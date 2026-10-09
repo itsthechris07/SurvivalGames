@@ -1,0 +1,65 @@
+site_name: SurvivalGames
+site_description: Documentation of SurvivalGames, a Paper plugin for Survival Games and Varo - several games per server or one game per server in a network
+site_url: https://itsthechris07.github.io/SurvivalGames/
+repo_url: https://github.com/itsthechris07/SurvivalGames
+repo_name: itsthechris07/SurvivalGames
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: amber
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Survival Games: survival-games.md
+  - Varo: varo.md
+  - Network: network.md
+  - Reference:
+      - Commands and permissions: commands.md
+      - Configuration: configuration.md
+      - Messages and languages: customization.md
+      - Placeholders: placeholders.md
+  - FAQ and troubleshooting: faq.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn

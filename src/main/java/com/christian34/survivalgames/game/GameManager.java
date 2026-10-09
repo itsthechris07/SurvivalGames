@@ -1,0 +1,224 @@
+package com.christian34.survivalgames.game;
+
+import com.christian34.survivalgames.Debug;
+import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.lib.lang.I;
+import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.user.GamePlayer;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * The games of the arenas (at most one per arena). Arenas with auto-game get their game when the server starts, a
+ * Varo also gets it back if it was running (games/&lt;arena&gt;.yml). A round of Survival Games is followed by the next
+ * one.
+ *
+ * @author Christian34
+ */
+public class GameManager {
+    private final SurvivalGames plugin;
+    private final Map<String, Game> games = new ConcurrentHashMap<>();
+
+    public GameManager(SurvivalGames plugin) {
+        this.plugin = plugin;
+    }
+
+    private static String key(Arena arena) {
+        return arena.getName().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * creates the games of the arenas with auto-game and of the saved Varos (not on the lobby server of a network)
+     */
+    public void createAutoGames() {
+        if (plugin.getNetworkManager().isLobby()) return;
+        for (Arena arena : plugin.getArenaManager().getArenas()) {
+            boolean savedVaro = arena.getType() == GameType.VARO && VaroGame.getFile(arena).isFile();
+            if (!arena.hasAutoGame() && !savedVaro || getGame(arena) != null) continue;
+            if (!arena.isPlayable()) {
+                Debug.warn("Couldn't create the game of arena '" + arena.getName() + "', its setup is missing: "
+                        + arena.getMissingSetup().stream().map(I::plain).toList());
+                continue;
+            }
+            try {
+                createGame(arena);
+            } catch (RuntimeException ex) {
+                Debug.warn("Couldn't create the game of arena '" + arena.getName() + "'", ex);
+            }
+        }
+    }
+
+    /**
+     * @return the new game of the arena (check {@link #getGame(Arena)} and {@link Arena#isPlayable()} first)
+     */
+    public Game createGame(Arena arena) {
+        Game game = switch (arena.getType()) {
+            case SURVIVAL_GAMES -> new SurvivalGame(plugin, arena);
+            case VARO -> new VaroGame(plugin, arena);
+        };
+        games.put(key(arena), game);
+        return game;
+    }
+
+    public List<Game> getGames() {
+        return games.values().stream().sorted(Comparator.comparing(game -> game.getArena().getName(),
+                String.CASE_INSENSITIVE_ORDER)).toList();
+    }
+
+    @Nullable
+    public Game getGame(Arena arena) {
+        return games.get(key(arena));
+    }
+
+    /**
+     * @return the game played in the world, null if it isn't the world of a game
+     */
+    @Nullable
+    public Game getGame(@Nullable World world) {
+        if (world == null) return null;
+        for (Game game : games.values()) {
+            if (world.equals(game.getGameWorld().getWorld())) return game;
+        }
+        return null;
+    }
+
+    /**
+     * @return the game the player is in (playing or watching), null if none
+     */
+    @Nullable
+    public Game getGame(Player player) {
+        return plugin.getUser(player).getGame();
+    }
+
+    /**
+     * @return the game the player is in, else the game he takes part in while he is away (Varo), null if none
+     */
+    @Nullable
+    public Game findGame(UUID uuid) {
+        Player player = Bukkit.getPlayer(uuid);
+        Game game = player == null ? null : getGame(player);
+        if (game != null) return game;
+        return getGames().stream().filter(other -> other.getParticipant(uuid) != null).findFirst().orElse(null);
+    }
+
+    /**
+     * stops the game (everybody leaves) and removes it - a Varo stays saved
+     */
+    public void removeGame(Game game) {
+        games.remove(key(game.getArena()), game);
+        game.stop();
+    }
+
+    /**
+     * an admin stops the game: everybody leaves (a Varo stays saved, a round of Survival Games starts again)
+     *
+     * @param nextRound true: a round of Survival Games starts again right away
+     */
+    public void stopGame(Game game, boolean nextRound) {
+        game.broadcast(LangText.GAME_STOPPED);
+        removeGame(game);
+        if (nextRound && game instanceof SurvivalGame && game.getArena().isPlayable()) createGame(game.getArena());
+    }
+
+    /**
+     * a round of Survival Games is over: everybody leaves, the next round starts in a fresh copy of the map
+     */
+    public void restart(Game game) {
+        List<GamePlayer> members = game.getMembers();
+        removeGame(game);
+        Arena arena = game.getArena();
+        if (plugin.getArenaManager().get(arena.getName()) != arena || !arena.isPlayable()) return;
+        Game next = createGame(arena);
+        if (plugin.getNetworkManager().isGameServer()) return;
+        for (GamePlayer member : members) {
+            Player player = member.getPlayer();
+            if (player.isOnline() && member.getGame() == null && next.isJoinable()) {
+                player.sendMessage(I.prefixed(LangText.PLAY_AGAIN, arena.getName()));
+            }
+        }
+    }
+
+    /**
+     * ends the Varo and starts it again from the lobby: new world, everybody alive without kills and play time
+     *
+     * @param keepTeams true: the teams take part again
+     * @return the new game
+     */
+    public VaroGame resetVaro(VaroGame game, boolean keepTeams) {
+        List<GamePlayer> members = game.getMembers();
+        removeGame(game);
+        game.deleteData();
+        VaroGame next = (VaroGame) createGame(game.getArena());
+        if (keepTeams) next.takeOver(game);
+        for (GamePlayer member : members) {
+            if (member.getPlayer().isOnline() && member.getGame() == null) next.join(member);
+        }
+        return next;
+    }
+
+    /**
+     * joins the game of the arena, otherwise watches it while it is running
+     *
+     * @param arena null: the game with the most players waiting
+     */
+    public void join(GamePlayer gamePlayer, @Nullable Arena arena) {
+        Player player = gamePlayer.getPlayer();
+        if (gamePlayer.getGame() != null) {
+            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
+            return;
+        }
+        if (plugin.getArenaManager().getEditedArena(player) != null) {
+            player.sendMessage(I.prefixed(LangText.EDITING_ARENA));
+            return;
+        }
+        Game game = arena == null ? findJoinableGame(player) : getGame(arena);
+        if (game == null) {
+            player.sendMessage(I.prefixed(arena == null ? LangText.NO_GAME_TO_JOIN : LangText.NO_GAME_IN_ARENA,
+                    arena == null ? "" : arena.getName()));
+            return;
+        }
+        if (game.getJoinDenial(player.getUniqueId()) == null) {
+            game.join(gamePlayer);
+        } else if (game.maySpectate(player.getUniqueId())) {
+            game.spectate(gamePlayer);
+        } else {
+            game.join(gamePlayer);
+        }
+    }
+
+    /**
+     * @return a game the player can join (a Varo he takes part in first, then the lobby with the most players)
+     */
+    @Nullable
+    public Game findJoinableGame(Player player) {
+        for (Game game : getGames()) {
+            if (game instanceof VaroGame varo && varo.canRejoin(player.getUniqueId())) return game;
+        }
+        Game game = getGames().stream().filter(Game::isJoinable)
+                .max(Comparator.comparingInt(g -> g.getParticipants().size())).orElse(null);
+        if (game != null) return game;
+        return getGames().stream().filter(other -> other.maySpectate(player.getUniqueId()))
+                .max(Comparator.comparingInt(g -> g.getMembers().size())).orElse(null);
+    }
+
+    /**
+     * the plugin is disabled: all games stop (the Varos are saved)
+     */
+    public void stopAll() {
+        for (Game game : new ArrayList<>(games.values())) {
+            removeGame(game);
+        }
+    }
+
+}

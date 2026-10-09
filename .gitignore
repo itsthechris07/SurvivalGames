@@ -1,0 +1,12 @@
+/.idea/
+*.iml
+# local settings (serverPluginsDir, relocateLibraries)
+gradle.properties
+# Gradle
+.gradle
+build
+# Maven leftovers of the 2018 version
+/target/
+/.claude/
+/.floo
+/.flooignore

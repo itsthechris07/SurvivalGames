@@ -1,0 +1,18 @@
+name: SurvivalGames
+version: ${version}
+author: Christian34
+description: Survival Games and Varo - several games per server or one game per server in a network
+main: com.christian34.survivalgames.SurvivalGames
+# the current version only: older ones make Paper rewrite the bytecode of the plugin for old api calls
+api-version: "26.2"
+# commands are registered by cloud (commands/CommandManager)
+
+softdepend: [PlaceholderAPI]
+
+permissions:
+  sg.admin:
+    description: create and set up arenas, start and stop games, manage teams, build mode, reset, revive and reload
+    default: op
+  sg.network.bypass:
+    description: game servers of a network let the player in although he can't play (ops can always join)
+    default: false

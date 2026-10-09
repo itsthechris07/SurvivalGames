@@ -1,0 +1,45 @@
+# SurvivalGames
+
+Survival Games and Varo for Paper 26.2 – several games next to each other on one server, or one game per server in a
+network behind Velocity/BungeeCord.
+
+- **Survival Games** (the default): everybody spawns on a spawn point, loots the chests and fights; after a grace
+  period and a deathmatch with a shrinking world border the last one standing wins. Every round starts with a fresh
+  copy of the map.
+- **Varo**: teams play in the same world for days, every player may only play a few minutes per day and is out after
+  the first death – the last team wins. The world and the game are kept until an admin resets it.
+
+## Features
+- Arenas with their own map (a folder in `maps/`, an imported world or a generated one), set up in a copy of the map
+  (`/sg arena <arena> edit`), spawn points or a spawn circle, lobby, center and world border
+- Server modes: `standalone` (games run "on the side", players join with `/sg join` or a `[sg]` sign), `game` (one
+  game per server, players come from the lobby server) and `lobby` (sends players to free game servers, reads their
+  state from the MOTD)
+- Survival Games: lobby countdown, frozen start, loot chests with refill (`loot.yml`), grace period, deathmatch,
+  spectators, only some blocks breakable
+- Varo: play time per day, no logout during a fight, join protection, shrinking world border, the players get their
+  own inventory back when they leave the game
+- Teams (menu or `/sg team create <name> [color]`), team chat (`@message`), separate chat per game, scoreboard
+- Extras (per game type): backpack, chest lock with a `[Lock]` sign, gravity grenade, toxic rain
+- English and German messages (MiniMessage, clickable commands), PlaceholderAPI (`%sg_...%`)
+
+## Quick start
+1. Put the jar into `plugins/` and start the server.
+2. Put a map into `plugins/SurvivalGames/maps/<name>` (or import a world: `/sg arena create <name> --world <world>`,
+   or generate one: `--generate`) and create the arena: `/sg arena create <name>` (`--type varo` for Varo).
+3. `/sg arena <name> edit`, set `/sg arena <name> lobby`, `center` and `spawn add`, then `/sg arena save`.
+4. `/sg arena <name> creategame` – players join with `/sg join` or a sign with `[sg]` and the arena name.
+
+All commands: `/sg help` (alias `/varo`). Admin permission: `sg.admin` (operators).
+
+Full documentation: [itsthechris07.github.io/SurvivalGames](https://itsthechris07.github.io/SurvivalGames/) (source in
+[`docs/`](docs/index.md)).
+
+## Building
+Requires JDK 25.
+
+```
+./gradlew build
+```
+
+The plugin jar is `build/libs/SurvivalGames-<version>.jar`.

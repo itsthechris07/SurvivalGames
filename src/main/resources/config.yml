@@ -1,0 +1,148 @@
+############################################################
+# +------------------------------------------------------+ #
+# |                     - Config -                       | #
+# |               Plugin by Christian34                  | #
+# +------------------------------------------------------+ #
+############################################################
+
+# language of the messages: en (messages.yml) or de (messages_de.yml) - other languages: put a translated
+# messages_<language>.yml into the plugin folder (missing texts are English); /sg reload after a change
+language: en
+# texts use MiniMessage (<red>, <bold>, <#ff8800>, <gradient:aqua:blue>, ... see https://docs.papermc.io/adventure/minimessage/format),
+# old color codes (&c) still work - the same goes for messages.yml
+# in front of all messages (leave it empty for none)
+prefix: "<dark_gray>[<gold>SG<dark_gray>]"
+# the date of /sg lastseen (https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/time/format/DateTimeFormatter.html)
+date-format: "dd.MM.yyyy HH:mm"
+# the sidebar of the players in a game (players, team, kills, countdowns, play time left)
+scoreboard: true
+
+# standalone: the games run next to each other on this server (players join with /sg join or a [sg] sign)
+# game: this server runs exactly one game (network.arena), the players come from the lobby server and go back there
+#   after the game - players who can't play are turned away before they connect (except ops)
+# lobby: the lobby server of the network: no games, /sg join and [sg] signs send the players to a free game server
+# the proxy (Velocity/BungeeCord) has to forward the plugin messages of the channel BungeeCord (Velocity:
+# bungee-plugin-message-channel = true)
+network:
+  mode: standalone
+  # game servers: the server the players are sent to after the game (the name in the proxy config, empty: kick)
+  lobby-server: lobby
+  # game servers: the arena of the game of this server
+  arena: ""
+  # lobby server: the game servers (name in the proxy config + address the lobby pings for the state of the game)
+  servers:
+    - name: sg-1
+      address: localhost:25566
+
+teams:
+  # players can create teams with /sg team create (otherwise only admins with /sg game <arena> team create)
+  players-can-create: true
+
+chat:
+  # players only see the chat of their own game (players outside of games only see each other)
+  separate-games: true
+  # messages starting with this only go to the own team (empty: no team chat)
+  team-prefix: "@"
+
+# the settings of the game types - arenas override min-players, max-players, team-size and world-border.size
+# (/sg arena <arena> players|teamsize|border)
+survival-games:
+  min-players: 2
+  max-players: 24
+  # players per team (1: everybody plays alone)
+  team-size: 1
+  # the lobby countdown starts once min-players are in the lobby (seconds)
+  lobby-countdown: 60
+  # the lobby countdown is shortened to this once the game is full
+  full-countdown: 10
+  # seconds the players stand frozen on their spawn points before the game begins
+  start-countdown: 10
+  # without spawn points the players spawn in a circle around the center (radius in blocks)
+  spawn-circle-radius: 15
+  # seconds without PvP after the start
+  grace-period: 60
+  # the chests are filled again every ... minutes (0: never)
+  refill-minutes: 5
+  # members of the same team can hurt each other
+  friendly-fire: false
+  # players who are out of the game watch the rest (otherwise they leave) - others can watch with /sg spectate
+  spectators: true
+  # monsters spawn in the arena
+  monsters: false
+  # the time of day (fixed, 6000: noon)
+  time: 6000
+  # players can break and place every block (otherwise only the blocks below and the ones placed in the game)
+  building: false
+  breakable-blocks: [ cobweb, short_grass, tall_grass, fern, large_fern, dead_bush, oak_leaves, birch_leaves, spruce_leaves, jungle_leaves, acacia_leaves, dark_oak_leaves, cake, tnt ]
+  placeable-blocks: [ cobweb, cake, tnt, fire, crafting_table ]
+  world-border:
+    # the size (blocks) of the world border around the center (0: none)
+    size: 500
+  deathmatch:
+    # the deathmatch starts after ... minutes (0: never) or once only ... players are left (0: never)
+    minutes: 20
+    players: 3
+    # seconds of warning before everybody is teleported back to the spawn points
+    warning: 30
+    # the world border around the center during the deathmatch shrinks from border-size to final-border-size in
+    # border-minutes
+    border-size: 75
+    final-border-size: 15
+    border-minutes: 3
+  # seconds after the end until the next round (everybody leaves the arena)
+  ending-seconds: 15
+
+varo:
+  min-players: 2
+  max-players: 100
+  team-size: 2
+  # seconds from /sg game <arena> start until the game begins
+  start-countdown: 60
+  spawn-circle-radius: 30
+  # minutes every player may play per day
+  play-time: 15
+  # the hour (0-23) a new day starts - the play time is reset then
+  day-start-hour: 0
+  # seconds without damage after joining (0: none)
+  join-protection: 10
+  # the play time doesn't run out while an enemy is this close (blocks, 0: always runs out) - you can't log out of a fight
+  combat-radius: 20
+  friendly-fire: false
+  # players who are out of the game can watch (otherwise they can't join anymore)
+  spectators: true
+  world-border:
+    # the size (blocks) of the world border when the game starts around the center (0: no border)
+    size: 2000
+    # blocks the border shrinks every day
+    shrink-per-day: 100
+    # the border doesn't get smaller than this
+    min-size: 200
+
+# games: the game types the module is used in (survival-games, varo)
+modules:
+  backpack:
+    # a crafted backpack (leather around a chest, a diamond at the bottom)
+    enabled: true
+    games: [ varo ]
+    # team: the team shares one backpack, player: everybody has their own
+    type: team
+    # rows of the backpack (1-6)
+    rows: 3
+  chest-lock:
+    # a sign with [Lock] in the first line on a chest (barrel, furnace, ...) locks it for the own team
+    enabled: true
+    games: [ varo ]
+  gravity-grenade:
+    # crafted from a snowball, TNT and an ender pearl: tears out the blocks where it lands and pulls them and the
+    # players nearby into one point (radius in blocks, 1-8)
+    enabled: true
+    games: [ varo, survival-games ]
+    radius: 6
+  toxic-rain:
+    # some rains hurt everybody under the open sky (never kills)
+    enabled: true
+    games: [ varo ]
+    # chance (percent) that a rain is toxic
+    chance: 30
+    # damage every 2 seconds (2 = one heart)
+    damage: 1.0

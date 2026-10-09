@@ -1,0 +1,69 @@
+# The loot of the chests, barrels and trapped chests in Survival Games. Every container gets a random number of items
+# (items.min to items.max) when it is opened the first time and again after every refill.
+# item: like in /give (iron_sword, potion[potion_contents={potion:"healing"}], diamond_sword[enchantments={sharpness:1}])
+# amount: a number or a range (1-3)
+# weight: how often the item is chosen compared to the others (default 1)
+# /sg reload after a change
+
+items:
+  min: 3
+  max: 6
+
+# containers this close to the center of the arena (blocks) get the center loot (0: only the normal loot)
+center-radius: 25
+
+normal:
+  - { item: wooden_sword, weight: 8 }
+  - { item: stone_sword, weight: 5 }
+  - { item: wooden_axe, weight: 6 }
+  - { item: stone_axe, weight: 4 }
+  - { item: bow, weight: 3 }
+  - { item: arrow, amount: 2-6, weight: 6 }
+  - { item: fishing_rod, weight: 3 }
+  - { item: leather_helmet, weight: 6 }
+  - { item: leather_chestplate, weight: 5 }
+  - { item: leather_leggings, weight: 5 }
+  - { item: leather_boots, weight: 6 }
+  - { item: golden_helmet, weight: 3 }
+  - { item: golden_boots, weight: 3 }
+  - { item: chainmail_chestplate, weight: 2 }
+  - { item: chainmail_leggings, weight: 2 }
+  - { item: apple, amount: 1-3, weight: 8 }
+  - { item: bread, amount: 1-2, weight: 7 }
+  - { item: cooked_porkchop, weight: 4 }
+  - { item: cooked_chicken, weight: 4 }
+  - { item: carrot, amount: 1-3, weight: 6 }
+  - { item: baked_potato, amount: 1-2, weight: 5 }
+  - { item: stick, amount: 1-2, weight: 6 }
+  - { item: flint, weight: 4 }
+  - { item: feather, amount: 1-2, weight: 4 }
+  - { item: iron_ingot, weight: 3 }
+  - { item: gold_ingot, weight: 3 }
+  - { item: cobweb, amount: 1-2, weight: 3 }
+  - { item: snowball, amount: 2-4, weight: 3 }
+  - { item: experience_bottle, weight: 2 }
+
+center:
+  - { item: stone_sword, weight: 5 }
+  - { item: iron_sword, weight: 3 }
+  - { item: iron_axe, weight: 2 }
+  - { item: bow, weight: 4 }
+  - { item: arrow, amount: 4-10, weight: 6 }
+  - { item: crossbow, weight: 1 }
+  - { item: iron_helmet, weight: 3 }
+  - { item: iron_chestplate, weight: 2 }
+  - { item: iron_leggings, weight: 2 }
+  - { item: iron_boots, weight: 3 }
+  - { item: chainmail_chestplate, weight: 3 }
+  - { item: chainmail_leggings, weight: 3 }
+  - { item: golden_apple, weight: 2 }
+  - { item: cooked_beef, amount: 1-3, weight: 6 }
+  - { item: bread, amount: 2-3, weight: 5 }
+  - { item: iron_ingot, amount: 1-2, weight: 5 }
+  - { item: diamond, weight: 1 }
+  - { item: flint_and_steel, weight: 2 }
+  - { item: tnt, weight: 2 }
+  - { item: ender_pearl, weight: 1 }
+  - { item: experience_bottle, amount: 1-3, weight: 3 }
+  - { item: "splash_potion[potion_contents={potion:\"healing\"}]", weight: 2 }
+  - { item: "potion[potion_contents={potion:\"swiftness\"}]", weight: 2 }
