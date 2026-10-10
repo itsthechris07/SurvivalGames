@@ -3,6 +3,7 @@ package com.christian34.survivalgames.game;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.integrations.VanishSupport;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -150,6 +151,38 @@ public class GameManager {
     }
 
     /**
+     * the players in the lobby of the game move into the arena (map voting), the arena of the game gets a new game
+     * (with auto-game)
+     *
+     * @return the game of the arena, null if it can't take them (they stay)
+     */
+    @Nullable
+    Game moveLobby(SurvivalGame game, Arena arena) {
+        Game next = getGame(arena);
+        if (next != null && (next.getState() != GameState.LOBBY || !next.getMembers().isEmpty())) return null;
+        if (next == null) {
+            try {
+                next = createGame(arena);
+            } catch (RuntimeException ex) {
+                Debug.warn("Couldn't create the game of arena '" + arena.getName() + "'", ex);
+                return null;
+            }
+        }
+        if (next instanceof SurvivalGame survivalGame) survivalGame.closeVoting();
+        game.moveLobby(next);
+        removeGame(game);
+        Arena old = game.getArena();
+        if (old.hasAutoGame() && plugin.getArenaManager().get(old.getName()) == old && old.isPlayable()) {
+            try {
+                createGame(old);
+            } catch (RuntimeException ex) {
+                Debug.warn("Couldn't create the game of arena '" + old.getName() + "'", ex);
+            }
+        }
+        return next;
+    }
+
+    /**
      * ends the Varo and starts it again from the lobby: new world, everybody alive without kills and play time
      *
      * @param keepTeams true: the teams take part again
@@ -158,6 +191,7 @@ public class GameManager {
     public VaroGame resetVaro(VaroGame game, boolean keepTeams) {
         List<GamePlayer> members = game.getMembers();
         removeGame(game);
+        plugin.getBounty().refundAll(game);
         game.deleteData();
         VaroGame next = (VaroGame) createGame(game.getArena());
         if (keepTeams) next.takeOver(game);
@@ -168,7 +202,8 @@ public class GameManager {
     }
 
     /**
-     * joins the game of the arena, otherwise watches it while it is running
+     * joins the game of the arena, otherwise watches it while it is running - a party leader takes the members of
+     * their party into the lobby
      *
      * @param arena null: the game with the most players waiting
      */
@@ -182,14 +217,35 @@ public class GameManager {
             player.sendMessage(I.prefixed(LangText.EDITING_ARENA));
             return;
         }
-        Game game = arena == null ? findJoinableGame(player) : getGame(arena);
+        List<GamePlayer> followers = new ArrayList<>();
+        for (Player member : plugin.getPartySupport().getFollowers(player)) {
+            GamePlayer follower = plugin.getUser(member);
+            if (follower.getGame() == null && plugin.getArenaManager().getEditedArena(member) == null
+                    && !VanishSupport.isVanished(member)) {
+                followers.add(follower);
+            }
+        }
+        Game game = arena == null ? findJoinableGame(player, 1 + followers.size()) : getGame(arena);
         if (game == null) {
             player.sendMessage(I.prefixed(arena == null ? LangText.NO_GAME_TO_JOIN : LangText.NO_GAME_IN_ARENA,
                     arena == null ? "" : arena.getName()));
             return;
         }
         if (game.getJoinDenial(player.getUniqueId()) == null) {
-            game.join(gamePlayer);
+            // vanish plugins would hide him from the other players (EssentialsX makes him visible) - he can still watch
+            if (!VanishSupport.canPlay(player)) {
+                player.sendMessage(I.prefixed(LangText.JOIN_VANISHED));
+                return;
+            }
+            if (!game.join(gamePlayer)) return;
+            // only into the lobby - in a Varo everybody comes back on his own
+            for (GamePlayer follower : followers) {
+                if (game.getState() != GameState.LOBBY || !game.isJoinable()) break;
+                if (game.getJoinDenial(follower.getPlayer().getUniqueId()) != null) continue;
+                if (game.join(follower)) {
+                    follower.getPlayer().sendMessage(I.prefixed(LangText.JOINED_WITH_PARTY, player.getName()));
+                }
+            }
         } else if (game.maySpectate(player.getUniqueId())) {
             game.spectate(gamePlayer);
         } else {
@@ -202,11 +258,24 @@ public class GameManager {
      */
     @Nullable
     public Game findJoinableGame(Player player) {
+        return findJoinableGame(player, 1);
+    }
+
+    /**
+     * @param players the player and the members of his party who join with him
+     * @return a game the player can join (a Varo he takes part in first, then the lobby with the most players -
+     * preferably with room for all of them)
+     */
+    @Nullable
+    public Game findJoinableGame(Player player, int players) {
         for (Game game : getGames()) {
             if (game instanceof VaroGame varo && varo.canRejoin(player.getUniqueId())) return game;
         }
+        Comparator<Game> mostPlayers = Comparator.comparingInt(g -> g.getParticipants().size());
         Game game = getGames().stream().filter(Game::isJoinable)
-                .max(Comparator.comparingInt(g -> g.getParticipants().size())).orElse(null);
+                .filter(g -> g.getParticipants().size() + players <= g.getMaxPlayers())
+                .max(mostPlayers).orElse(null);
+        if (game == null) game = getGames().stream().filter(Game::isJoinable).max(mostPlayers).orElse(null);
         if (game != null) return game;
         return getGames().stream().filter(other -> other.maySpectate(player.getUniqueId()))
                 .max(Comparator.comparingInt(g -> g.getMembers().size())).orElse(null);

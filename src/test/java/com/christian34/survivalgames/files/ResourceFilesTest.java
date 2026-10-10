@@ -121,4 +121,42 @@ class ResourceFilesTest extends PluginTestBase {
         assertFalse(updated.getComments("varo.day-start-hour").isEmpty(), "comments got lost");
     }
 
+
+    @Test
+    void updaterAddsNewSectionsWithTheirComments() throws IOException {
+        File file = new File(plugin.getDataFolder(), "config.yml");
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        config.set("survival-games.reveal", null);
+        config.set("modules.restrictions.max-enchantments", null);
+        config.save(file);
+
+        ConfigUpdater.update(plugin, "config.yml", file);
+
+        YamlConfiguration updated = YamlConfiguration.loadConfiguration(file);
+        assertEquals(60, updated.getInt("survival-games.reveal.interval"));
+        assertFalse(updated.getComments("survival-games.reveal").isEmpty(), "the comment of the section got lost");
+        assertTrue(updated.isConfigurationSection("modules.restrictions.max-enchantments"), "empty sections are added too");
+    }
+
+    @Test
+    void updaterLeavesTheOpenSectionsOfLootYmlAlone() throws IOException {
+        File file = new File(plugin.getDataFolder(), "loot.yml");
+        YamlConfiguration loot = YamlConfiguration.loadConfiguration(file);
+        // no upgrades and only barrels have a table of their own
+        loot.set("upgrades", null);
+        loot.createSection("upgrades");
+        loot.set("containers", null);
+        loot.set("containers.barrel", "center");
+        loot.set("center-radius", null);
+        loot.save(file);
+
+        plugin.reload();
+
+        YamlConfiguration updated = plugin.getFileManager().getLootFile().getData();
+        assertTrue(updated.getConfigurationSection("upgrades").getKeys(false).isEmpty(), "not added again");
+        assertEquals(java.util.Set.of("barrel"), updated.getConfigurationSection("containers").getKeys(false));
+        assertEquals(25, updated.getInt("center-radius"), "other keys are");
+        assertEquals("normal", plugin.getLoot().getTableName(org.bukkit.Material.CHEST, false, 5));
+    }
+
 }

@@ -2,6 +2,7 @@ package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -57,10 +58,28 @@ public class SurvivalGame extends Game {
     private boolean deathmatch;
     private int endingIn = -1;
     private int startTeams;
+    /**
+     * seconds until the next lightnings show where the players are, -1: not yet
+     */
+    private int revealIn = -1;
+    /**
+     * the refills of the chests so far (loot.yml: upgrades)
+     */
+    private int refills;
+    /**
+     * null: the players don't vote for the map
+     */
+    @Nullable
+    private MapVoting mapVoting;
 
     public SurvivalGame(SurvivalGames plugin, Arena arena) {
         super(plugin, arena, arena.createWorld(arena.getName() + "_"
                 + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)), false));
+        if (MapVoting.isEnabled(plugin, arena)) {
+            this.mapVoting = new MapVoting(plugin, this);
+            // nothing to choose from
+            if (mapVoting.getOptions().size() < 2) this.mapVoting = null;
+        }
     }
 
     @Override
@@ -151,6 +170,81 @@ public class SurvivalGame extends Game {
         if (players >= getMaxPlayers() && getCountdown() > full) setCountdown(full);
     }
 
+    @Override
+    protected void onLobbyJoin(GamePlayer gamePlayer) {
+        super.onLobbyJoin(gamePlayer);
+        if (getMapVoting() != null) gamePlayer.getPlayer().sendMessage(I.prefixed(LangText.MAP_VOTE_HINT));
+    }
+
+    @Override
+    protected void giveLobbyItems(Player player) {
+        super.giveLobbyItems(player);
+        if (getMapVoting() != null) {
+            player.getInventory().setItem(2, Items.create(Material.MAP, i18n(LangText.ITEM_VOTE),
+                    I.itemLines(LangText.ITEM_VOTE_LORE), Items.VOTE));
+        }
+    }
+
+    // ---------------------------------------------------------------- map voting
+
+    /**
+     * @return the map voting while it is open, null if there is none (anymore)
+     */
+    @Nullable
+    public MapVoting getMapVoting() {
+        return mapVoting == null || mapVoting.isOver() || getState() != GameState.LOBBY ? null : mapVoting;
+    }
+
+    /**
+     * the players moved into this game from another lobby (they have voted already)
+     */
+    void closeVoting() {
+        this.mapVoting = null;
+    }
+
+    /**
+     * the player votes for the map (map menu, /sg vote)
+     */
+    public void voteMap(Player player, Arena map) {
+        MapVoting voting = getMapVoting();
+        if (voting == null) {
+            player.sendMessage(I.prefixed(LangText.MAP_VOTE_NONE));
+        } else if (getParticipant(player.getUniqueId()) == null) {
+            player.sendMessage(I.prefixed(LangText.NOT_PLAYING));
+        } else if (!voting.vote(player, map)) {
+            player.sendMessage(I.prefixed(LangText.MAP_VOTE_UNKNOWN, map.getName()));
+        } else {
+            player.sendMessage(I.prefixed(LangText.MAP_VOTED, map.getDisplayName()));
+        }
+    }
+
+    /**
+     * the votes are counted: the players move into the arena that has won
+     *
+     * @return the game the players are in now
+     */
+    private Game finishVoting() {
+        MapVoting voting = getMapVoting();
+        if (voting == null) return this;
+        Arena map = voting.finish();
+        broadcast(LangText.MAP_VOTE_WON, map.getDisplayName(), voting.getVotes(map));
+        if (map == arena) return this;
+        Game next = plugin.getGameManager().moveLobby(this, map);
+        return next != null ? next : this;
+    }
+
+    @Override
+    public void start() {
+        if (getMapVoting() != null) {
+            Game next = finishVoting();
+            if (next != this) {
+                next.start();
+                return;
+            }
+        }
+        super.start();
+    }
+
     // ---------------------------------------------------------------- running
 
     @Override
@@ -166,6 +260,7 @@ public class SurvivalGame extends Game {
             broadcast(LangText.SG_STARTED_GRACE, graceLeft);
         } else {
             broadcast(LangText.SG_STARTED);
+            giveTrackers();
         }
         // e.g. one player left during the countdown
         if (startTeams > 1) checkWinner();
@@ -195,6 +290,11 @@ public class SurvivalGame extends Game {
             if (endingIn > 0 && --endingIn == 0) plugin.getGameManager().restart(this);
             return;
         }
+        if (getState() == GameState.LOBBY) {
+            int end = settings().getInt("map-voting.end-seconds", 10);
+            if (getMapVoting() != null && getCountdown() > 0 && getCountdown() <= end) finishVoting();
+            return;
+        }
         if (getState() != GameState.RUNNING) return;
         seconds++;
         if (graceLeft > 0) {
@@ -203,6 +303,7 @@ public class SurvivalGame extends Game {
                 broadcast(LangText.GRACE_OVER);
                 showTitle(net.kyori.adventure.title.Title.title(Component.empty(), i18n(LangText.GRACE_OVER_TITLE)),
                         Sound.ENTITY_WITHER_SPAWN);
+                giveTrackers();
             } else if (COUNTDOWN_MESSAGES.contains(graceLeft)) {
                 broadcast(LangText.GRACE_ENDS, graceLeft);
             }
@@ -210,9 +311,60 @@ public class SurvivalGame extends Game {
         int refill = settings().getInt("refill-minutes");
         if (refill > 0 && seconds % (refill * 60) == 0 && !deathmatch) {
             filledContainers.clear();
+            refills++;
             broadcast(LangText.CHESTS_REFILLED);
         }
+        tickBorder();
         tickDeathmatch();
+        tickReveal();
+    }
+
+    /**
+     * the world border starts shrinking world-border.shrink-after minutes after the start (warned a minute before)
+     */
+    private void tickBorder() {
+        int size = arena.getBorderSize();
+        int start = settings().getInt("world-border.shrink-after") * 60;
+        if (deathmatch || size <= 0 || start <= 0) return;
+        if (start > 60 && seconds == start - 60) {
+            broadcast(LangText.BORDER_SHRINK_WARNING, 60);
+        } else if (seconds == start) {
+            WorldBorder border = getWorld().getWorldBorder();
+            int finalSize = Math.clamp(settings().getInt("world-border.final-size"), 1, size);
+            int minutes = Math.max(1, settings().getInt("world-border.shrink-minutes"));
+            if (finalSize >= border.getSize()) return;
+            border.changeSize(finalSize, 20L * 60 * minutes);
+            broadcast(LangText.BORDER_SHRINKING, finalSize, minutes);
+            for (GamePlayer member : getMembers()) {
+                member.getPlayer().playSound(member.getPlayer(), Sound.BLOCK_BEACON_DEACTIVATE, 1f, 0.8f);
+            }
+        }
+    }
+
+    /**
+     * lightnings (without damage) strike where the players alive are every reveal.interval seconds - after
+     * reveal.minutes or once only reveal.players are left
+     */
+    private void tickReveal() {
+        int interval = settings().getInt("reveal.interval", 60);
+        if (deathmatch || interval <= 0) return;
+        if (revealIn < 0) {
+            int minutes = settings().getInt("reveal.minutes");
+            int players = settings().getInt("reveal.players");
+            boolean time = minutes > 0 && seconds >= minutes * 60;
+            boolean few = players > 0 && getAlive().size() <= players && participants.size() > players;
+            if (!time && !few) return;
+            this.revealIn = 0;
+        }
+        if (revealIn-- > 0) return;
+        this.revealIn = interval - 1;
+        broadcast(LangText.REVEAL);
+        for (GamePlayer member : getPlayers()) {
+            Participant participant = getParticipant(member.getPlayer().getUniqueId());
+            if (participant != null && participant.isAlive()) {
+                member.getPlayer().getWorld().strikeLightningEffect(member.getPlayer().getLocation());
+            }
+        }
     }
 
     private void tickDeathmatch() {
@@ -264,6 +416,12 @@ public class SurvivalGame extends Game {
     }
 
     @Override
+    protected void onStop() {
+        // a round stopped before its end
+        plugin.getBounty().refundAll(this);
+    }
+
+    @Override
     protected void onEnd() {
         this.endingIn = Math.max(1, settings().getInt("ending-seconds"));
         for (GamePlayer member : getMembers()) {
@@ -285,7 +443,8 @@ public class SurvivalGame extends Game {
         Location center = arena.getCenter(getWorld());
         double radius = plugin.getLoot().getCenterRadius();
         boolean isCenter = radius > 0 && horizontalDistanceSquared(location, center) <= radius * radius;
-        plugin.getLoot().fill(inventory, isCenter);
+        Loot loot = plugin.getLoot();
+        loot.fill(inventory, loot.getTableName(block.getType(), isCenter, refills));
     }
 
     private static double horizontalDistanceSquared(Location a, Location b) {

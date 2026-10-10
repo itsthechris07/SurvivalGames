@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SurvivalGames features</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&amp;family=Barlow:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+code{font-family: Consolas, monospace; font-size: 16px; color: #F5D38A; background: #2A2430; padding: 0 4px}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; box-sizing: border-box; padding: 52px 64px; background: #121014; font-family: 'Barlow', sans-serif; color: #F2EEE8; display: flex; flex-direction: column; gap: 32px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 56px">Ready for your server</h2>
+<p style="margin: 0; font-size: 22px; color: #D6CFD8">Several arenas on one server – or one game per server behind Velocity or BungeeCord.</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 20px; flex-grow: 1">
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3FD08A" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M2 6l6-3 8 3 6-3v15l-6 3-8-3-6 3z"></path><line x1="8" y1="3" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="21"></line></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Any map</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">A folder in <code>maps/</code>, an imported or a generated world. Every round gets a fresh copy.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"></path><rect x="10" y="8" width="4" height="4"></rect></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Set up in game</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Spawn points or a spawn circle, lobby, center and world border – in an edit copy of the map.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="6" width="18" height="14"></rect><line x1="3" y1="11" x2="21" y2="11"></line><rect x="10" y="9" width="4" height="4"></rect></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Loot chests</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Filled when opened, refilled every few minutes, better loot near the center. All in <code>loot.yml</code>.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="3" width="18" height="18" stroke-dasharray="4 3"></rect><polyline points="9 6 12 9 15 6"></polyline><polyline points="9 18 12 15 15 18"></polyline></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Grace &amp; deathmatch</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">A peaceful start, then back to the spawns while the world border closes in.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 15"></polyline><line x1="9" y1="2" x2="15" y2="2"></line></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Varo play time</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">A few minutes per day on the scoreboard. Every new day brings a smaller border.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" stroke-linejoin="round"><path d="M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z"></path></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">One life</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Out after the first death. No logout during a fight, join protection, revive by an admin.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#4B95FF" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><circle cx="9" cy="8" r="4"></circle><path d="M2 21c0-4 3-7 7-7s7 3 7 7"></path><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-2-6-5-7"></path></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Teams</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Team menu or <code>/sg team create</code>, team colors, team chat with <code>@message</code>.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9B6BFF" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Spectators</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Players who are out and visitors watch invisibly – <code>/sg spectate</code>.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#4B95FF" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="9" y="2" width="6" height="5"></rect><rect x="2" y="17" width="6" height="5"></rect><rect x="9" y="17" width="6" height="5"></rect><rect x="16" y="17" width="6" height="5"></rect><path d="M12 7v10M5 17v-4h14v4"></path></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Three server modes</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Games on the side, one game per server, or a lobby that sends players to free servers.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="4" width="18" height="11"></rect><line x1="12" y1="15" x2="12" y2="22"></line><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="11" x2="13" y2="11"></line></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Join signs</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8"><code>[sg]</code> signs show the state and let players join with a click – on one server or across the network.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3FD08A" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"></path></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Extras</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">Backpack, chest lock with a <code>[Lock]</code> sign, gravity grenade and toxic rain – per game type.</p>
+</div>
+
+<div style="background: #1B1820; border: 2px solid #332C38; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; gap: 12px; align-items: center">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9B6BFF" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2c3 3 4 6.5 4 10s-1 7-4 10c-3-3-4-6.5-4-10s1-7 4-10z"></path></svg>
+<h3 style="margin: 0; font-size: 23px; font-weight: 600">Your texts</h3>
+</div>
+<p style="margin: 0; font-size: 18px; line-height: 1.45; color: #D6CFD8">English and German, MiniMessage with clickable commands, PlaceholderAPI <code>%sg_…%</code>.</p>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

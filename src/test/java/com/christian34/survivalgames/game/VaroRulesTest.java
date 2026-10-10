@@ -1,0 +1,313 @@
+package com.christian34.survivalgames.game;
+
+import com.christian34.survivalgames.PluginTestBase;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Material;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Villager;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.inventory.ItemStack;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockbukkit.mockbukkit.entity.PlayerMock;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * The optional rules of a Varo: peaceful days, inactive players, the daily coordinates, the villager standing in for
+ * players who leave the server and the backups.
+ *
+ * @author Christian34
+ */
+class VaroRulesTest extends PluginTestBase {
+    private VaroGame game;
+    private PlayerMock admin;
+    private PlayerMock steve;
+    private PlayerMock alex;
+
+    @BeforeEach
+    void setUpGame() {
+        config().set("varo.start-countdown", 1);
+        config().set("varo.combat-radius", 0);
+        config().set("varo.join-protection", 0);
+        game = (VaroGame) createGame("varo1", GameType.VARO, 3);
+        admin = addAdmin("Admin");
+        steve = addPlayer("Steve");
+        alex = addPlayer("Alex");
+        execute(admin, "sg join varo1");
+        execute(steve, "sg join varo1");
+        execute(alex, "sg join varo1");
+        execute(admin, "sg team create Wolves");
+        execute(steve, "sg team create Bears");
+        execute(alex, "sg team create Foxes");
+    }
+
+    private Participant participant(PlayerMock player) {
+        return game.getParticipant(player.getUniqueId());
+    }
+
+    private void startGame() {
+        execute(admin, "sg game varo1 start");
+        for (int tick = 0; tick < 20 * 5 && game.getState() != GameState.RUNNING; tick++) {
+            server.getScheduler().performOneTick();
+        }
+        assertEquals(GameState.RUNNING, game.getState());
+    }
+
+    /**
+     * the day of the game begins (1: the day it started) - everybody in the game plays for a second
+     */
+    private void day(int day) {
+        game.setClock(Clock.offset(Clock.systemDefaultZone(), Duration.ofDays(day - 1)));
+        seconds(1);
+        assertEquals(day, game.getDay());
+    }
+
+    // peaceful days
+
+    @Test
+    void noPvpDuringThePeacefulDays() {
+        config().set("varo.peaceful-days", 2);
+        startGame();
+        assertContains(messages(steve), "No PvP for the first 2 days - farm and build!");
+        assertTrue(game.isPeaceful());
+        assertFalse(attack(admin, steve));
+        assertTrue(fall(steve), "only other players can't hurt him");
+
+        day(2);
+        assertFalse(attack(admin, steve));
+        assertNotContains(messages(steve), "The peaceful days are over");
+
+        day(3);
+        assertContains(messages(steve), "The peaceful days are over - PvP is on from now on!");
+        assertFalse(game.isPeaceful());
+        assertTrue(attack(admin, steve));
+    }
+
+    @Test
+    void pvpFromTheStartByDefault() {
+        startGame();
+        assertNotContains(messages(steve), "No PvP for the first");
+        assertFalse(game.isPeaceful());
+        assertTrue(attack(admin, steve));
+    }
+
+    // inactive players
+
+    @Test
+    void inactivePlayersAreOut() {
+        config().set("varo.inactive-days", 2);
+        startGame();
+        seconds(1);
+        execute(alex, "sg leave");
+        messages(steve);
+
+        day(2);
+        day(3);
+        assertTrue(participant(alex).isAlive(), "missed one day so far");
+        day(4);
+        assertFalse(participant(alex).isAlive());
+        assertContains(messages(steve), "Alex hasn't played for 2 days and is out of the game.");
+        assertTrue(participant(steve).isAlive(), "he played every day");
+        assertEquals(GameState.RUNNING, game.getState());
+    }
+
+    @Test
+    void playersWhoNeverPlayedAreOutToo() {
+        config().set("varo.inactive-days", 2);
+        // in a team, but not there when the game starts
+        execute(alex, "sg leave");
+        startGame();
+        day(2);
+        assertTrue(participant(alex).isAlive());
+        day(3);
+        assertFalse(participant(alex).isAlive(), "missed the first two days");
+    }
+
+    @Test
+    void inactivePlayersStayByDefault() {
+        startGame();
+        seconds(1);
+        execute(alex, "sg leave");
+        day(10);
+        assertTrue(participant(alex).isAlive());
+    }
+
+    // coordinates
+
+    @Test
+    void coordinatesAreAnnouncedEveryDay() {
+        config().set("varo.coordinates-from-day", 3);
+        startGame();
+        seconds(1);
+        var position = alex.getLocation();
+        execute(alex, "sg leave");
+        messages(steve);
+
+        day(2);
+        assertNotContains(messages(steve), "this is where everybody is");
+        day(3);
+        var messages = messages(steve);
+        assertContains(messages, "Day 3 - this is where everybody is:");
+        assertContains(messages, "Steve Bears at " + steve.getLocation().getBlockX() + " " + steve.getLocation().getBlockY()
+                + " " + steve.getLocation().getBlockZ());
+        // where he left the game
+        assertContains(messages, "Alex Foxes at " + position.getBlockX() + " " + position.getBlockY() + " "
+                + position.getBlockZ());
+        day(4);
+        assertContains(messages(steve), "Day 4 - this is where everybody is:");
+    }
+
+    // the villager of players who leave the server
+
+    private List<Villager> npcs() {
+        return new ArrayList<>(game.getWorld().getEntitiesByClass(Villager.class));
+    }
+
+    @SuppressWarnings("removal")
+    private boolean attack(PlayerMock attacker, Entity victim) {
+        var event = new EntityDamageByEntityEvent(attacker, victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+                DamageSource.builder(DamageType.PLAYER_ATTACK).withCausingEntity(attacker).withDirectEntity(attacker)
+                        .build(), 5);
+        server.getPluginManager().callEvent(event);
+        return !event.isCancelled();
+    }
+
+    @Test
+    void aVillagerStandsInForPlayersWhoLeaveTheServer() {
+        startGame();
+        steve.setHealth(12);
+        var position = steve.getLocation();
+        steve.disconnect();
+
+        assertEquals(1, npcs().size());
+        Villager npc = npcs().getFirst();
+        assertEquals("Steve (offline)", PlainTextComponentSerializer.plainText().serialize(npc.customName()));
+        assertEquals(position.getBlockX(), npc.getLocation().getBlockX());
+        assertEquals(12, npc.getHealth());
+        assertFalse(npc.hasAI());
+        assertTrue(attack(admin, npc), "enemies can hurt it");
+
+        var fall = new EntityDamageEvent(npc, EntityDamageEvent.DamageCause.FALL, DamageSource.builder(DamageType.FALL).build(), 5);
+        server.getPluginManager().callEvent(fall);
+        assertTrue(fall.isCancelled(), "only players");
+
+        seconds(61);
+        assertTrue(npcs().isEmpty(), "gone after offline-npc-seconds");
+        assertTrue(participant(steve).isAlive());
+    }
+
+    @Test
+    void killingTheVillagerKillsThePlayer() {
+        startGame();
+        steve.getInventory().addItem(new ItemStack(Material.DIAMOND, 3));
+        steve.disconnect();
+        Villager npc = npcs().getFirst();
+        messages(admin);
+
+        npc.setKiller(admin);
+        npc.setHealth(0);
+        assertFalse(participant(steve).isAlive());
+        assertEquals(1, participant(admin).getKills());
+        assertContains(messages(admin), "Steve has left the server and was killed by Admin!");
+        assertTrue(game.getWorld().getEntitiesByClass(Item.class).stream()
+                .anyMatch(item -> item.getItemStack().getType() == Material.DIAMOND && item.getItemStack().getAmount() == 3),
+                "his items drop");
+        assertNotNull(game.getJoinDenial(steve.getUniqueId()), "he is out when he comes back");
+    }
+
+    @Test
+    void teamMatesAndOutsidersCantHurtTheVillager() {
+        PlayerMock bob = addPlayer("Bob");
+        execute(bob, "sg join varo1");
+        execute(bob, "sg team join Bears");
+        startGame();
+        steve.disconnect();
+        Villager npc = npcs().getFirst();
+        assertFalse(attack(bob, npc), "same team");
+        assertFalse(attack(addPlayer("Outsider"), npc), "not in the game");
+
+        config().set("varo.peaceful-days", 1);
+        assertFalse(attack(admin, npc), "no PvP");
+    }
+
+    @Test
+    void theDamageOfTheVillagerStaysWhenThePlayerComesBack() {
+        startGame();
+        steve.disconnect();
+        Villager npc = npcs().getFirst();
+        npc.setHealth(6);
+
+        steve.reconnect();
+        execute(steve, "sg join varo1");
+        assertSame(game, plugin.getUser(steve).getGame());
+        assertTrue(npcs().isEmpty());
+        assertEquals(6, steve.getHealth());
+    }
+
+    @Test
+    void noVillagerIfTurnedOffOrLeavingByCommand() {
+        startGame();
+        execute(alex, "sg leave");
+        assertTrue(npcs().isEmpty(), "only for players leaving the server");
+
+        config().set("varo.offline-npc-seconds", 0);
+        steve.disconnect();
+        assertTrue(npcs().isEmpty());
+    }
+
+    // backups
+
+    @Test
+    void backupsContainTheWorldAndTheGame(@org.junit.jupiter.api.io.TempDir File temp) throws IOException {
+        File worldFolder = new File(temp, "world");
+        assertTrue(new File(worldFolder, "region").mkdirs());
+        Files.writeString(new File(worldFolder, "level.dat").toPath(), "level");
+        Files.writeString(new File(worldFolder, "region/r.0.0.mca").toPath(), "region");
+        Files.writeString(new File(worldFolder, "session.lock").toPath(), "locked by the server");
+        File saved = new File(temp, "varo1.yml");
+        Files.writeString(saved.toPath(), "state: RUNNING");
+        File target = new File(temp, "2026-10-10.zip");
+
+        Backups.zip(worldFolder, saved, target);
+
+        try (ZipFile zip = new ZipFile(target)) {
+            List<String> names = zip.stream().map(ZipEntry::getName).sorted().toList();
+            assertEquals(List.of("game.yml", "world/level.dat", "world/region/r.0.0.mca"), names);
+            assertEquals("state: RUNNING", new String(zip.getInputStream(zip.getEntry("game.yml")).readAllBytes()));
+        }
+        assertFalse(new File(temp, "2026-10-10.zip.tmp").exists());
+    }
+
+    @Test
+    void onlyTheNewestBackupsAreKept(@org.junit.jupiter.api.io.TempDir File temp) throws IOException {
+        for (int day = 1; day <= 5; day++) {
+            File backup = new File(temp, "2026-10-0" + day + ".zip");
+            Files.writeString(backup.toPath(), "backup");
+            assertTrue(backup.setLastModified(1_700_000_000_000L + day * 86_400_000L));
+        }
+        Files.writeString(new File(temp, "notes.txt").toPath(), "not a backup");
+
+        Backups.prune(temp, 2);
+
+        assertEquals(List.of("2026-10-04.zip", "2026-10-05.zip", "notes.txt"),
+                java.util.Arrays.stream(temp.list()).sorted().toList());
+        Backups.prune(temp, 7);
+        assertEquals(3, temp.list().length);
+    }
+
+}

@@ -8,7 +8,15 @@ import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameManager;
 import com.christian34.survivalgames.game.Loot;
 import com.christian34.survivalgames.game.SignManager;
+import com.christian34.survivalgames.integrations.BedrockForms;
+import com.christian34.survivalgames.integrations.EconomySupport;
+import com.christian34.survivalgames.integrations.EssentialsSupport;
+import com.christian34.survivalgames.integrations.MultiverseSupport;
+import com.christian34.survivalgames.integrations.NpcSupport;
+import com.christian34.survivalgames.integrations.PartySupport;
 import com.christian34.survivalgames.integrations.SgExpansion;
+import com.christian34.survivalgames.integrations.SgMiniPlaceholders;
+import com.christian34.survivalgames.integrations.TabSupport;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.Sidebar;
 import com.christian34.survivalgames.lib.lang.I;
@@ -16,11 +24,21 @@ import com.christian34.survivalgames.listeners.PlayerListener;
 import com.christian34.survivalgames.listeners.ProtectionListener;
 import com.christian34.survivalgames.listeners.TeleportListener;
 import com.christian34.survivalgames.modules.Backpack;
+import com.christian34.survivalgames.modules.Bounty;
 import com.christian34.survivalgames.modules.BuildMode;
 import com.christian34.survivalgames.modules.ChestLock;
 import com.christian34.survivalgames.modules.GravityGrenade;
+import com.christian34.survivalgames.modules.InventoryView;
+import com.christian34.survivalgames.modules.Kits;
+import com.christian34.survivalgames.modules.OfflineNpc;
+import com.christian34.survivalgames.modules.Restrictions;
+import com.christian34.survivalgames.modules.Sponsor;
+import com.christian34.survivalgames.modules.SupplyDrop;
 import com.christian34.survivalgames.modules.ToxicRain;
+import com.christian34.survivalgames.modules.Tracker;
 import com.christian34.survivalgames.network.NetworkManager;
+import com.christian34.survivalgames.stats.Leaderboards;
+import com.christian34.survivalgames.stats.StatsManager;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -60,6 +78,21 @@ public class SurvivalGames extends JavaPlugin {
     private Backpack backpack;
     private GravityGrenade gravityGrenade;
     private Sidebar sidebar;
+    private StatsManager stats;
+    private Tracker tracker;
+    private SupplyDrop supplyDrop;
+    private InventoryView inventoryView;
+    private Kits kits;
+    private Bounty bounty;
+    private Sponsor sponsor;
+    private OfflineNpc offlineNpc;
+    private Leaderboards leaderboards;
+    private EssentialsSupport essentials = EssentialsSupport.NONE;
+    private TabSupport tabSupport = TabSupport.NONE;
+    private BedrockForms bedrockForms = BedrockForms.NONE;
+    private PartySupport partySupport;
+    private EconomySupport economySupport;
+    private NpcSupport npcSupport;
 
     public static SurvivalGames getInstance() {
         return instance;
@@ -68,11 +101,24 @@ public class SurvivalGames extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        // Multiverse may have loaded worlds of games again
+        MultiverseSupport.hook(this);
         // worlds of games that weren't stopped (crash)
         GameWorld.deleteLeftovers();
         this.fileManager = new FileManager();
         loadTexts();
         this.loot = new Loot(this);
+        this.stats = new StatsManager(this);
+        this.leaderboards = new Leaderboards(this);
+        this.inventoryView = new InventoryView(this);
+        this.kits = new Kits(this);
+        this.bounty = new Bounty(this);
+        this.sponsor = new Sponsor(this);
+        this.offlineNpc = new OfflineNpc(this);
+        this.essentials = EssentialsSupport.create(this);
+        this.tabSupport = TabSupport.create(this);
+        this.partySupport = new PartySupport(this);
+        this.economySupport = new EconomySupport(this);
         this.arenaManager = new ArenaManager(this);
         this.gameManager = new GameManager(this);
         this.networkManager = new NetworkManager(this);
@@ -80,9 +126,13 @@ public class SurvivalGames extends JavaPlugin {
         this.backpack = new Backpack(this);
         this.gravityGrenade = new GravityGrenade(this);
         this.sidebar = new Sidebar(this);
+        this.tracker = new Tracker(this);
+        this.supplyDrop = new SupplyDrop(this);
         networkManager.ensureGame();
         gameManager.createAutoGames();
         this.signManager = new SignManager(this);
+        this.npcSupport = new NpcSupport(this);
+        this.bedrockForms = BedrockForms.create(this);
         try {
             this.commandManager = new CommandManager(this);
         } catch (Exception | LinkageError ex) {
@@ -91,9 +141,18 @@ public class SurvivalGames extends JavaPlugin {
             Debug.warn("Couldn't register the commands of SurvivalGames: " + ex);
         }
         register(new PlayerListener(this), new ProtectionListener(this), new TeleportListener(this),
-                new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this));
+                new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this),
+                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc);
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new SgExpansion(this).register();
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("MiniPlaceholders")) {
+            try {
+                new SgMiniPlaceholders(this).register();
+                Debug.info("Hooked into MiniPlaceholders");
+            } catch (Exception | LinkageError ex) {
+                Debug.warn("Couldn't register the placeholders for MiniPlaceholders: " + ex);
+            }
         }
         // a reload: the players who are online already
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -104,10 +163,15 @@ public class SurvivalGames extends JavaPlugin {
     @Override
     public void onDisable() {
         if (gameManager != null) gameManager.stopAll();
+        // the NPCs don't show the state of games that don't exist any more
+        if (npcSupport != null) npcSupport.removeStatus();
         if (arenaManager != null) arenaManager.stopAll();
         if (buildMode != null) buildMode.restoreAll();
         if (backpack != null) backpack.removeRecipe();
         if (gravityGrenade != null) gravityGrenade.removeRecipe();
+        if (offlineNpc != null) offlineNpc.removeAll();
+        // after the games: their last statistics are saved
+        if (stats != null) stats.stop();
         users.clear();
     }
 
@@ -123,6 +187,7 @@ public class SurvivalGames extends JavaPlugin {
     public void reload() {
         fileManager.reloadConfig();
         loadTexts();
+        stats.reload();
     }
 
     private void loadTexts() {
@@ -152,6 +217,8 @@ public class SurvivalGames extends JavaPlugin {
      * only see the players outside of games
      */
     public void updateVisibility() {
+        // Paper refuses hidePlayer for a disabled plugin (onDisable: the games are stopped after disabling)
+        if (!isEnabled()) return;
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             GamePlayer viewerUser = getUser(viewer);
             for (Player target : Bukkit.getOnlinePlayers()) {
@@ -231,6 +298,87 @@ public class SurvivalGames extends JavaPlugin {
 
     public Sidebar getSidebar() {
         return sidebar;
+    }
+
+    public StatsManager getStats() {
+        return stats;
+    }
+
+    public Tracker getTracker() {
+        return tracker;
+    }
+
+    public SupplyDrop getSupplyDrop() {
+        return supplyDrop;
+    }
+
+    public InventoryView getInventoryView() {
+        return inventoryView;
+    }
+
+    public Kits getKits() {
+        return kits;
+    }
+
+    public Leaderboards getLeaderboards() {
+        return leaderboards;
+    }
+
+    public Bounty getBounty() {
+        return bounty;
+    }
+
+    public Sponsor getSponsor() {
+        return sponsor;
+    }
+
+    public OfflineNpc getOfflineNpc() {
+        return offlineNpc;
+    }
+
+    public EssentialsSupport getEssentials() {
+        return essentials;
+    }
+
+    /**
+     * only for the tests: a fake of EssentialsX
+     */
+    public void setEssentials(EssentialsSupport essentials) {
+        this.essentials = essentials;
+    }
+
+    public TabSupport getTabSupport() {
+        return tabSupport;
+    }
+
+    /**
+     * only for the tests: a fake of TAB
+     */
+    public void setTabSupport(TabSupport tabSupport) {
+        this.tabSupport = tabSupport;
+    }
+
+    public BedrockForms getBedrockForms() {
+        return bedrockForms;
+    }
+
+    /**
+     * only for the tests: a fake of Floodgate
+     */
+    public void setBedrockForms(BedrockForms bedrockForms) {
+        this.bedrockForms = bedrockForms;
+    }
+
+    public PartySupport getPartySupport() {
+        return partySupport;
+    }
+
+    public EconomySupport getEconomySupport() {
+        return economySupport;
+    }
+
+    public NpcSupport getNpcSupport() {
+        return npcSupport;
     }
 
 }

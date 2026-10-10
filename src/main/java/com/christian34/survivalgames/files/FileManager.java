@@ -50,7 +50,7 @@ public class FileManager {
      */
     public void reloadConfig() {
         this.configFile = new ConfigFile();
-        this.lootFile = new ResourceFile("loot.yml");
+        this.lootFile = new ResourceFile("loot.yml", "containers", "upgrades");
     }
 
     private void load() {

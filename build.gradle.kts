@@ -18,6 +18,19 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.extendedclip.com/releases/")
+    // party plugins (integrations/PartySupport)
+    maven("https://repo.alessiodp.com/releases/") { content { includeGroup("com.alessiodp.parties") } }
+    maven("https://simonsator.de/repo/") { content { includeGroup("de.simonsator") } }
+    // NPC plugins (integrations/NpcSupport), Floodgate (integrations/BedrockForms)
+    maven("https://maven.citizensnpcs.co/repo") { content { includeGroup("net.citizensnpcs") } }
+    maven("https://repo.fancyinnovations.com/releases") { content { includeGroup("de.oliver") } }
+    maven("https://repo.opencollab.dev/main/") { content { includeGroupByRegex("org\\.geysermc.*") } }
+    // TAB, EssentialsX, Multiverse (integrations/TabSupport, EssentialsSupport, MultiverseSupport)
+    maven("https://jitpack.io") { content { includeGroup("com.github.NEZNAMY") } }
+    maven("https://repo.essentialsx.net/releases/") { content { includeGroup("net.essentialsx") } }
+    maven("https://repo.onarandombox.com/multiverse-releases") { content { includeGroupByRegex("org\\.mvplugins.*") } }
+    // VaultUnlocked API (integrations/EconomySupport)
+    maven("https://repo.codemc.io/repository/creatorfromhell/") { content { includeGroup("net.milkbowl.vault") } }
 }
 
 // the Paper version the plugin is built for; -PpaperApi=<version> compiles against a newer one to find API changes
@@ -30,6 +43,29 @@ dependencies {
     compileOnly("org.jetbrains:annotations:26.1.0")
     // optional: placeholders for other plugins (integrations/SgExpansion)
     compileOnly("me.clip:placeholderapi:2.12.3")
+    // optional: parties join together and play in the same team (integrations/PartySupport)
+    compileOnly("com.alessiodp.parties:parties-api:3.2.18")
+    compileOnly("de.simonsator:spigot-party-api-for-party-and-friends:1.0.7-RELEASE") { isTransitive = false }
+    compileOnly("de.simonsator:Party-and-Friends-MySQL-Edition-Spigot-API:1.6.2-RELEASE") { isTransitive = false }
+    // optional: join NPCs (integrations/NpcSupport)
+    compileOnly("net.citizensnpcs:citizens-main:2.0.44-SNAPSHOT") { isTransitive = false }
+    compileOnly("de.oliver:FancyNpcs:2.11.0") { isTransitive = false }
+    // optional: forms instead of chest menus for Bedrock players (integrations/BedrockForms)
+    // not transitive: geyser-common contains an old Gson, which would hide the one of Paper
+    compileOnly("org.geysermc.floodgate:api:2.2.5-SNAPSHOT") { isTransitive = false }
+    compileOnly("org.geysermc.cumulus:cumulus:1.1.2") { isTransitive = false }
+    // optional: placeholders for MiniMessage texts of other plugins (integrations/SgMiniPlaceholders)
+    compileOnly("io.github.miniplaceholders:miniplaceholders-api:3.2.0")
+    // optional: TAB doesn't overwrite tab list names, name tags and sidebar in games (integrations/TabSupport)
+    compileOnly("com.github.NEZNAMY:TAB-API:6.1.2") { isTransitive = false }
+    // optional: god mode, vanish, /back, ... (integrations/EssentialsSupport)
+    compileOnly("net.essentialsx:EssentialsX:2.21.2") { isTransitive = false }
+    // optional: the worlds of games aren't managed by Multiverse (integrations/MultiverseSupport)
+    compileOnly("org.mvplugins.multiverse.core:multiverse-core:5.8.1") { isTransitive = false }
+    compileOnly("org.mvplugins.multiverse.inventories:multiverse-inventories:5.3.6") { isTransitive = false }
+    // optional: money for kills, wins and games (integrations/EconomySupport); VaultUnlocked (the Vault fork) contains
+    // the legacy Vault api (net.milkbowl.vault) and its new one (net.milkbowl.vault2)
+    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.20") { isTransitive = false }
 
     implementation("org.incendo:cloud-annotations:2.1.0")
     implementation("org.incendo:cloud-paper:2.0.1")
@@ -42,6 +78,10 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains:annotations:26.1.0")
     testImplementation("me.clip:placeholderapi:2.12.3")
+    testImplementation("io.github.miniplaceholders:miniplaceholders-api:3.2.0")
+    testImplementation("net.milkbowl.vault:VaultUnlockedAPI:2.20") { isTransitive = false }
+    // the database of the statistics (MySQL on the servers, which ship its driver) - H2 speaks its dialect
+    testRuntimeOnly("com.h2database:h2:2.3.232")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -165,8 +205,14 @@ modrinth {
     detectLoaders = false
     changelog = releaseNotes
     debugMode = providers.gradleProperty("publishDryRun").isPresent
+    // the optional integrations available on Modrinth (Citizens isn't, Floodgate only for mod loaders)
     dependencies {
-        optional.project("placeholderapi")
+        for (slug in listOf(
+            "placeholderapi", "miniplaceholders", "parties", "fancynpcs", "vaultunlocked", "tab-was-taken",
+            "essentialsx", "multiverse-core", "multiverse-inventories"
+        )) {
+            optional.project(slug)
+        }
     }
 }
 
@@ -182,8 +228,15 @@ hangarPublish {
             paper {
                 jar = tasks.shadowJar.flatMap { it.archiveFile }
                 platformVersions = minecraftVersions
+                // the optional integrations (Vault = VaultUnlocked on Hangar, Party and Friends isn't there)
                 dependencies {
-                    hangar("PlaceholderAPI") { required = false }
+                    for (slug in listOf(
+                        "PlaceholderAPI", "MiniPlaceholders", "Parties", "FancyNpcs", "VaultUnlocked", "TAB",
+                        "Essentials", "Multiverse-Core", "Multiverse-Inventories", "Floodgate"
+                    )) {
+                        hangar(slug) { required = false }
+                    }
+                    url("Citizens", "https://www.spigotmc.org/resources/citizens.13811/") { required = false }
                 }
             }
         }

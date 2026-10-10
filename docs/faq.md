@@ -45,3 +45,26 @@ Yes: change `config.yml` and run `/sg reload`. Arenas can't be changed while the
 
 `/sg game <arena> reset --confirm` starts again from the lobby with a fresh world, everybody is alive again (the teams
 stay). To start with new teams: `/sg game <arena> reset --teams --confirm`.
+
+## Bounties and sponsors say they need an economy plugin
+
+Install [Vault](integrations.md#economy) (or VaultUnlocked) **and** an economy plugin (e.g. EssentialsX). Free items
+of the sponsors (`price: 0`) and the reward commands work without one.
+
+## A player left the server during a fight in a Varo
+
+A villager with their name stands in for them for `varo.offline-npc-seconds`. If an enemy kills it, the player is
+out and their items drop – see the [optional rules](varo.md#optional-rules). `0` turns it off.
+
+## An item, potion or enchantment is too strong for our Varo
+
+Ban it: `modules.restrictions` in `config.yml`, see [banned items](varo.md#banned-items).
+
+## How do I go back to yesterday in a Varo?
+
+Every day the world and the game are saved as a zip file – see [backups](varo.md#backups).
+
+## The leaderboard hologram or sign is empty
+
+The top lists are updated every minute and need `stats.enabled: true`. The rating is only counted in the game types
+of `stats.rating.games`.

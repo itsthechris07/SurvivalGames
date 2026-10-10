@@ -33,7 +33,7 @@ stand at the right place and run:
 |---|---|
 | `/sg arena <name> lobby` | where the players wait before the game (default: the center) |
 | `/sg arena <name> center` | the middle of the world border, the spawn circle and the deathmatch (default: the world spawn) |
-| `/sg arena <name> spawn add` | a spawn point (the middle of the block, looking straight) – once per player |
+| `/sg arena <name> spawn add` | a spawn point (the middle of the block you stand on; the players look at the center) – once per player |
 
 `/sg arena save` saves the copy back into the map and teleports you back. Without spawn points the players spawn in a
 circle around the center (`spawn-circle-radius`).
@@ -52,6 +52,8 @@ More settings: `/sg arena <name> players <min> <max>`, `teamsize <size>`, `borde
 - a **sign** with `[sg]` in the first line and the arena in the second (only admins can create it). It shows the state
   and the players, a click joins the game (or watches it while it runs). Sneak to break it.
 - `/sg spectate [arena]` to watch a running game
+- a **join NPC** of Citizens or FancyNpcs: `/sg npc link <arena>` and a click on the NPC – see
+  [Integrations](integrations.md#join-npcs)
 
 A round of Survival Games starts by itself once enough players are there; admins can start it right away with
 `/sg game <arena> start` (`--force`: with fewer players). A Varo starts with `/sg game <arena> start`.

@@ -17,6 +17,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.incendo.cloud.annotation.specifier.Greedy;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
 import org.incendo.cloud.annotations.CommandDescription;
@@ -33,7 +34,8 @@ import static com.christian34.survivalgames.commands.CommandSurvivalGames.ADMIN;
 import static com.christian34.survivalgames.commands.CommandSurvivalGames.ROOT;
 
 /**
- * /sg game &lt;arena&gt;: admins start, stop and reset the game of an arena, revive players and manage its teams.
+ * /sg game &lt;arena&gt;: admins start, stop and reset the game of an arena, revive players, give strikes (Varo) and
+ * manage its teams.
  *
  * @author Christian34
  */
@@ -173,6 +175,98 @@ public class CommandGame {
             return;
         }
         sg.startDeathmatch();
+    }
+
+    // ---------------------------------------------------------------- strikes (Varo)
+
+    /**
+     * @return the Varo of the arena, null if it has none (the sender got a message)
+     */
+    @Nullable
+    private static VaroGame varo(CommandSender sender, Arena arena) {
+        Game game = game(sender, arena);
+        if (game == null || game instanceof VaroGame) return (VaroGame) game;
+        send(sender, LangText.ONLY_VARO);
+        return null;
+    }
+
+    @Suggestions("participants")
+    public List<String> participants(CommandContext<CommandSender> context, String input) {
+        Arena arena = context.getOrDefault("arena", null);
+        Game game = arena == null ? null : plugin().getGameManager().getGame(arena);
+        if (game == null) return List.of();
+        return game.getParticipants().stream().map(Participant::getName).toList();
+    }
+
+    @Command(GAME + " strike <player> [reason]")
+    @CommandDescription("command_game_strike")
+    @Permission(ADMIN)
+    public void strikeCmd(CommandSender sender, @Argument("arena") Arena arena,
+                          @Argument(value = "player", suggestions = "participants") String name,
+                          @Argument("reason") @Greedy @Nullable String reason) {
+        VaroGame varo = varo(sender, arena);
+        if (varo == null) return;
+        Participant participant = varo.findParticipant(name);
+        if (participant == null) {
+            send(sender, LangText.PLAYER_NOT_FOUND);
+            return;
+        }
+        if (varo.getState() != GameState.RUNNING) {
+            send(sender, LangText.NOT_RUNNING);
+            return;
+        }
+        String text = reason == null || reason.isBlank() ? I.plain(LangText.STRIKE_NO_REASON) : reason.trim();
+        int number = varo.strike(participant, text, sender.getName());
+        // the announcement only reaches the players of the Varo
+        if (!(sender instanceof Player player) || varo.getParticipant(player.getUniqueId()) == null
+                && !varo.isMember(player)) {
+            send(sender, LangText.STRIKE_GIVEN, participant.getName(), number, text);
+        }
+    }
+
+    @Command(GAME + " unstrike <player>")
+    @CommandDescription("command_game_unstrike")
+    @Permission(ADMIN)
+    public void unstrikeCmd(CommandSender sender, @Argument("arena") Arena arena,
+                            @Argument(value = "player", suggestions = "participants") String name) {
+        VaroGame varo = varo(sender, arena);
+        if (varo == null) return;
+        Participant participant = varo.findParticipant(name);
+        if (participant == null) {
+            send(sender, LangText.PLAYER_NOT_FOUND);
+        } else if (varo.removeStrike(participant) == null) {
+            send(sender, LangText.NO_STRIKE_TO_REMOVE, participant.getName());
+        } else {
+            send(sender, LangText.STRIKE_REMOVED, participant.getName(), participant.getStrikes().size());
+        }
+    }
+
+    @Command(GAME + " strikes [player]")
+    @CommandDescription("command_game_strikes")
+    @Permission(ADMIN)
+    public void strikesCmd(CommandSender sender, @Argument("arena") Arena arena,
+                           @Argument(value = "player", suggestions = "participants") @Nullable String name) {
+        VaroGame varo = varo(sender, arena);
+        if (varo == null) return;
+        if (name != null) {
+            Participant participant = varo.findParticipant(name);
+            if (participant == null) {
+                send(sender, LangText.PLAYER_NOT_FOUND);
+            } else {
+                CommandSurvivalGames.showStrikes(sender, participant);
+            }
+            return;
+        }
+        List<Participant> struck = varo.getParticipants().stream().filter(p -> !p.getStrikes().isEmpty()).toList();
+        if (struck.isEmpty()) {
+            send(sender, LangText.NO_STRIKES, arena.getName());
+            return;
+        }
+        sender.sendMessage(I.i18n(LangText.STRIKES_LIST_TITLE, arena.getName()));
+        for (Participant participant : struck) {
+            sender.sendMessage(I.i18n(LangText.STRIKES_LIST_ENTRY, participant.getName(),
+                    participant.getStrikes().size(), arena.getName()));
+        }
     }
 
     // ---------------------------------------------------------------- teams

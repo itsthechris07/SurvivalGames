@@ -218,7 +218,7 @@ public class SignManager implements Listener {
      * @return the name of the arena or server, null if it doesn't exist (the sender got a message)
      */
     @Nullable
-    private String resolveTarget(CommandSender sender, String name) {
+    public String resolveTarget(CommandSender sender, String name) {
         if (plugin.getNetworkManager().isLobby()) {
             NetworkManager.Server server = plugin.getNetworkManager().getServer(name);
             if (server == null) {
@@ -243,14 +243,23 @@ public class SignManager implements Listener {
         if (sign == null) return;
         // no sign editor
         e.setCancelled(true);
-        Player player = e.getPlayer();
+        join(e.getPlayer(), sign.target());
+    }
+
+    /**
+     * the player clicked a join sign or NPC: he joins the game of the arena (or watches it), on a lobby server he is
+     * sent to the game server
+     *
+     * @param target the arena, on a lobby server the game server
+     */
+    public void join(Player player, String target) {
         if (plugin.getNetworkManager().isLobby()) {
-            plugin.getNetworkManager().joinServer(player, sign.target());
+            plugin.getNetworkManager().joinServer(player, target);
             return;
         }
-        Arena arena = plugin.getArenaManager().get(sign.target());
+        Arena arena = plugin.getArenaManager().get(target);
         if (arena == null) {
-            player.sendMessage(I.prefixed(LangText.ARENA_NOT_FOUND, sign.target()));
+            player.sendMessage(I.prefixed(LangText.ARENA_NOT_FOUND, target));
             return;
         }
         plugin.getGameManager().join(plugin.getUser(player), arena);

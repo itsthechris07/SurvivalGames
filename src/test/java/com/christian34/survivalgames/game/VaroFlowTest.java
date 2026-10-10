@@ -320,6 +320,74 @@ class VaroFlowTest extends PluginTestBase {
     }
 
     @Test
+    void strikesHaveTheirConsequences() {
+        startGame();
+        steve.getInventory().addItem(new ItemStack(Material.DIRT, 5));
+        Location position = steve.getLocation();
+
+        execute(admin, "sg game varo1 strike Steve camping at the spawn");
+        var messages = messages(steve);
+        assertContains(messages, "Steve has got strike #1: camping at the spawn");
+        assertContains(messages, "The position of Steve is " + position.getBlockX() + " " + position.getBlockY() + " "
+                + position.getBlockZ());
+
+        execute(admin, "sg game varo1 strike Steve");
+        assertContains(messages(steve), "Steve has got strike #2: no reason given");
+        assertFalse(steve.getInventory().contains(Material.DIRT), "the inventory has been cleared");
+
+        execute(steve, "sg strikes");
+        messages = messages(steve);
+        assertContains(messages, "Strikes of Steve (2):");
+        assertContains(messages, "#1 camping at the spawn - Admin");
+
+        execute(admin, "sg game varo1 strike Steve");
+        assertFalse(participant(steve).isAlive(), "out after the third strike");
+        assertEquals(GameState.ENDED, game.getState());
+        assertTrue(plugin.getUser(steve).isSpectator());
+    }
+
+    @Test
+    void strikesOfPlayersOutsideTheGameUseTheirSavedState() {
+        startGame();
+        steve.getInventory().addItem(new ItemStack(Material.DIRT, 5));
+        Location position = steve.getLocation();
+        execute(steve, "sg leave");
+        messages(steve);
+
+        execute(admin, "sg game varo1 strike Steve");
+        // he still gets the announcement as a participant
+        assertContains(messages(steve), "The position of Steve is " + position.getBlockX());
+        execute(admin, "sg game varo1 strike Steve");
+        execute(steve, "sg join varo1");
+        assertFalse(steve.getInventory().contains(Material.DIRT), "the inventory in the game has been cleared");
+    }
+
+    @Test
+    void strikesCanBeRemovedAndAreSaved() {
+        startGame();
+        execute(admin, "sg game varo1 strike Steve one");
+        execute(admin, "sg game varo1 strike Steve two");
+        execute(admin, "sg game varo1 unstrike Steve");
+        assertContains(messages(admin), "The last strike of Steve has been removed (1 left).");
+        execute(admin, "sg game varo1 strikes");
+        assertContains(messages(admin), "Steve: 1");
+
+        plugin.getGameManager().stopGame(game, false);
+        VaroGame loaded = (VaroGame) plugin.getGameManager().createGame(game.getArena());
+        var strikes = loaded.getParticipant(steve.getUniqueId()).getStrikes();
+        assertEquals(1, strikes.size());
+        assertEquals("one", strikes.getFirst().reason());
+        assertEquals("Admin", strikes.getFirst().by());
+    }
+
+    @Test
+    void strikesOnlyInARunningVaro() {
+        execute(admin, "sg game varo1 strike Steve");
+        assertContains(messages(admin), "The game is not running.");
+        assertTrue(participant(steve).getStrikes().isEmpty());
+    }
+
+    @Test
     void infoShowsTheGame() {
         startGame();
         execute(steve, "sg info");

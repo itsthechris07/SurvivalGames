@@ -1,5 +1,5 @@
-# The loot of the chests, barrels and trapped chests in Survival Games. Every container gets a random number of items
-# (items.min to items.max) when it is opened the first time and again after every refill.
+# The loot of the chests, barrels and trapped chests in Survival Games and of the supply drops. Every container gets
+# a random number of items (items.min to items.max) when it is opened the first time and again after every refill.
 # item: like in /give (iron_sword, potion[potion_contents={potion:"healing"}], diamond_sword[enchantments={sharpness:1}])
 # amount: a number or a range (1-3)
 # weight: how often the item is chosen compared to the others (default 1)
@@ -11,6 +11,18 @@ items:
 
 # containers this close to the center of the arena (blocks) get the center loot (0: only the normal loot)
 center-radius: 25
+
+# the loot table of every kind of container (chest, trapped_chest, barrel): normal, center, supply or a table of your
+# own (a list of items like normal below) - the center loot only replaces the normal loot
+containers:
+  chest: normal
+  barrel: normal
+  trapped_chest: center
+
+# better loot after refills: from the 2nd refill on the containers with normal loot get the center loot
+# (<refills>: { <table>: <better table> })
+upgrades:
+  2: { normal: center }
 
 normal:
   - { item: wooden_sword, weight: 8 }
@@ -67,3 +79,28 @@ center:
   - { item: experience_bottle, amount: 1-3, weight: 3 }
   - { item: "splash_potion[potion_contents={potion:\"healing\"}]", weight: 2 }
   - { item: "potion[potion_contents={potion:\"swiftness\"}]", weight: 2 }
+
+# the chests of the supply drops (modules.supply-drop in config.yml): number of items and the loot
+supply-items:
+  min: 5
+  max: 8
+
+supply:
+  - { item: iron_sword, weight: 4 }
+  - { item: diamond_sword, weight: 1 }
+  - { item: diamond_axe, weight: 1 }
+  - { item: bow, weight: 3 }
+  - { item: "bow[enchantments={power:1}]", weight: 2 }
+  - { item: arrow, amount: 8-16, weight: 5 }
+  - { item: iron_helmet, weight: 3 }
+  - { item: iron_chestplate, weight: 3 }
+  - { item: iron_leggings, weight: 3 }
+  - { item: iron_boots, weight: 3 }
+  - { item: diamond_helmet, weight: 1 }
+  - { item: diamond_boots, weight: 1 }
+  - { item: golden_apple, amount: 1-2, weight: 4 }
+  - { item: cooked_beef, amount: 2-4, weight: 4 }
+  - { item: ender_pearl, amount: 1-2, weight: 2 }
+  - { item: experience_bottle, amount: 2-4, weight: 3 }
+  - { item: "splash_potion[potion_contents={potion:\"healing\"}]", weight: 3 }
+  - { item: "potion[potion_contents={potion:\"strength\"}]", weight: 1 }

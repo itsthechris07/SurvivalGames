@@ -17,6 +17,26 @@ date-format: "dd.MM.yyyy HH:mm"
 # the sidebar of the players in a game (players, team, kills, countdowns, play time left)
 scoreboard: true
 
+# the statistics of the players per game type (games, wins, kills, deaths): /sg stats, /sg top and the placeholders
+# %sg_stats_...% and %sg_top_...%
+stats:
+  enabled: true
+  # file: plugins/SurvivalGames/stats.yml
+  # mysql: a MySQL/MariaDB database - the servers of a network share the statistics this way (/sg reload after a change)
+  storage: file
+  mysql:
+    url: "jdbc:mysql://localhost:3306/minecraft"
+    user: minecraft
+    password: ""
+    # the table is created if it doesn't exist
+    table: sg_stats
+  # the Elo rating of the players in the game types: winning against strong players brings more than against weak
+  # ones (everybody starts with 1000, /sg top rating) - the change of a game is at most k-factor
+  rating:
+    enabled: true
+    games: [ survival-games ]
+    k-factor: 32
+
 # standalone: the games run next to each other on this server (players join with /sg join or a [sg] sign)
 # game: this server runs exactly one game (network.arena), the players come from the lobby server and go back there
 #   after the game - players who can't play are turned away before they connect (except ops)
@@ -71,6 +91,8 @@ survival-games:
   monsters: false
   # the time of day (fixed, 6000: noon)
   time: 6000
+  # players make progress in their advancements while they are in the game
+  advancements: false
   # players can break and place every block (otherwise only the blocks below and the ones placed in the game)
   building: false
   breakable-blocks: [ cobweb, short_grass, tall_grass, fern, large_fern, dead_bush, oak_leaves, birch_leaves, spruce_leaves, jungle_leaves, acacia_leaves, dark_oak_leaves, cake, tnt ]
@@ -78,6 +100,14 @@ survival-games:
   world-border:
     # the size (blocks) of the world border around the center (0: none)
     size: 500
+    # the border starts shrinking ... minutes after the start (0: only in the deathmatch) and is final-size blocks wide
+    # after shrink-minutes - everybody is warned a minute before
+    shrink-after: 8
+    shrink-minutes: 7
+    final-size: 150
+    # damage per second for every block outside of the border (2 = one heart), starting ... blocks outside of it
+    damage: 1.0
+    buffer: 0
   deathmatch:
     # the deathmatch starts after ... minutes (0: never) or once only ... players are left (0: never)
     minutes: 20
@@ -89,6 +119,22 @@ survival-games:
     border-size: 75
     final-border-size: 15
     border-minutes: 3
+  # lightnings (without damage) show where every player alive is - nobody can hide: every interval seconds after
+  # ... minutes or once only ... players are left (0: never)
+  reveal:
+    minutes: 12
+    players: 3
+    interval: 60
+  # the players vote for the map in the lobby: the arena of the game and other arenas of Survival Games nobody waits
+  # in (same team size) - the votes are counted end-seconds before the start, then everybody moves into the arena that
+  # has won (not on a game server of a network). Players with sg.vote.2 ... sg.vote.5 have more votes
+  map-voting:
+    enabled: true
+    # the number of maps to choose from (the arena of the game is one of them)
+    maps: 5
+    end-seconds: 10
+  # fireworks for the winners
+  fireworks: true
   # seconds after the end until the next round (everybody leaves the arena)
   ending-seconds: 15
 
@@ -107,19 +153,85 @@ varo:
   join-protection: 10
   # the play time doesn't run out while an enemy is this close (blocks, 0: always runs out) - you can't log out of a fight
   combat-radius: 20
+  # a villager stands in for a player who leaves the server for ... seconds (0: none) - whoever kills it kills the
+  # player, damage it takes stays when he comes back
+  offline-npc-seconds: 60
   friendly-fire: false
   # players who are out of the game can watch (otherwise they can't join anymore)
   spectators: true
+  # fireworks for the winners
+  fireworks: true
+  # players make progress in their advancements while they are in the game
+  advancements: false
+  # what happens at the 1st, 2nd, 3rd, ... strike of an admin (/sg game <arena> strike): coordinates (the position
+  # of the player is announced), inventory (his inventory in the game is cleared), out (he is out of the game),
+  # warning (nothing else) - strikes beyond the list are only warnings
+  strikes: [ coordinates, inventory, out ]
+  # no PvP during the first ... days of the game (0: PvP from the start)
+  peaceful-days: 0
+  # players who haven't played for ... days in a row are out of the game (0: never)
+  inactive-days: 0
+  # from day ... on the positions of all players alive are announced at the start of every day (0: never)
+  coordinates-from-day: 0
+  # the world and the game are saved as backups/<arena>/<day>.zip in the plugin folder when the game begins and
+  # every day - the newest ... are kept (0: no backups)
+  backups: 7
   world-border:
     # the size (blocks) of the world border when the game starts around the center (0: no border)
     size: 2000
-    # blocks the border shrinks every day
+    # blocks the border shrinks every day (within 10 minutes after the new day begins)
     shrink-per-day: 100
     # the border doesn't get smaller than this
     min-size: 200
+    # damage per second for every block outside of the border (2 = one heart), starting ... blocks outside of it
+    damage: 0.2
+    buffer: 5
 
 # games: the game types the module is used in (survival-games, varo)
 modules:
+  inventory-view:
+    # who was killed can look at the inventory, armor, health and effects of the killer (a clickable message), the
+    # killer at those of the victim and at the end everybody at those of the winners
+    enabled: true
+    games: [ survival-games, varo ]
+  kits:
+    # the players choose a kit in the lobby and get it when the game begins - admins save their inventory as kit
+    # (/sg kit create <name> [--permission]), kits with a permission need sg.kit.<name>
+    enabled: true
+    games: [ survival-games ]
+    # the kit of players who didn't choose one (empty: none)
+    default: ""
+  bounty:
+    # players put money (economy plugin via Vault) on a player alive: /sg bounty <player> <amount> - whoever kills him
+    # gets all of it, otherwise (he dies otherwise or wins, the round is stopped) it is paid back
+    enabled: true
+    games: [ survival-games, varo ]
+    min: 10
+    # the highest bounty a player can put on somebody at once (0: no limit)
+    max: 0
+  restrictions:
+    # rules for items: banned items can't be crafted, picked up or used and are taken away, banned potions can't be
+    # brewed or drunk (strength also bans strong_strength and long_strength), enchantments are lowered to their limit
+    # (0: banned) - e.g. banned-items: [ totem_of_undying, end_crystal ], max-enchantments: { sharpness: 3 }
+    enabled: true
+    games: [ varo ]
+    banned-items: [ ]
+    banned-potions: [ ]
+    max-enchantments: { }
+  sponsor:
+    # spectators (also players who are out) send items to the players alive and pay with the money of an economy
+    # plugin (Vault): /sg sponsor - item like in /give, amount, price (0: free)
+    enabled: true
+    games: [ survival-games ]
+    # seconds between two items of the same spectator
+    cooldown: 30
+    items:
+      - { item: cooked_beef, amount: 4, price: 10 }
+      - { item: arrow, amount: 16, price: 20 }
+      - { item: golden_apple, price: 50 }
+      - { item: "splash_potion[potion_contents={potion:\"healing\"}]", price: 40 }
+      - { item: iron_chestplate, price: 80 }
+      - { item: ender_pearl, price: 60 }
   backpack:
     # a crafted backpack (leather around a chest, a diamond at the bottom)
     enabled: true
@@ -138,6 +250,21 @@ modules:
     enabled: true
     games: [ varo, survival-games ]
     radius: 6
+  tracker:
+    # a compass that points at the nearest enemy (holding it shows his name and distance) - Survival Games: everybody
+    # alive gets one when the grace period is over, Varo: on the spawn point
+    enabled: true
+    games: [ survival-games ]
+  supply-drop:
+    # every ... minutes a chest with the supply loot of loot.yml lands at a random place near the center, announced
+    # with its coordinates (not in the deathmatch)
+    enabled: true
+    games: [ survival-games ]
+    minutes: 4
+    # seconds between the announcement and the landing
+    warning: 20
+    # the greatest distance from the center (blocks, always inside the world border)
+    radius: 100
   toxic-rain:
     # some rains hurt everybody under the open sky (never kills)
     enabled: true
@@ -146,3 +273,34 @@ modules:
     chance: 30
     # damage every 2 seconds (2 = one heart)
     damage: 1.0
+
+# money of an economy plugin for every game type (needs Vault or VaultUnlocked and an economy plugin, e.g.
+# EssentialsX), 0 = nothing
+rewards:
+  enabled: false
+  kill: 5
+  # every player of the winning team (also offline in a Varo)
+  win: 50
+  # every player who took part, at the end of the game
+  game: 10
+  # commands of the console ({player}, {uuid}, {arena}, {type}), also without an economy plugin - "[10s] ..." runs
+  # the command 10 seconds later, e.g. "give {player} diamond 1"
+  commands:
+    kill: []
+    win: []
+    game: []
+
+# parties of the plugins Parties or Party and Friends (in a network: "Spigot Party API for Party and Friends" on the
+# game servers; the proxy plugins take the members along when the leader is sent to a game server)
+parties:
+  enabled: true
+  # the party leader takes the members of their party on this server into the lobby (/sg join, join signs and NPCs)
+  join-together: true
+  # parties play in the same team (with team-size > 1) - in the team a member chose, otherwise in a team with room
+  # for all of them
+  same-team: true
+
+# join NPCs of Citizens or FancyNpcs (/sg npc link <arena>)
+npcs:
+  # linked NPCs show the state of the game (Citizens: an extra hologram line, FancyNpcs: behind the display name)
+  show-status: true

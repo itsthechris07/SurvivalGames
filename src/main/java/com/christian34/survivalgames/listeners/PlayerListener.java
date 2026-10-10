@@ -6,10 +6,12 @@ import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.game.SurvivalGame;
+import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
 import com.christian34.survivalgames.user.UserStorage;
+import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import io.papermc.paper.chat.ChatRenderer;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
@@ -141,7 +143,8 @@ public class PlayerListener implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (game instanceof SurvivalGame sg && sg.isGracePeriod()) {
+        boolean peaceful = game instanceof SurvivalGame sg ? sg.isGracePeriod() : game instanceof VaroGame varo && varo.isPeaceful();
+        if (peaceful) {
             e.setCancelled(true);
             return;
         }
@@ -157,12 +160,22 @@ public class PlayerListener implements Listener {
     }
 
     @Nullable
-    private static Player getAttacker(Entity damager) {
+    public static Player getAttacker(Entity damager) {
         if (damager instanceof Player player) return player;
         if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) {
             return shooter;
         }
         return null;
+    }
+
+    /**
+     * players in a game don't make progress in the advancements (advancements of the game type) - they belong to the
+     * normal worlds
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onAdvancement(PlayerAdvancementCriterionGrantEvent e) {
+        Game game = getGame(e.getPlayer());
+        if (game != null && !game.getArena().settings().getBoolean("advancements")) e.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)

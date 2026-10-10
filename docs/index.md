@@ -1,5 +1,7 @@
 # SurvivalGames
 
+![SurvivalGames](assets/banner.png)
+
 **Survival Games** and **Varo** for Paper – several games next to each other on one server, or one game per server in
 a network.
 
@@ -8,16 +10,19 @@ a network.
 - **Varo:** teams play in the same world for days. **Every player may only play a few minutes per day and is out after
   the first death.** The last team standing wins.
 
+![Two games, one plugin](assets/how-it-works.png)
+
 ## Where to start
 
 <div class="grid cards" markdown>
 
 - **[Getting started](getting-started.md)** – install the plugin, set up an arena and start the first game
-- **[Survival Games](survival-games.md)** – lobby, loot, grace period, deathmatch
-- **[Varo](varo.md)** – play time per day, one life, the world border, the extras
+- **[Survival Games](survival-games.md)** – map voting, kits, loot, grace period, bounties, sponsors, deathmatch
+- **[Varo](varo.md)** – play time per day, one life, the world border, optional rules, backups, the extras
 - **[Network](network.md)** – one game per server behind Velocity or BungeeCord, the lobby server
+- **[Integrations](integrations.md)** – Vault, parties, join NPCs, Bedrock forms, TAB, EssentialsX, Multiverse
 - **[Commands and permissions](commands.md)** – everything under `/sg`
-- **[Configuration](configuration.md)** – `config.yml` and `loot.yml`
+- **[Configuration](configuration.md)** – `config.yml` and `loot.yml`, statistics, rating, leaderboards, rewards
 - **[Messages and languages](customization.md)** – English, German or your own texts
 - **[Placeholders](placeholders.md)** – PlaceholderAPI for scoreboards, tab lists and holograms
 
@@ -27,7 +32,8 @@ a network.
 
 - **Paper 26.2** – only the current version is supported (forks of Paper like Purpur work too)
 - **Java 25**
-- optional: [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi)
+- optional: Vault, PlaceholderAPI, MiniPlaceholders, Parties, Citizens, FancyNpcs, Floodgate, TAB, EssentialsX,
+  Multiverse – see [Integrations](integrations.md)
 - for a network: [Velocity](https://papermc.io/software/velocity) (or BungeeCord)
 
 Found a bug or have an idea? Open an [issue on GitHub](https://github.com/itsthechris07/SurvivalGames/issues).

@@ -1,3 +1,5 @@
+![SurvivalGames](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/banner.png)
+
 # SurvivalGames
 
 Survival Games and Varo for Paper 26.2 – several games next to each other on one server, or one game per server in a
@@ -9,19 +11,33 @@ network behind Velocity/BungeeCord.
 - **Varo**: teams play in the same world for days, every player may only play a few minutes per day and is out after
   the first death – the last team wins. The world and the game are kept until an admin resets it.
 
+![Two games, one plugin](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/how-it-works.png)
+
 ## Features
+
+![Features](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/features.png)
+
 - Arenas with their own map (a folder in `maps/`, an imported world or a generated one), set up in a copy of the map
   (`/sg arena <arena> edit`), spawn points or a spawn circle, lobby, center and world border
 - Server modes: `standalone` (games run "on the side", players join with `/sg join` or a `[sg]` sign), `game` (one
   game per server, players come from the lobby server) and `lobby` (sends players to free game servers, reads their
   state from the MOTD)
-- Survival Games: lobby countdown, frozen start, loot chests with refill (`loot.yml`), grace period, deathmatch,
-  spectators, only some blocks breakable
-- Varo: play time per day, no logout during a fight, join protection, shrinking world border, the players get their
-  own inventory back when they leave the game
+- Survival Games: map voting, kits, lobby countdown, frozen start, loot tables per container with refills and upgrades
+  (`loot.yml`), grace period, shrinking world border, player tracker, supply drops, lightnings that reveal the
+  players, deathmatch, spectators who sponsor items, only some blocks breakable
+- Varo: play time per day, no logout during a fight (a villager stands in for players who leave), join protection,
+  shrinking world border, strikes, peaceful days, inactive players are out, daily coordinates, banned items, potions
+  and enchantments, daily backups, the players get their own inventory back when they leave the game
+- Statistics (games, wins, kills, deaths, Elo rating) per game type in a file or a MySQL database: `/sg stats`,
+  `/sg top`, leaderboard holograms and `[sgtop]` signs
+- Rewards (money and console commands), bounties, fireworks, the inventory of the killer after a death
+- Settings menu in the game: `/sg settings`
 - Teams (menu or `/sg team create <name> [color]`), team chat (`@message`), separate chat per game, scoreboard
-- Extras (per game type): backpack, chest lock with a `[Lock]` sign, gravity grenade, toxic rain
-- English and German messages (MiniMessage, clickable commands), PlaceholderAPI (`%sg_...%`)
+- Extras (per game type): backpack, chest lock with a `[Lock]` sign, gravity grenade, toxic rain, tracker, supply drops,
+  kits, bounties, sponsors, item restrictions
+- English and German messages (MiniMessage, clickable commands), PlaceholderAPI (`%sg_...%`) and MiniPlaceholders
+- Integrations: Vault/VaultUnlocked, Parties, Party and Friends, Citizens and FancyNpcs (join NPCs), Floodgate
+  (Bedrock forms), TAB, EssentialsX, vanish plugins, Multiverse
 
 ## Quick start
 1. Put the jar into `plugins/` and start the server.

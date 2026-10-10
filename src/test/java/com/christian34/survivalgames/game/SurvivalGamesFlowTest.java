@@ -105,6 +105,10 @@ class SurvivalGamesFlowTest extends PluginTestBase {
         }
         assertEquals(GameState.STARTING, game.getState());
         assertEquals(64, steve.getLocation().getBlockY(), "on the spawn point");
+        var toCenter = game.getArena().getCenter(game.getWorld()).toVector().subtract(steve.getLocation().toVector())
+                .setY(0).normalize();
+        assertTrue(steve.getLocation().getDirection().dot(toCenter) > 0.99, "looking at the center");
+        assertEquals(0, steve.getLocation().getPitch(), 0.001, "looking straight");
         assertEquals(GameMode.SURVIVAL, steve.getGameMode());
         assertTrue(steve.getInventory().isEmpty(), "no lobby items");
         assertFalse(fall(steve), "no damage during the countdown");

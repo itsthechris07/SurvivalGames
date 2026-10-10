@@ -4,9 +4,12 @@ import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
+import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.stats.Rating;
+import com.christian34.survivalgames.stats.Stat;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -18,15 +21,20 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,6 +69,10 @@ public abstract class Game {
      */
     private int countdown = -1;
     private boolean stopped;
+    /**
+     * the participants out of the game so far (the order of {@link Participant#getOut()})
+     */
+    private int eliminations;
     @Nullable
     private String winner;
     private List<Location> spawns = List.of();
@@ -68,6 +80,10 @@ public abstract class Game {
      * the contents of the backpacks (modules.backpack) by team or player
      */
     private final Map<String, String> backpacks = new ConcurrentHashMap<>();
+    /**
+     * the bounties (modules.bounty): target -> player who has put it on him -> amount
+     */
+    private final Map<UUID, Map<UUID, Double>> bounties = new ConcurrentHashMap<>();
 
     public enum LeaveReason {
         /**
@@ -139,6 +155,13 @@ public abstract class Game {
      */
     public Map<String, String> getBackpacks() {
         return backpacks;
+    }
+
+    /**
+     * the bounties of the game (target -> player who has put it on him -> amount, modules.bounty)
+     */
+    public Map<UUID, Map<UUID, Double>> getBounties() {
+        return bounties;
     }
 
     /**
@@ -250,6 +273,18 @@ public abstract class Game {
         broadcast(I.prefixed(text, arguments));
     }
 
+    /**
+     * the message goes to the players in the game and the participants online outside of it (Varo)
+     */
+    public void announce(LangText text, Object... arguments) {
+        Component message = I.prefixed(text, arguments);
+        broadcast(message);
+        for (Participant participant : participants.values()) {
+            Player player = participant.getPlayer();
+            if (player != null && !isMember(player)) player.sendMessage(message);
+        }
+    }
+
     protected void showTitle(Title title, @Nullable Sound sound) {
         for (GamePlayer member : members) {
             member.getPlayer().showTitle(title);
@@ -346,6 +381,7 @@ public abstract class Game {
         gamePlayer.setGame(this);
         gamePlayer.setSpectator(spectator);
         members.add(gamePlayer);
+        plugin.getEssentials().joinGame(player, spectator);
     }
 
     /**
@@ -360,6 +396,7 @@ public abstract class Game {
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(location != null ? location : safe(arena.getCenter(getWorld())));
         player.sendMessage(I.prefixed(LangText.SPECTATING));
+        if (plugin.getSponsor().isUsed(this)) player.sendMessage(I.prefixed(LangText.SPONSOR_HINT));
         plugin.updateVisibility();
     }
 
@@ -377,6 +414,8 @@ public abstract class Game {
         player.closeInventory();
         gamePlayer.getStorage().restore();
         plugin.getSidebar().remove(player);
+        plugin.getTabSupport().release(player);
+        plugin.getEssentials().leaveGame(player);
         if (player.getWorld().equals(gameWorld.getWorld())) {
             // no saved location (e.g. a crash) - out of the game world
             player.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
@@ -460,8 +499,37 @@ public abstract class Game {
             player.getInventory().setItem(0, Items.create(Material.WHITE_BANNER, i18n(LangText.ITEM_TEAMS),
                     I.itemLines(LangText.ITEM_TEAMS_LORE), Items.TEAMS));
         }
+        if (plugin.getKits().isUsed(this)) {
+            player.getInventory().setItem(4, Items.create(Material.CHEST, i18n(LangText.ITEM_KITS),
+                    I.itemLines(LangText.ITEM_KITS_LORE), Items.KITS));
+        }
         player.getInventory().setItem(8, Items.create(Material.RED_BED, i18n(LangText.ITEM_LEAVE),
                 I.itemLines(LangText.ITEM_LEAVE_LORE), Items.LEAVE));
+    }
+
+    /**
+     * the players in the lobby move into the lobby of the other game (map voting) with their teams and kits - this
+     * game is empty afterwards
+     */
+    void moveLobby(Game next) {
+        next.participants.putAll(participants);
+        for (GameTeam team : teams.getTeams()) {
+            GameTeam copy = next.teams.create(team.getName(), team.getColor());
+            if (copy == null) continue;
+            team.getMembers().forEach(member -> next.teams.addMember(copy, member));
+        }
+        participants.clear();
+        teams.clear();
+        for (GamePlayer member : members) {
+            members.remove(member);
+            next.members.add(member);
+            member.setGame(next);
+            member.getPlayer().closeInventory();
+            next.sendToLobby(member.getPlayer());
+        }
+        next.setCountdown(countdown);
+        this.countdown = -1;
+        plugin.updateVisibility();
     }
 
     /**
@@ -660,26 +728,77 @@ public abstract class Game {
     }
 
     /**
-     * players without a team get one: alone with a team size of 1, otherwise teams are filled up
+     * players without a team get one: alone with a team size of 1, otherwise teams are filled up. Parties
+     * (parties.same-team) are placed first and together: into the team a member chose, otherwise into a team with
+     * room for all of them.
      */
     protected void fillTeams() {
         int size = arena.getTeamSize();
+        Map<UUID, UUID> partyOf = new HashMap<>();
+        if (size > 1) {
+            for (Participant participant : participants.values()) {
+                Player player = participant.getPlayer();
+                UUID party = player == null ? null : plugin.getPartySupport().getTeamParty(player);
+                if (party != null) partyOf.put(participant.getUuid(), party);
+            }
+        }
+        // players without a party form a group of their own
+        Map<Object, List<Participant>> groups = new LinkedHashMap<>();
         for (Participant participant : participants.values()) {
             if (teams.getTeam(participant.getUuid()) != null) continue;
-            GameTeam team = null;
-            if (size > 1) {
-                team = teams.getTeams().stream().filter(this::hasRoom)
-                        .min((a, b) -> Integer.compare(a.getMembers().size(), b.getMembers().size())).orElse(null);
+            UUID party = partyOf.get(participant.getUuid());
+            groups.computeIfAbsent(party != null ? party : participant, key -> new ArrayList<>()).add(participant);
+        }
+        List<List<Participant>> ordered = new ArrayList<>(groups.values());
+        // parties first (the biggest first) - otherwise players without a party take the places in the team a member
+        // of the party chose
+        ordered.sort(Comparator.comparing((List<Participant> group) -> !partyOf.containsKey(group.getFirst().getUuid()))
+                .thenComparing(Comparator.comparingInt(List<Participant>::size).reversed()));
+        for (List<Participant> group : ordered) {
+            GameTeam team = chosenTeam(partyOf.get(group.getFirst().getUuid()), partyOf);
+            for (int i = 0; i < group.size(); i++) {
+                Participant participant = group.get(i);
+                if (team == null || !hasRoom(team)) team = teamFor(participant, group.size() - i);
+                if (team != null) teams.addMember(team, participant.getUuid());
             }
-            if (team == null) {
-                NamedTextColor color = teams.nextColor();
-                String name = size == 1 && Teams.NAME.matcher(participant.getName()).matches()
-                        && teams.get(participant.getName()) == null ? participant.getName() : teams.nextName(color);
-                team = teams.create(name, color);
-            }
-            if (team != null) teams.addMember(team, participant.getUuid());
         }
         teamsChanged();
+    }
+
+    /**
+     * @return the team a member of the party chose (if it has room), null if none
+     */
+    @Nullable
+    private GameTeam chosenTeam(@Nullable UUID party, Map<UUID, UUID> partyOf) {
+        if (party == null) return null;
+        for (Map.Entry<UUID, UUID> entry : partyOf.entrySet()) {
+            GameTeam team = entry.getValue().equals(party) ? teams.getTeam(entry.getKey()) : null;
+            if (team != null && hasRoom(team)) return team;
+        }
+        return null;
+    }
+
+    /**
+     * @param players the players who should play in the same team (the participant and the rest of his party)
+     * @return the team the participant joins: the emptiest team with room for all of them, otherwise a new one
+     */
+    @Nullable
+    private GameTeam teamFor(Participant participant, int players) {
+        int size = arena.getTeamSize();
+        if (size > 1) {
+            GameTeam team = teams.getTeams().stream()
+                    .filter(other -> size - other.getMembers().size() >= Math.min(players, size))
+                    .min(Comparator.comparingInt(other -> other.getMembers().size())).orElse(null);
+            if (team != null) return team;
+        }
+        NamedTextColor color = teams.nextColor();
+        String name = size == 1 && Teams.NAME.matcher(participant.getName()).matches()
+                && teams.get(participant.getName()) == null ? participant.getName() : teams.nextName(color);
+        GameTeam team = teams.create(name, color);
+        if (team != null || size == 1) return team;
+        // no more names or colors: any team with room
+        return teams.getTeams().stream().filter(this::hasRoom)
+                .min(Comparator.comparingInt(other -> other.getMembers().size())).orElse(null);
     }
 
     /**
@@ -688,8 +807,14 @@ public abstract class Game {
     protected List<Location> resolveSpawns(int count) {
         World world = getWorld();
         List<Location> arenaSpawns = arena.getSpawns(world);
-        if (!arenaSpawns.isEmpty()) return arenaSpawns;
         Location center = arena.getCenter(world);
+        if (!arenaSpawns.isEmpty()) {
+            for (Location spawn : arenaSpawns) {
+                onTop(spawn);
+                lookAt(spawn, center);
+            }
+            return arenaSpawns;
+        }
         double radius = Math.max(2, settings().getDouble("spawn-circle-radius", 15));
         List<Location> circle = new ArrayList<>();
         for (int i = 0; i < Math.max(1, count); i++) {
@@ -697,11 +822,33 @@ public abstract class Game {
             Location location = center.clone().add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
             location.setY(world.getMinHeight());
             Location spawn = safe(location);
-            // facing the center
-            spawn.setDirection(center.toVector().subtract(spawn.toVector()));
+            lookAt(spawn, center);
             circle.add(spawn);
         }
         return circle;
+    }
+
+    /**
+     * a spawn point inside a block (older versions saved them at the bottom of a slab) is moved on top of it - otherwise the
+     * player falls through
+     */
+    private static void onTop(Location location) {
+        try {
+            Block block = location.getBlock();
+            if (block.isPassable()) return;
+            double top = block.getBoundingBox().getMaxY();
+            if (top > location.getY()) location.setY(top);
+        } catch (RuntimeException ignored) {
+            // MockBukkit
+        }
+    }
+
+    /**
+     * the location looks straight at the target (unless it is right on it)
+     */
+    private static void lookAt(Location location, Location target) {
+        Vector direction = target.toVector().subtract(location.toVector()).setY(0);
+        if (direction.lengthSquared() > 0.25) location.setDirection(direction);
     }
 
     /**
@@ -752,10 +899,40 @@ public abstract class Game {
             WorldBorder border = world.getWorldBorder();
             border.setCenter(arena.getCenter(world));
             border.setSize(size);
+            border.setDamageAmount(Math.max(0, settings().getDouble("world-border.damage", 0.2)));
+            border.setDamageBuffer(Math.max(0, settings().getDouble("world-border.buffer", 5)));
+            border.setWarningDistance(10);
         }
+        for (Participant participant : participants.values()) {
+            plugin.getStats().add(participant.getUuid(), participant.getName(), getType(), Stat.GAMES);
+            // the change at the end depends on the ratings of the opponents now
+            participant.setRating(plugin.getStats().getRating(participant.getUuid(), getType()));
+        }
+        plugin.getKits().give(this);
         showTitle(Title.title(i18n(LangText.GAME_STARTED_TITLE), i18n(getType().getDisplayName())),
                 Sound.ENTITY_ENDER_DRAGON_GROWL);
         onBegin();
+    }
+
+    /**
+     * @return the size of the world border, 0 if there is none
+     */
+    public int getBorderSize() {
+        World world = gameWorld.getWorld();
+        if (world == null || state == GameState.LOBBY) return 0;
+        double size = world.getWorldBorder().getSize();
+        // the default border of a world (none set)
+        return size >= 1_000_000 ? 0 : (int) Math.round(size);
+    }
+
+    /**
+     * the players alive who play right now get a tracker (modules.tracker)
+     */
+    protected void giveTrackers() {
+        for (GamePlayer member : getPlayers()) {
+            Participant participant = participants.get(member.getPlayer().getUniqueId());
+            if (participant != null && participant.isAlive()) plugin.getTracker().give(this, member.getPlayer());
+        }
     }
 
     protected abstract void onBegin();
@@ -833,6 +1010,8 @@ public abstract class Game {
         e.deathMessage(null);
         if (killerParticipant != null && killer != player) {
             broadcast(LangText.PLAYER_KILLED, player.getName(), killer.getName());
+            // before the items are dropped
+            plugin.getInventoryView().onKill(this, player, killer);
         } else {
             broadcast(LangText.PLAYER_DIED, player.getName());
         }
@@ -844,8 +1023,17 @@ public abstract class Game {
      */
     public void afterRespawn(GamePlayer gamePlayer, @Nullable Location deathLocation) {
         if (gamePlayer.getGame() != this) return;
+        outOfPlay(gamePlayer, deathLocation);
+    }
+
+    /**
+     * a player in the game who is out (died, strikes) watches or leaves the game
+     *
+     * @param location where he starts watching
+     */
+    protected void outOfPlay(GamePlayer gamePlayer, @Nullable Location location) {
         if (settings().getBoolean("spectators") && !stopped) {
-            makeSpectator(gamePlayer, deathLocation);
+            makeSpectator(gamePlayer, location);
         } else {
             kick(gamePlayer, I.prefixed(LangText.KICK_ELIMINATED));
         }
@@ -859,7 +1047,14 @@ public abstract class Game {
     public void eliminate(Participant participant, @Nullable Participant killer) {
         if (state != GameState.RUNNING || !participant.isAlive()) return;
         participant.setAlive(false);
-        if (killer != null && killer != participant) killer.addKill();
+        participant.setOut(++eliminations);
+        plugin.getStats().add(participant.getUuid(), participant.getName(), getType(), Stat.DEATHS);
+        if (killer != null && killer != participant) {
+            killer.addKill();
+            plugin.getStats().add(killer.getUuid(), killer.getName(), getType(), Stat.KILLS);
+            Rewards.give(plugin, this, killer.getUuid(), killer.getName(), EconomySupport.Reward.KILL);
+        }
+        plugin.getBounty().onEliminated(this, participant, killer);
         GameTeam team = teams.getTeam(participant.getUuid());
         if (arena.getTeamSize() == 1 || team == null) {
             broadcast(LangText.PLAYER_ELIMINATED_SOLO, participant.getName(), getAlive().size());
@@ -879,6 +1074,7 @@ public abstract class Game {
      */
     public void revive(Participant participant) {
         participant.setAlive(true);
+        participant.setOut(0);
         onRevive(participant);
     }
 
@@ -900,6 +1096,9 @@ public abstract class Game {
             broadcast(LangText.GAME_DRAW);
             title = Title.title(i18n(LangText.GAME_DRAW_TITLE), Component.empty());
         } else {
+            for (UUID member : winner.getMembers()) {
+                plugin.getStats().add(member, getName(member), getType(), Stat.WINS);
+            }
             String names = String.join(", ", winner.getMembers().stream().map(this::getName).toList());
             if (arena.getTeamSize() == 1) {
                 broadcast(LangText.GAME_WON_SOLO, names, arena.getDisplayName());
@@ -910,7 +1109,59 @@ public abstract class Game {
             }
         }
         showTitle(title, Sound.UI_TOAST_CHALLENGE_COMPLETE);
+        if (winner != null) {
+            for (UUID member : winner.getMembers()) {
+                Rewards.give(plugin, this, member, getName(member), EconomySupport.Reward.WIN);
+            }
+            // the winners playing right now (in a Varo the others are offline)
+            List<Player> inGame = getPlayers().stream().map(GamePlayer::getPlayer)
+                    .filter(player -> winner.isMember(player.getUniqueId())).toList();
+            plugin.getInventoryView().onEnd(this, inGame);
+            Rewards.fireworks(plugin, this, inGame, winner.getColor());
+        }
+        for (Participant participant : participants.values()) {
+            Rewards.give(plugin, this, participant.getUuid(), participant.getName(), EconomySupport.Reward.GAME);
+        }
+        rate(winner);
+        // nobody has killed them
+        plugin.getBounty().refundAll(this);
         onEnd();
+    }
+
+    /**
+     * changes the Elo ratings of the participants by how long they (their team) lasted (stats.rating)
+     */
+    private void rate(@Nullable GameTeam winner) {
+        if (!plugin.getStats().isRated(getType()) || participants.size() < 2) return;
+        Map<UUID, Integer> scores = new HashMap<>();
+        Map<UUID, Integer> ratings = new HashMap<>();
+        for (Participant participant : participants.values()) {
+            GameTeam team = teams.getTeam(participant.getUuid());
+            int score;
+            if (team == null) {
+                score = participant.isAlive() ? Integer.MAX_VALUE : participant.getOut();
+            } else if (team == winner) {
+                score = Integer.MAX_VALUE;
+            } else {
+                // a team is out with its last player
+                score = team.getMembers().stream().map(participants::get).filter(Objects::nonNull)
+                        .mapToInt(member -> member.isAlive() ? Integer.MAX_VALUE : member.getOut()).max().orElse(0);
+            }
+            scores.put(participant.getUuid(), score);
+            // 0: the game was loaded after a restart (Varo)
+            ratings.put(participant.getUuid(), participant.getRating() > 0 ? participant.getRating()
+                    : plugin.getStats().getRating(participant.getUuid(), getType()));
+        }
+        double factor = Math.max(1, plugin.getFileManager().getConfigFile().getData().getDouble("stats.rating.k-factor", 32));
+        Rating.changes(scores, ratings, factor).forEach((uuid, change) -> {
+            Participant participant = participants.get(uuid);
+            plugin.getStats().add(uuid, participant.getName(), getType(), Stat.RATING, change);
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                player.sendMessage(I.prefixed(LangText.RATING_CHANGED, ratings.get(uuid) + change,
+                        Component.text((change >= 0 ? "+" : "") + change, change >= 0 ? NamedTextColor.GREEN : NamedTextColor.RED)));
+            }
+        });
     }
 
     protected abstract void onEnd();

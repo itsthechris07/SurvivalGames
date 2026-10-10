@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,6 +23,9 @@ public final class Items {
     public static final String LEAVE = "leave";
     public static final String BACKPACK = "backpack";
     public static final String GRENADE = "gravity_grenade";
+    public static final String TRACKER = "tracker";
+    public static final String KITS = "kits";
+    public static final String VOTE = "vote";
 
     private Items() {
     }
@@ -38,6 +42,16 @@ public final class Items {
             meta.getPersistentDataContainer().set(key("item"), PersistentDataType.STRING, marker);
         });
         return item;
+    }
+
+    /**
+     * the name of the item for messages: its own name, otherwise the name the client shows in its language
+     */
+    public static Component name(ItemStack item) {
+        ItemMeta meta = item.hasItemMeta() ? item.getItemMeta() : null;
+        if (meta != null && meta.hasCustomName()) return meta.customName();
+        if (meta != null && meta.hasItemName()) return meta.itemName();
+        return Component.translatable(item.translationKey());
     }
 
     public static boolean is(@Nullable ItemStack item, String marker) {

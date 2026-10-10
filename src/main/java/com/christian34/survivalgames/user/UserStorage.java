@@ -288,7 +288,7 @@ public class UserStorage {
         return Base64.getEncoder().encodeToString(ItemStack.serializeItemsAsBytes(copy));
     }
 
-    private static ItemStack[] items(@Nullable String data, int size) {
+    public static ItemStack[] items(@Nullable String data, int size) {
         ItemStack[] contents = new ItemStack[size];
         if (data == null || data.isEmpty()) return contents;
         ItemStack[] items = ItemStack.deserializeItemsFromBytes(Base64.getDecoder().decode(data));

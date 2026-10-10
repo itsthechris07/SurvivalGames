@@ -3,19 +3,23 @@ package com.christian34.survivalgames.game;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
 import com.christian34.survivalgames.user.UserStorage;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.GameRules;
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -24,9 +28,14 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
 
@@ -101,6 +110,22 @@ public class VaroGame extends Game {
                 if (contents != null) getBackpacks().put(key, contents);
             }
         }
+        ConfigurationSection bounties = data.getConfigurationSection("bounties");
+        if (bounties != null) {
+            for (String target : bounties.getKeys(false)) {
+                ConfigurationSection setters = bounties.getConfigurationSection(target);
+                if (setters == null) continue;
+                try {
+                    Map<UUID, Double> amounts = new ConcurrentHashMap<>();
+                    for (String setter : setters.getKeys(false)) {
+                        amounts.put(UUID.fromString(setter), setters.getDouble(setter));
+                    }
+                    getBounties().put(UUID.fromString(target), amounts);
+                } catch (IllegalArgumentException ex) {
+                    Debug.warn("Invalid bounty in the Varo of arena '" + arena.getName() + "': " + target);
+                }
+            }
+        }
     }
 
     /**
@@ -128,6 +153,9 @@ public class VaroGame extends Game {
         }
         ConfigurationSection backpacks = data.createSection("backpacks");
         getBackpacks().forEach(backpacks::set);
+        ConfigurationSection bounties = data.createSection("bounties");
+        getBounties().forEach((target, amounts) -> amounts.forEach((setter, amount) ->
+                bounties.set(target + "." + setter, amount)));
         try {
             File folder = file.getParentFile();
             if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Couldn't create " + folder);
@@ -278,16 +306,24 @@ public class VaroGame extends Game {
     protected void onJoinRunning(GamePlayer gamePlayer) {
         Player player = gamePlayer.getPlayer();
         Participant participant = participate(player.getUniqueId(), player.getName());
+        boolean onSpawn = true;
+        // the damage his villager took while he was away
+        Double npcHealth = plugin.getOfflineNpc().remove(player.getUniqueId());
         if (!participant.isStarted()) {
             // offline at the start: onto his spawn point now
             placeOnSpawn(player, participant);
         } else if (participant.getState() != null) {
             UserStorage.apply(player, participant.getState(), false);
             player.setGameMode(GameMode.SURVIVAL);
+            onSpawn = false;
+            if (npcHealth != null) player.setHealth(Math.max(0.5, Math.min(npcHealth, player.getHealth())));
         } else {
             placeOnSpawn(player, participant);
         }
-        if (getState() == GameState.RUNNING) startSession(player, participant);
+        if (getState() == GameState.RUNNING) {
+            if (onSpawn) plugin.getTracker().give(this, player);
+            startSession(player, participant);
+        }
     }
 
     private void startSession(Player player, Participant participant) {
@@ -311,6 +347,33 @@ public class VaroGame extends Game {
         if (participant == null || !participant.isAlive() || getState() == GameState.ENDED) return;
         if (participant.isStarted()) participant.setState(UserStorage.snapshot(player));
         save();
+        // nobody escapes from a fight by leaving the server
+        int seconds = settings().getInt("offline-npc-seconds");
+        if (reason == LeaveReason.QUIT && seconds > 0 && getState() == GameState.RUNNING) {
+            plugin.getOfflineNpc().spawn(player, seconds);
+        }
+    }
+
+    /**
+     * the villager that stood in for the participant while he was away has been killed: he is out and his items drop
+     *
+     * @param killer the player who has killed the villager
+     */
+    public void killOffline(Participant participant, @Nullable Player killer, Location location) {
+        if (!participant.isAlive() || getState() != GameState.RUNNING) return;
+        YamlConfiguration state = participant.getState();
+        if (state != null) {
+            for (ItemStack item : UserStorage.items(state.getString("inventory"), 41)) {
+                if (item != null && !item.isEmpty()) location.getWorld().dropItemNaturally(location, item);
+            }
+        }
+        Participant killerParticipant = killer == null ? null : getParticipant(killer.getUniqueId());
+        if (killer != null) {
+            announce(LangText.OFFLINE_NPC_KILLED, participant.getName(), killer.getName());
+        } else {
+            announce(LangText.OFFLINE_NPC_DIED, participant.getName());
+        }
+        eliminate(participant, killerParticipant);
     }
 
     /**
@@ -343,11 +406,15 @@ public class VaroGame extends Game {
         world.setStorm(false);
         world.setThundering(false);
         broadcast(LangText.VARO_STARTED, formatTime(getPlayTime()));
+        int peaceful = settings().getInt("peaceful-days");
+        if (peaceful > 0) broadcast(LangText.VARO_PEACEFUL, peaceful);
+        giveTrackers();
         for (GamePlayer member : getPlayers()) {
             Participant participant = getParticipant(member.getPlayer().getUniqueId());
             if (participant != null) startSession(member.getPlayer(), participant);
         }
         save();
+        backup();
     }
 
     @Override
@@ -389,7 +456,13 @@ public class VaroGame extends Game {
         if (day <= borderDay) return;
         this.borderDay = day;
         broadcast(LangText.NEW_DAY, day);
+        int peaceful = settings().getInt("peaceful-days");
+        if (peaceful > 0 && day == peaceful + 1) announce(LangText.VARO_PVP_ENABLED);
+        checkInactive();
+        if (getState() != GameState.RUNNING) return;
+        announceCoordinates(day);
         save();
+        backup();
         World world = getWorld();
         int size = arena.getBorderSize();
         int shrink = settings().getInt("world-border.shrink-per-day");
@@ -398,6 +471,97 @@ public class VaroGame extends Game {
         if (newSize >= world.getWorldBorder().getSize()) return;
         world.getWorldBorder().changeSize(newSize, 20L * 60 * 10);
         broadcast(LangText.BORDER_SHRINKS, newSize);
+    }
+
+    /**
+     * saves the world and zips it with the game into backups/&lt;arena&gt;/&lt;day&gt;.zip (asynchronously), only the
+     * newest backups are kept (backups: their number, 0: none)
+     */
+    public void backup() {
+        int keep = settings().getInt("backups");
+        World world = gameWorld.getWorld();
+        if (keep <= 0 || world == null) return;
+        try {
+            save();
+            world.save();
+        } catch (RuntimeException ex) {
+            Debug.warn("Couldn't save the world of the Varo in arena '" + arena.getName() + "' for a backup", ex);
+            return;
+        }
+        File source = GameWorld.getFolder(world);
+        File folder = new File(FileManager.getPluginFolder(), "backups/" + arena.getName());
+        File target = new File(folder, today() + ".zip");
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Couldn't create " + folder);
+                Backups.zip(source, file, target);
+                Backups.prune(folder, keep);
+                Debug.info("Backup of the Varo in arena '" + arena.getName() + "': " + target.getName());
+            } catch (IOException | RuntimeException ex) {
+                Debug.warn("Couldn't back up the Varo in arena '" + arena.getName() + "'", ex);
+            }
+        });
+    }
+
+    /**
+     * @return true during the first peaceful-days of the game (nobody can hurt other players)
+     */
+    public boolean isPeaceful() {
+        int day = getDay();
+        return day > 0 && day <= settings().getInt("peaceful-days");
+    }
+
+    /**
+     * participants who haven't played for inactive-days are out (they would block the end of the game)
+     */
+    private void checkInactive() {
+        int days = settings().getInt("inactive-days");
+        if (days <= 0 || startDay == null) return;
+        LocalDate today = LocalDate.parse(today());
+        for (Participant participant : getAlive()) {
+            LocalDate last;
+            try {
+                // never played: missed every day since the start
+                last = participant.getLastDay() != null ? LocalDate.parse(participant.getLastDay())
+                        : LocalDate.parse(startDay).minusDays(1);
+            } catch (DateTimeParseException ex) {
+                continue;
+            }
+            long missed = ChronoUnit.DAYS.between(last, today) - 1;
+            if (missed < days) continue;
+            announce(LangText.VARO_INACTIVE_OUT, participant.getName(), missed);
+            eliminate(participant, null);
+            if (getState() != GameState.RUNNING) return;
+        }
+    }
+
+    /**
+     * from day coordinates-from-day on the positions of all players alive are announced every day
+     */
+    private void announceCoordinates(int day) {
+        int from = settings().getInt("coordinates-from-day");
+        if (from <= 0 || day < from) return;
+        announce(LangText.VARO_COORDINATES_TITLE, day);
+        for (Participant participant : getAlive()) {
+            Location location = getLocation(participant);
+            if (location == null) continue;
+            GameTeam team = getTeam(participant.getUuid());
+            announce(LangText.VARO_COORDINATES_ENTRY, participant.getName(),
+                    team == null || arena.getTeamSize() == 1 ? Component.empty()
+                            : team.getDisplayName().append(Component.space()),
+                    location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        }
+    }
+
+    /**
+     * @return where the participant is (in the game right now) or has left the game, null if he hasn't been in it yet
+     */
+    @Nullable
+    public Location getLocation(Participant participant) {
+        Player player = participant.getPlayer();
+        GamePlayer gamePlayer = player == null ? null : plugin.getUser(player);
+        boolean playing = gamePlayer != null && gamePlayer.getGame() == this && !gamePlayer.isSpectator();
+        return playing ? player.getLocation() : getSavedLocation(participant);
     }
 
     @Override
@@ -418,8 +582,82 @@ public class VaroGame extends Game {
         if (gamePlayer.getGame() != this || !gamePlayer.isSpectator() || getState() != GameState.RUNNING) return;
         gamePlayer.setSpectator(false);
         placeOnSpawn(player, participant);
+        plugin.getTracker().give(this, player);
         startSession(player, participant);
         plugin.updateVisibility();
+    }
+
+    // ---------------------------------------------------------------- strikes
+
+    /**
+     * an admin gives the participant a strike: it is announced and what varo.strikes says for its number happens
+     * (coordinates, inventory, out - nothing beyond the list)
+     *
+     * @param by the name of the admin
+     * @return the number of the strike
+     */
+    public int strike(Participant participant, String reason, String by) {
+        int number = participant.addStrike(new Participant.Strike(reason, by, System.currentTimeMillis()));
+        announce(LangText.STRIKE_GIVEN, participant.getName(), number, reason);
+        List<String> consequences = settings().getStringList("strikes");
+        if (number <= consequences.size()) punish(participant, consequences.get(number - 1).trim().toLowerCase(Locale.ROOT));
+        save();
+        return number;
+    }
+
+    /**
+     * @return the strike that has been removed (the last one, what it has caused stays), null if there was none
+     */
+    @Nullable
+    public Participant.Strike removeStrike(Participant participant) {
+        Participant.Strike strike = participant.removeLastStrike();
+        if (strike != null) save();
+        return strike;
+    }
+
+    private void punish(Participant participant, String consequence) {
+        Player player = participant.getPlayer();
+        GamePlayer gamePlayer = player == null ? null : plugin.getUser(player);
+        boolean playing = gamePlayer != null && gamePlayer.getGame() == this && !gamePlayer.isSpectator();
+        switch (consequence) {
+            case "coordinates" -> {
+                Location location = getLocation(participant);
+                if (location != null) {
+                    announce(LangText.STRIKE_COORDINATES, participant.getName(), location.getBlockX(),
+                            location.getBlockY(), location.getBlockZ());
+                }
+            }
+            case "inventory" -> {
+                if (playing) {
+                    player.getInventory().clear();
+                } else if (participant.getState() != null) {
+                    participant.getState().set("inventory", null);
+                }
+                announce(LangText.STRIKE_INVENTORY, participant.getName());
+            }
+            case "out" -> {
+                if (!participant.isAlive() || getState() != GameState.RUNNING) return;
+                announce(LangText.STRIKE_OUT, participant.getName());
+                Location location = playing ? player.getLocation() : null;
+                eliminate(participant, null);
+                if (playing && gamePlayer.getGame() == this) outOfPlay(gamePlayer, location);
+            }
+            default -> {
+                // nothing: only the warning
+            }
+        }
+    }
+
+    /**
+     * @return where the participant left the game, null if he hasn't been in it yet
+     */
+    @Nullable
+    private Location getSavedLocation(Participant participant) {
+        if (!participant.isStarted()) return null;
+        ConfigurationSection location = participant.getState() == null ? null
+                : participant.getState().getConfigurationSection("location");
+        if (location == null) return getSpawn(participant);
+        return new Location(getWorld(), location.getDouble("x"), location.getDouble("y"), location.getDouble("z"));
     }
 
     @Override

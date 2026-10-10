@@ -61,7 +61,13 @@ public class Sidebar {
         boolean enabled = isEnabled();
         for (Player player : Bukkit.getOnlinePlayers()) {
             Game game = plugin.getUser(player).getGame();
-            updateTabName(player, game);
+            Component tabName = getTabName(player, game);
+            if (tabName != null && !tabName.equals(player.playerListName())) player.playerListName(tabName);
+            if (game != null) {
+                plugin.getTabSupport().takeOver(player, tabName, enabled);
+            } else {
+                plugin.getTabSupport().release(player);
+            }
             if (enabled && game != null) {
                 update(player, game);
             } else {
@@ -79,14 +85,16 @@ public class Sidebar {
         }
     }
 
-    private void updateTabName(Player player, @Nullable Game game) {
+    /**
+     * @return the name of the player in the tab list (with his team), null if he isn't in a team of a game
+     */
+    @Nullable
+    private static Component getTabName(Player player, @Nullable Game game) {
         GameTeam team = game == null ? null : game.getTeam(player.getUniqueId());
-        if (team == null) return;
+        if (team == null) return null;
         Participant participant = game.getParticipant(player.getUniqueId());
         boolean alive = participant == null || participant.isAlive();
-        Component name = i18n(alive ? LangText.TABLIST_NAME : LangText.TABLIST_NAME_OUT, team.getDisplayName(),
-                player.getName());
-        if (!name.equals(player.playerListName())) player.playerListName(name);
+        return i18n(alive ? LangText.TABLIST_NAME : LangText.TABLIST_NAME_OUT, team.getDisplayName(), player.getName());
     }
 
     private void update(Player player, Game game) {
@@ -145,9 +153,14 @@ public class Sidebar {
                     lines.add(i18n(LangText.SCOREBOARD_TEAMS_ALIVE, game.getAliveTeams().size()));
                 }
                 lines.add(i18n(LangText.SCOREBOARD_PLAYERS_ALIVE, game.getAlive().size()));
+                int border = game.getBorderSize();
+                if (border > 0) lines.add(i18n(LangText.SCOREBOARD_BORDER, border));
                 if (participant != null) {
                     lines.add(Component.empty());
                     lines.add(i18n(LangText.SCOREBOARD_KILLS, participant.getKills()));
+                    if (!participant.getStrikes().isEmpty()) {
+                        lines.add(i18n(LangText.SCOREBOARD_STRIKES, participant.getStrikes().size()));
+                    }
                     if (game instanceof VaroGame varo && participant.isAlive()) {
                         lines.add(i18n(LangText.SCOREBOARD_TIME_LEFT, Game.formatTime(varo.getRemaining(participant))));
                     }

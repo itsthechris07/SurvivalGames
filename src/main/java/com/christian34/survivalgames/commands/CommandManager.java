@@ -109,6 +109,11 @@ public class CommandManager {
         annotationParser.parse(new CommandTeam());
         annotationParser.parse(new CommandGame());
         annotationParser.parse(new CommandArena());
+        annotationParser.parse(new CommandNpc());
+        annotationParser.parse(new CommandKit());
+        annotationParser.parse(new CommandLeaderboard());
+        annotationParser.parse(new CommandBounty());
+        annotationParser.parse(new CommandSettings());
     }
 
     private static LegacyPaperCommandManager<CommandSender> createPaperManager(SurvivalGames instance) {

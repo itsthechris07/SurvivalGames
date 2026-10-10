@@ -82,9 +82,10 @@ public class Menu {
     }
 
     /**
-     * clicking a button closes the menu and runs its action
+     * clicking a button closes the menu and runs its action - Bedrock players get a form (Floodgate)
      */
     public void show(Player player) {
+        if (SurvivalGames.getInstance().getBedrockForms().show(player, this)) return;
         player.openInventory(new Chest(this).getInventory());
     }
 

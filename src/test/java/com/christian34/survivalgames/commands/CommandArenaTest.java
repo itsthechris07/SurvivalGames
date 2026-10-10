@@ -96,7 +96,7 @@ class CommandArenaTest extends PluginTestBase {
         assertEquals(GameMode.CREATIVE, admin.getGameMode());
         assertTrue(admin.getInventory().isEmpty());
 
-        admin.teleport(new Location(editWorld, 10.3, 70, -5.8, 30, 0));
+        admin.teleport(new Location(editWorld, 10.3, 70.5, -5.8, 30, 0));
         execute(admin, "sg arena a1 spawn add");
         admin.teleport(new Location(editWorld, -10, 70, 5));
         execute(admin, "sg arena a1 spawn add");
@@ -105,6 +105,7 @@ class CommandArenaTest extends PluginTestBase {
         assertEquals(2, arena("a1").getSpawnCount());
         Location spawn = arena("a1").getSpawns(editWorld).getFirst();
         assertEquals(10.5, spawn.getX(), "the middle of the block");
+        assertEquals(70.5, spawn.getY(), "on a slab: the height of the feet");
         assertEquals(45, spawn.getYaw(), "looking straight");
 
         execute(admin, "sg arena save");

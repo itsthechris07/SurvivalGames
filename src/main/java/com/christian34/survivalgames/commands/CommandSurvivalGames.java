@@ -5,6 +5,8 @@ import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
+import com.christian34.survivalgames.game.GameType;
+import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.VaroGame;
@@ -12,6 +14,9 @@ import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.network.NetworkManager;
 import com.christian34.survivalgames.network.ServerStatus;
+import com.christian34.survivalgames.stats.PlayerStats;
+import com.christian34.survivalgames.stats.Stat;
+import com.christian34.survivalgames.stats.StatsManager;
 import com.christian34.survivalgames.game.SignManager;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
@@ -39,7 +44,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 
 /**
  * The general commands of /sg: joining, watching and leaving games, the list of games, info, play time, ping, last
- * seen and the admin commands start, build, reload and debug.
+ * seen, statistics, strikes and the admin commands start, build, reload and debug.
  *
  * @author Christian34
  */
@@ -119,6 +124,11 @@ public class CommandSurvivalGames {
             return;
         }
         GamePlayer gamePlayer = plugin().getUser(player);
+        if (gamePlayer.getGame() != null && gamePlayer.isSpectator()) {
+            // spectators choose whom to watch (Bedrock players can't do that in the spectator mode)
+            Menus.openSpectate(player, gamePlayer.getGame());
+            return;
+        }
         if (gamePlayer.getGame() != null) {
             player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
             return;
@@ -269,14 +279,196 @@ public class CommandSurvivalGames {
             sender.sendMessage(I.prefixed(LangText.PLAYER_NOT_FOUND));
             return;
         }
-        String date;
+        sender.sendMessage(I.prefixed(LangText.LAST_SEEN, player.getName(), formatDate(player.getLastSeen())));
+    }
+
+    /**
+     * @param time milliseconds since 1970
+     * @return the date in the date-format of config.yml
+     */
+    static String formatDate(long time) {
         try {
-            date = DateTimeFormatter.ofPattern(String.valueOf(plugin().getFileManager().getConfigFile().getString("date-format")))
-                    .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(player.getLastSeen()));
+            return DateTimeFormatter.ofPattern(String.valueOf(plugin().getFileManager().getConfigFile().getString("date-format")))
+                    .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(time));
         } catch (IllegalArgumentException ex) {
-            date = Instant.ofEpochMilli(player.getLastSeen()).toString();
+            return Instant.ofEpochMilli(time).toString();
         }
-        sender.sendMessage(I.prefixed(LangText.LAST_SEEN, player.getName(), date));
+    }
+
+    // ---------------------------------------------------------------- statistics
+
+    private static StatsManager stats() {
+        return plugin().getStats();
+    }
+
+    /**
+     * @return false if the statistics are turned off (the sender got a message)
+     */
+    private static boolean checkStats(CommandSender sender) {
+        if (stats().isEnabled()) return true;
+        sender.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+        return false;
+    }
+
+    @Suggestions("online-players")
+    public List<String> onlinePlayers(CommandContext<CommandSender> context, String input) {
+        return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+    }
+
+    /**
+     * the players alive in the game of the sender (bounties, sponsors)
+     */
+    @Suggestions("alive-players")
+    public List<String> alivePlayers(CommandContext<CommandSender> context, String input) {
+        if (!(context.sender() instanceof Player player)) return List.of();
+        Game game = plugin().getGameManager().findGame(player.getUniqueId());
+        if (game == null) return List.of();
+        return game.getAlive().stream().map(Participant::getName).toList();
+    }
+
+    @Command(ROOT + " stats [player]")
+    @CommandDescription("command_stats")
+    public void statsCmd(CommandSender sender, @Argument(value = "player", suggestions = "online-players") @Nullable String name) {
+        if (name == null && !(sender instanceof Player)) {
+            sender.sendMessage(I.prefixed(LangText.ONLY_PLAYERS));
+            return;
+        }
+        if (!checkStats(sender)) return;
+        String player = name != null ? name : sender.getName();
+        stats().then(stats().load(player), stats -> {
+            if (stats.isEmpty()) {
+                sender.sendMessage(I.prefixed(LangText.STATS_NONE, player));
+                return;
+            }
+            PlayerStats any = stats.values().iterator().next();
+            sender.sendMessage(i18n(LangText.STATS_TITLE, any.name()));
+            for (GameType type : GameType.values()) {
+                PlayerStats typeStats = stats.get(type.getKey());
+                if (typeStats == null) continue;
+                sender.sendMessage(statsLine(i18n(type.getDisplayName()), typeStats));
+                if (stats().isRated(type)) sender.sendMessage(i18n(LangText.STATS_RATING, typeStats.get(Stat.RATING)));
+            }
+            if (stats.size() > 1) {
+                sender.sendMessage(statsLine(i18n(LangText.STATS_TOTAL),
+                        PlayerStats.total(any.uuid(), any.name(), stats.values())));
+            }
+        }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+    }
+
+    private static Component statsLine(Component type, PlayerStats stats) {
+        return i18n(LangText.STATS_ENTRY, type, stats.games(), stats.wins(), stats.kills(), stats.deaths(),
+                stats.formatKillDeathRatio());
+    }
+
+    @Suggestions("stats")
+    public List<String> statNames(CommandContext<CommandSender> context, String input) {
+        return Stat.keys();
+    }
+
+    /**
+     * also used by CommandArena
+     */
+    @Suggestions("game-types")
+    public List<String> gameTypes(CommandContext<CommandSender> context, String input) {
+        return GameType.keys();
+    }
+
+    @Command(ROOT + " top [stat] [type]")
+    @CommandDescription("command_top")
+    public void topCmd(CommandSender sender, @Argument(value = "stat", suggestions = "stats") @Nullable String statName,
+                       @Argument(value = "type", suggestions = "game-types") @Nullable String typeName) {
+        Stat stat = statName == null ? Stat.WINS : Stat.parse(statName);
+        if (stat == null) {
+            sender.sendMessage(I.prefixed(LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
+            return;
+        }
+        GameType type = typeName == null ? null : GameType.parse(typeName);
+        if (typeName != null && type == null) {
+            sender.sendMessage(I.prefixed(LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
+            return;
+        }
+        if (!checkStats(sender)) return;
+        Component typeText = i18n(type == null ? LangText.TOP_ALL_TYPES : type.getDisplayName());
+        stats().then(stats().top(stat, type), top -> {
+            if (top.isEmpty()) {
+                sender.sendMessage(I.prefixed(LangText.TOP_EMPTY, i18n(stat.getDisplayName())));
+                return;
+            }
+            sender.sendMessage(i18n(LangText.TOP_TITLE, i18n(stat.getDisplayName()), typeText));
+            for (int i = 0; i < top.size(); i++) {
+                sender.sendMessage(i18n(LangText.TOP_ENTRY, i + 1, top.get(i).name(), top.get(i).get(stat)));
+            }
+        }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+    }
+
+    @Command(ROOT + " inventory <id>")
+    @CommandDescription("command_inventory")
+    public void inventoryCmd(Player player, @Argument("id") String id) {
+        if (!plugin().getInventoryView().open(player, id)) {
+            player.sendMessage(I.prefixed(LangText.INVENTORY_VIEW_EXPIRED));
+        }
+    }
+
+    @Command(ROOT + " vote [arena]")
+    @CommandDescription("command_vote")
+    public void voteCmd(Player player, @Argument("arena") @Nullable Arena arena) {
+        if (!(plugin().getUser(player).getGame() instanceof SurvivalGame game) || game.getMapVoting() == null) {
+            player.sendMessage(I.prefixed(LangText.MAP_VOTE_NONE));
+        } else if (arena == null) {
+            Menus.openVoting(player, game);
+        } else {
+            game.voteMap(player, arena);
+        }
+    }
+
+    @Command(ROOT + " sponsor [player]")
+    @CommandDescription("command_sponsor")
+    public void sponsorCmd(Player player, @Argument(value = "player", suggestions = "alive-players") @Nullable String name) {
+        Game game = plugin().getUser(player).getGame();
+        LangText denial = plugin().getSponsor().getDenial(player, game);
+        if (denial != null) {
+            player.sendMessage(I.prefixed(denial));
+            return;
+        }
+        if (name == null) {
+            Menus.openSponsor(player, game);
+            return;
+        }
+        Participant target = game.findParticipant(name);
+        if (target == null || !target.isAlive()) {
+            player.sendMessage(I.prefixed(LangText.SPONSOR_INVALID_TARGET, name));
+        } else {
+            Menus.openSponsorItems(player, game, target);
+        }
+    }
+
+    @Command(ROOT + " strikes")
+    @CommandDescription("command_strikes")
+    public void strikesCmd(Player player) {
+        Game game = plugin().getGameManager().findGame(player.getUniqueId());
+        Participant participant = game instanceof VaroGame ? game.getParticipant(player.getUniqueId()) : null;
+        if (participant == null) {
+            player.sendMessage(I.prefixed(LangText.NOT_PLAYING));
+            return;
+        }
+        showStrikes(player, participant);
+    }
+
+    /**
+     * the strikes of the participant with reason, admin and date
+     */
+    static void showStrikes(CommandSender sender, Participant participant) {
+        List<Participant.Strike> strikes = participant.getStrikes();
+        if (strikes.isEmpty()) {
+            sender.sendMessage(I.prefixed(LangText.STRIKES_NONE, participant.getName()));
+            return;
+        }
+        sender.sendMessage(i18n(LangText.STRIKES_TITLE, participant.getName(), strikes.size()));
+        for (int i = 0; i < strikes.size(); i++) {
+            Participant.Strike strike = strikes.get(i);
+            sender.sendMessage(i18n(LangText.STRIKES_ENTRY, i + 1, strike.reason(), strike.by(),
+                    formatDate(strike.time())));
+        }
     }
 
     // ---------------------------------------------------------------- admins

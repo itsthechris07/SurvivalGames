@@ -4,6 +4,7 @@ import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.Game;
+import com.christian34.survivalgames.integrations.VanishSupport;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -203,7 +204,8 @@ public class NetworkManager implements Listener {
     }
 
     private void joinGame(Player player) {
-        if (!player.isOnline()) return;
+        // vanished players (admins checking the server) stay outside of the game
+        if (!player.isOnline() || VanishSupport.isVanished(player)) return;
         GamePlayer gamePlayer = plugin.getUser(player);
         Game game = getGame();
         // without a game (arena not set up yet) the player stays
@@ -289,17 +291,25 @@ public class NetworkManager implements Listener {
     }
 
     /**
-     * on the lobby server: sends the player to the game server with the most players waiting, otherwise to a running
-     * game
+     * on the lobby server: sends the player to the game server with the most players waiting (preferably with room
+     * for his party, the proxy plugin of the party takes the members along), otherwise to a running game
      *
      * @param spectate only running games
      */
     public void joinAnyServer(@NotNull Player player, boolean spectate) {
         Comparator<Server> mostPlayers = Comparator.comparingInt(server -> getStatus(server.name()).players());
+        int party = spectate ? 1 : plugin.getPartySupport().getPartySize(player);
         Server server = spectate ? null : getServers().stream()
                 .filter(s -> getStatus(s.name()).isJoinable())
+                .filter(s -> getStatus(s.name()).players() + party <= getStatus(s.name()).maxPlayers())
                 .max(mostPlayers)
                 .orElse(null);
+        if (server == null && !spectate) {
+            server = getServers().stream()
+                    .filter(s -> getStatus(s.name()).isJoinable())
+                    .max(mostPlayers)
+                    .orElse(null);
+        }
         if (server == null) {
             server = getServers().stream()
                     .filter(s -> getStatus(s.name()).isRunning())

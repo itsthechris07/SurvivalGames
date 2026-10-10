@@ -64,11 +64,6 @@ public class CommandArena {
         return arenas().getMapNames();
     }
 
-    @Suggestions("game-types")
-    public List<String> gameTypes(CommandContext<CommandSender> context, String input) {
-        return GameType.keys();
-    }
-
     @Suggestions("maps-and-worlds")
     public List<String> mapsAndWorlds(CommandContext<CommandSender> context, String input) {
         Set<String> names = new LinkedHashSet<>(arenas().getMapNames());
@@ -248,9 +243,10 @@ public class CommandArena {
     public void spawnAddCmd(Player player, @Argument("arena") Arena arena) {
         Location location = position(player, arena);
         if (location == null) return;
-        // the middle of the block, looking straight
-        Location spawn = location.getBlock().getLocation().add(0.5, 0, 0.5);
-        spawn.setYaw(Math.round(location.getYaw() / 45f) * 45f);
+        // the middle of the block at the height of the feet (on a slab half a block above the block); in the game the
+        // players look at the center
+        Location spawn = new Location(location.getWorld(), location.getBlockX() + 0.5, location.getY(),
+                location.getBlockZ() + 0.5, Math.round(location.getYaw() / 45f) * 45f, 0);
         int number = arena.addSpawn(spawn);
         send(player, LangText.SPAWN_ADDED, number, arena.getName());
     }

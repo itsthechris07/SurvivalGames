@@ -4,6 +4,7 @@ import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Menus;
+import com.christian34.survivalgames.game.Rewards;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.modules.Backpack;
@@ -19,6 +20,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
@@ -69,6 +71,16 @@ public class ProtectionListener implements Listener {
             if (Items.is(e.getItem(), Items.TEAMS)) {
                 e.setCancelled(true);
                 Menus.openTeams(player, game);
+                return;
+            }
+            if (Items.is(e.getItem(), Items.KITS)) {
+                e.setCancelled(true);
+                Menus.openKits(player, game);
+                return;
+            }
+            if (Items.is(e.getItem(), Items.VOTE)) {
+                e.setCancelled(true);
+                if (game instanceof SurvivalGame survivalGame) Menus.openVoting(player, survivalGame);
                 return;
             }
             if (Items.is(e.getItem(), Items.LEAVE)) {
@@ -150,7 +162,9 @@ public class ProtectionListener implements Listener {
             return;
         }
         if (plugin.getUser(player).getGame() instanceof SurvivalGame sg
-                && SurvivalGame.isLootContainer(location.getBlock().getType())) {
+                && SurvivalGame.isLootContainer(location.getBlock().getType())
+                // a supply drop keeps its loot
+                && !plugin.getSupplyDrop().isDrop(location.getBlock())) {
             sg.fillContainer(e.getInventory());
         }
     }
@@ -173,6 +187,14 @@ public class ProtectionListener implements Listener {
                 || !plugin.isModuleEnabled(module, plugin.getUser(player).getGame())) {
             e.getInventory().setResult(null);
         }
+    }
+
+    /**
+     * the fireworks for the winners don't hurt anybody
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onFireworkDamage(EntityDamageByEntityEvent e) {
+        if (Rewards.isRewardFirework(e.getDamager())) e.setCancelled(true);
     }
 
 }
