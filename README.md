@@ -2,8 +2,8 @@
 
 # SurvivalGames
 
-Survival Games and Varo for Paper 26.2 – several games next to each other on one server, or one game per server in a
-network behind Velocity/BungeeCord.
+Survival Games and Varo for Paper 1.21.11 – 26.3 (and Purpur) – several games next to each other on one server, or
+one game per server in a network behind Velocity/BungeeCord.
 
 - **Survival Games** (the default): everybody spawns on a spawn point, loots the chests and fights; after a grace
   period and a deathmatch with a shrinking world border the last one standing wins. Every round starts with a fresh

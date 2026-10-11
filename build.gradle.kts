@@ -33,9 +33,10 @@ repositories {
     maven("https://repo.codemc.io/repository/creatorfromhell/") { content { includeGroup("net.milkbowl.vault") } }
 }
 
-// the Paper version the plugin is built for; -PpaperApi=<version> compiles against a newer one to find API changes
-// early (the tests keep using MockBukkit and the API of this version)
-val paperApi = providers.gradleProperty("paperApi").getOrElse("26.2.build.129-stable")
+// the oldest Paper version the plugin supports, so that it can't use newer API by accident;
+// -PpaperApi=<version> compiles against a newer one to find API changes early (the tests use MockBukkit and the API
+// of 26.2)
+val paperApi = providers.gradleProperty("paperApi").getOrElse("1.21.11-R0.1-SNAPSHOT")
 
 dependencies {
     // Paper API already ships Adventure (incl. MiniMessage + legacy serializer)
@@ -191,7 +192,7 @@ tasks {
 
 // uploads to Modrinth (modrinth) and Hangar (publishPluginPublicationToHangar), run by .github/workflows/release.yml;
 // -PpublishDryRun only shows what Modrinth would get
-val minecraftVersions = listOf("26.2")
+val minecraftVersions = listOf("1.21.11", "26.1.1", "26.1.2", "26.2", "26.3")
 // the release notes, written by the workflow
 val releaseNotes = providers.gradleProperty("releaseNotes").map { file(it).readText() }
     .orElse("See https://github.com/itsthechris07/SurvivalGames/releases")

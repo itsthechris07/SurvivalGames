@@ -3,8 +3,8 @@ version: ${version}
 author: Christian34
 description: Survival Games and Varo - several games per server or one game per server in a network
 main: com.christian34.survivalgames.SurvivalGames
-# the current version only: older ones make Paper rewrite the bytecode of the plugin for old api calls
-api-version: "26.2"
+# the oldest supported version (build.gradle.kts: paperApi)
+api-version: "1.21.11"
 # commands are registered by cloud (commands/CommandManager)
 
 softdepend: [Vault, PlaceholderAPI, MiniPlaceholders, Parties, Spigot-Party-API-PAF, Citizens, FancyNpcs, floodgate, TAB, Essentials, Multiverse-Core, Multiverse-Inventories]

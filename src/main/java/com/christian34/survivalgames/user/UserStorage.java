@@ -231,7 +231,7 @@ public class UserStorage {
             String key = attribute.getKey().toString();
             // attributes the player didn't have before get their default value
             instance.setBaseValue(attributes != null && attributes.contains(key) ? attributes.getDouble(key)
-                    : attribute.getDefaultValue());
+                    : instance.getDefaultValue());
         }
         AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
         double health = data.getDouble("health", 20);

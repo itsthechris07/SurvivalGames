@@ -31,8 +31,9 @@ a network.
 
 ## Requirements
 
-- **Paper 26.2** – only the current version is supported (forks of Paper like Purpur work too)
-- **Java 25**
+- **Paper 1.21.11, 26.1, 26.2 or 26.3** – or a fork of it like [Purpur](https://purpurmc.org/). Folia isn't
+  supported, see the [FAQ](faq.md#does-it-run-on-folia)
+- **Java 25** (also for Paper 1.21.11)
 - optional: Vault, PlaceholderAPI, MiniPlaceholders, Parties, Citizens, FancyNpcs, Floodgate, TAB, EssentialsX,
   Multiverse – see [Integrations](integrations.md)
 - for a network: [Velocity](https://papermc.io/software/velocity) (or BungeeCord)

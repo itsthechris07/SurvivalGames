@@ -68,3 +68,9 @@ Every day the world and the game are saved as a zip file – see [backups](varo.
 
 The top lists are updated every minute and need `stats.enabled: true`. The rating is only counted in the game types
 of `stats.rating.games`.
+
+## Does it run on Folia?
+
+No. Every game plays in its own copy of the map, and Folia can't load or unload worlds while the server runs; its
+scoreboards (sidebar, team colors) don't work either. Use Paper or Purpur – with one game per server in a
+[network](network.md) the load is spread over several servers as well.
