@@ -36,6 +36,18 @@ public interface StatsStorage {
      */
     List<PlayerStats> top(Stat stat, @Nullable String type, int limit);
 
+    /**
+     * @return the achievements of the player (key of the achievement - when he got it, milliseconds since 1970)
+     */
+    Map<String, Long> loadAchievements(UUID uuid);
+
+    /**
+     * the player gets the achievement
+     *
+     * @return false if he has it already
+     */
+    boolean addAchievement(UUID uuid, String name, String achievement, long time);
+
     void close();
 
 }

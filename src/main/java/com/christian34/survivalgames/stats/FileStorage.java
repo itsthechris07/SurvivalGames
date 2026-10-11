@@ -15,11 +15,13 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The statistics in stats.yml: &lt;uuid&gt;.name and &lt;uuid&gt;.&lt;game type&gt;.&lt;statistic&gt;.
+ * The statistics in stats.yml: &lt;uuid&gt;.name, &lt;uuid&gt;.&lt;game type&gt;.&lt;statistic&gt; and
+ * &lt;uuid&gt;.achievements.&lt;achievement&gt; (when the player got it).
  *
  * @author Christian34
  */
 public class FileStorage implements StatsStorage {
+    private static final String ACHIEVEMENTS = "achievements";
     private final File file;
     private final YamlConfiguration data;
 
@@ -33,6 +35,10 @@ public class FileStorage implements StatsStorage {
         String path = uuid + "." + type + "." + stat.getKey();
         data.set(uuid + ".name", name);
         data.set(path, data.getInt(path) + amount);
+        save();
+    }
+
+    private void save() {
         try {
             data.save(file);
         } catch (IOException ex) {
@@ -48,7 +54,7 @@ public class FileStorage implements StatsStorage {
         String name = player.getString("name", uuid.toString());
         for (String type : player.getKeys(false)) {
             ConfigurationSection section = player.getConfigurationSection(type);
-            if (section == null) continue;
+            if (section == null || type.equals(ACHIEVEMENTS)) continue;
             stats.put(type, new PlayerStats(uuid, name, section.getInt(Stat.GAMES.getKey()),
                     section.getInt(Stat.WINS.getKey()), section.getInt(Stat.KILLS.getKey()),
                     section.getInt(Stat.DEATHS.getKey()), section.getInt(Stat.RATING.getKey())));
@@ -86,6 +92,27 @@ public class FileStorage implements StatsStorage {
         }
         return players.stream().sorted(Comparator.comparingInt((PlayerStats p) -> p.get(stat)).reversed())
                 .limit(limit).toList();
+    }
+
+    @Override
+    public Map<String, Long> loadAchievements(UUID uuid) {
+        Map<String, Long> achievements = new HashMap<>();
+        ConfigurationSection section = data.getConfigurationSection(uuid + "." + ACHIEVEMENTS);
+        if (section == null) return achievements;
+        for (String key : section.getKeys(false)) {
+            achievements.put(key, section.getLong(key));
+        }
+        return achievements;
+    }
+
+    @Override
+    public boolean addAchievement(UUID uuid, String name, String achievement, long time) {
+        String path = uuid + "." + ACHIEVEMENTS + "." + achievement;
+        if (data.contains(path)) return false;
+        data.set(uuid + ".name", name);
+        data.set(path, time);
+        save();
+        return true;
     }
 
     @Override

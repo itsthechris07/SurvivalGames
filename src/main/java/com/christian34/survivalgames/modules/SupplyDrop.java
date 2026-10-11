@@ -152,6 +152,7 @@ public class SupplyDrop {
      */
     private void land(Game game, Location location) {
         Block block = location.getBlock();
+        plugin.getReplays().block(block);
         block.setType(Material.CHEST);
         if (block.getState() instanceof Chest chest) plugin.getLoot().fillSupply(chest.getBlockInventory());
         drops.add(block);

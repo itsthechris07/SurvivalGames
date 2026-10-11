@@ -43,6 +43,8 @@ public class MapVoting {
         List<Arena> others = new ArrayList<>(plugin.getArenaManager().getArenas().stream()
                 .filter(arena -> arena != game.getArena() && isPossible(arena)).toList());
         Collections.shuffle(others);
+        // the map of the last round only if there aren't enough others
+        others.sort(Comparator.comparing(this::isLast));
         List<String> names = new ArrayList<>();
         names.add(game.getArena().getName());
         others.stream().limit(maps - 1).map(Arena::getName).forEach(names::add);
@@ -77,7 +79,8 @@ public class MapVoting {
     }
 
     /**
-     * @return the arenas to vote for (the arena of the game first), arenas that are gone are left out
+     * @return the arenas to vote for (the arena of the game first), arenas that are gone are left out - and the map of
+     * the last round (map-voting.block-last), if there is another one
      */
     public List<Arena> getOptions() {
         List<Arena> arenas = new ArrayList<>();
@@ -85,7 +88,23 @@ public class MapVoting {
             Arena arena = plugin.getArenaManager().get(name);
             if (arena != null) arenas.add(arena);
         }
+        if (arenas.size() > 1) arenas.removeIf(this::isLast);
         return arenas;
+    }
+
+    /**
+     * @return true if the last round of Survival Games was played in the arena (and such maps are blocked)
+     */
+    private boolean isLast(Arena arena) {
+        return settings(game.getArena()).getBoolean("block-last")
+                && arena.getName().equalsIgnoreCase(plugin.getGameManager().getLastPlayed());
+    }
+
+    /**
+     * @return false if there is only the arena of the game to play in
+     */
+    boolean hasChoice() {
+        return options.size() > 1;
     }
 
     public boolean isOver() {
@@ -106,7 +125,7 @@ public class MapVoting {
      * @return false if the arena isn't one of the options
      */
     public boolean vote(Player player, Arena arena) {
-        if (over || options.stream().noneMatch(name -> name.equalsIgnoreCase(arena.getName()))) return false;
+        if (over || !getOptions().contains(arena)) return false;
         votes.put(player.getUniqueId(), arena.getName().toLowerCase(Locale.ROOT));
         return true;
     }
@@ -132,7 +151,8 @@ public class MapVoting {
     /**
      * ends the voting
      *
-     * @return the arena with the most votes the players can move into (a tie: the arena of the game or the first one)
+     * @return the arena with the most votes the players can move into (a tie: the arena of the game or the first one),
+     * the arena of the game if they can't move into any
      */
     Arena finish() {
         this.over = true;

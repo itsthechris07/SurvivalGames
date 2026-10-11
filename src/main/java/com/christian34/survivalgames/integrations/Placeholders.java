@@ -10,6 +10,8 @@ import com.christian34.survivalgames.game.SignManager;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.network.ServerStatus;
+import com.christian34.survivalgames.stats.Achievement;
+import com.christian34.survivalgames.stats.Achievements;
 import com.christian34.survivalgames.stats.PlayerStats;
 import com.christian34.survivalgames.stats.Stat;
 import org.bukkit.OfflinePlayer;
@@ -29,6 +31,7 @@ import java.util.Map;
  *     <li>games: the number of games on the server</li>
  *     <li>the game of an arena (on a lobby server: of a game server), e.g. for NPCs or holograms:
  *     game_players_&lt;arena&gt;, game_max_players_&lt;arena&gt;, game_state_&lt;arena&gt;</li>
+ *     <li>the achievements of the player: achievements, achievements_total</li>
  *     <li>the statistics stats_[type_]&lt;stat&gt; and the best players top_&lt;stat&gt;_&lt;rank&gt;_name|value</li>
  * </ul>
  *
@@ -56,6 +59,11 @@ public final class Placeholders {
     public static String value(SurvivalGames plugin, @Nullable OfflinePlayer player, String params) {
         String param = params.toLowerCase(Locale.ROOT);
         if (param.equals("games")) return String.valueOf(plugin.getGameManager().getGames().size());
+        if (param.equals("achievements_total")) return String.valueOf(Achievement.values().length);
+        if (param.equals("achievements")) {
+            Map<String, Long> unlocked = player == null ? null : plugin.getStats().getCachedAchievements(player.getUniqueId());
+            return unlocked == null ? "0" : String.valueOf(Achievements.count(unlocked));
+        }
         if (param.startsWith("stats_")) return player == null ? "" : stats(plugin, player, param.substring("stats_".length()));
         if (param.startsWith("top_")) return top(plugin, param.substring("top_".length()));
         if (param.startsWith("game_")) return arenaGame(plugin, params.substring("game_".length()));

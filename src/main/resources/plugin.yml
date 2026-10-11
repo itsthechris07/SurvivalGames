@@ -13,6 +13,9 @@ permissions:
   sg.admin:
     description: create and set up arenas, start and stop games, manage teams, build mode, reset, revive and reload
     default: op
+  sg.replay:
+    description: watch the replays of the games (/sg replay)
+    default: true
   sg.network.bypass:
     description: game servers of a network let the player in although he can't play (ops can always join)
     default: false

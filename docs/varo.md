@@ -88,8 +88,18 @@ When the game begins and at the start of every day, the world and the saved game
 `plugins/SurvivalGames/backups/<arena>/<day>.zip` (in the background). The newest `varo.backups` files are kept
 (default: 7, `0`: no backups).
 
-To go back to a backup, stop the server and replace the world folder of the game (`sgvaro_<arena>`) with the folder
-`world` of the zip file and `games/<arena>.yml` with its `game.yml`.
+Admins make a backup at any time with `/sg game <arena> backup` (`<day>_<time>.zip`, also with `varo.backups: 0`).
+
+The backup of a day is also the world its [replay](replays.md#varo) is played in – every day of a Varo is recorded
+(`/sg replay`, while the Varo is running only for admins).
+
+`/sg game <arena> backups` lists the backups, `/sg game <arena> restore <backup> --confirm` goes back to one: everybody
+leaves the game for a moment, the world and the saved game are replaced by those of the backup and the players who
+may play join again. Everything that happened since the backup is lost – bounties stay as they are, their money
+has been taken already.
+
+By hand (server stopped): replace the world folder of the game (`sgvaro_<arena>` in the dimensions of the main world)
+with the folder `world` of the zip file and `games/<arena>.yml` with its `game.yml`.
 
 ## Extras
 

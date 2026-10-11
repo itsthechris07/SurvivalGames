@@ -27,9 +27,13 @@ network behind Velocity/BungeeCord.
   players, deathmatch, spectators who sponsor items, only some blocks breakable
 - Varo: play time per day, no logout during a fight (a villager stands in for players who leave), join protection,
   shrinking world border, strikes, peaceful days, inactive players are out, daily coordinates, banned items, potions
-  and enchantments, daily backups, the players get their own inventory back when they leave the game
+  and enchantments, daily backups with a restore command, the players get their own inventory back when they leave the game
 - Statistics (games, wins, kills, deaths, Elo rating) per game type in a file or a MySQL database: `/sg stats`,
   `/sg top`, leaderboard holograms and `[sgtop]` signs
+- Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...): `/sg achievements`
+- Update checker: admins read about new releases when they join
+- Replays: every round of Survival Games and every day of a Varo is recorded and can be watched again in a copy of the
+  map (`/sg replay`) – pause, speed, jumps and the view of every player, without a client mod
 - Rewards (money and console commands), bounties, fireworks, the inventory of the killer after a death
 - Settings menu in the game: `/sg settings`
 - Teams (menu or `/sg team create <name> [color]`), team chat (`@message`), separate chat per game, scoreboard
@@ -43,7 +47,8 @@ network behind Velocity/BungeeCord.
 1. Put the jar into `plugins/` and start the server.
 2. Put a map into `plugins/SurvivalGames/maps/<name>` (or import a world: `/sg arena create <name> --world <world>`,
    or generate one: `--generate`) and create the arena: `/sg arena create <name>` (`--type varo` for Varo).
-3. `/sg arena <name> edit`, set `/sg arena <name> lobby`, `center` and `spawn add`, then `/sg arena save`.
+3. `/sg arena <name> edit`, set `center` and `spawn add`, then `/sg arena save`. The lobby of all arenas:
+   `/sg lobby setworld <world>` (or one per arena in its map: `/sg arena <name> lobby`).
 4. `/sg arena <name> creategame` – players join with `/sg join` or a sign with `[sg]` and the arena name.
 
 All commands: `/sg help` (alias `/varo`). Admin permission: `sg.admin` (operators).

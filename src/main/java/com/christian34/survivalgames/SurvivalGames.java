@@ -37,7 +37,9 @@ import com.christian34.survivalgames.modules.SupplyDrop;
 import com.christian34.survivalgames.modules.ToxicRain;
 import com.christian34.survivalgames.modules.Tracker;
 import com.christian34.survivalgames.network.NetworkManager;
+import com.christian34.survivalgames.replay.Replays;
 import com.christian34.survivalgames.stats.Leaderboards;
+import com.christian34.survivalgames.stats.Achievements;
 import com.christian34.survivalgames.stats.StatsManager;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
@@ -93,6 +95,9 @@ public class SurvivalGames extends JavaPlugin {
     private PartySupport partySupport;
     private EconomySupport economySupport;
     private NpcSupport npcSupport;
+    private Replays replays;
+    private UpdateChecker updateChecker;
+    private Achievements achievements;
 
     public static SurvivalGames getInstance() {
         return instance;
@@ -109,6 +114,7 @@ public class SurvivalGames extends JavaPlugin {
         loadTexts();
         this.loot = new Loot(this);
         this.stats = new StatsManager(this);
+        this.achievements = new Achievements(this);
         this.leaderboards = new Leaderboards(this);
         this.inventoryView = new InventoryView(this);
         this.kits = new Kits(this);
@@ -128,6 +134,8 @@ public class SurvivalGames extends JavaPlugin {
         this.sidebar = new Sidebar(this);
         this.tracker = new Tracker(this);
         this.supplyDrop = new SupplyDrop(this);
+        // before the games: a Varo that is loaded goes on with its recording
+        this.replays = new Replays(this);
         networkManager.ensureGame();
         gameManager.createAutoGames();
         this.signManager = new SignManager(this);
@@ -142,7 +150,7 @@ public class SurvivalGames extends JavaPlugin {
         }
         register(new PlayerListener(this), new ProtectionListener(this), new TeleportListener(this),
                 new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this),
-                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc);
+                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays);
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new SgExpansion(this).register();
         }
@@ -158,11 +166,15 @@ public class SurvivalGames extends JavaPlugin {
         for (Player player : Bukkit.getOnlinePlayers()) {
             getUser(player);
         }
+        this.updateChecker = new UpdateChecker(this);
+        this.updateChecker.start();
     }
 
     @Override
     public void onDisable() {
         if (gameManager != null) gameManager.stopAll();
+        // after the games: their recordings are saved, the viewers get their things back
+        if (replays != null) replays.close();
         // the NPCs don't show the state of games that don't exist any more
         if (npcSupport != null) npcSupport.removeStatus();
         if (arenaManager != null) arenaManager.stopAll();
@@ -379,6 +391,18 @@ public class SurvivalGames extends JavaPlugin {
 
     public NpcSupport getNpcSupport() {
         return npcSupport;
+    }
+
+    public Replays getReplays() {
+        return replays;
+    }
+
+    public UpdateChecker getUpdateChecker() {
+        return updateChecker;
+    }
+
+    public Achievements getAchievements() {
+        return achievements;
     }
 
 }

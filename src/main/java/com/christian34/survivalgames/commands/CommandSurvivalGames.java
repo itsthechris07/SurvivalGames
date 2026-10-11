@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.commands;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.UpdateChecker;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -165,9 +166,13 @@ public class CommandSurvivalGames {
             game.leave(gamePlayer, Game.LeaveReason.COMMAND);
             return;
         }
-        if (plugin().getArenaManager().getEditedArena(player) != null) {
+        if (plugin().getArenaManager().isEditing(player)) {
             plugin().getArenaManager().stopEditing(gamePlayer);
             player.sendMessage(I.prefixed(LangText.EDIT_STOPPED));
+            return;
+        }
+        if (plugin().getReplays().leave(player)) {
+            player.sendMessage(I.prefixed(LangText.REPLAY_LEFT));
             return;
         }
         player.sendMessage(I.prefixed(LangText.NOT_IN_GAME));
@@ -286,7 +291,7 @@ public class CommandSurvivalGames {
      * @param time milliseconds since 1970
      * @return the date in the date-format of config.yml
      */
-    static String formatDate(long time) {
+    public static String formatDate(long time) {
         try {
             return DateTimeFormatter.ofPattern(String.valueOf(plugin().getFileManager().getConfigFile().getString("date-format")))
                     .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(time));
@@ -351,6 +356,28 @@ public class CommandSurvivalGames {
             if (stats.size() > 1) {
                 sender.sendMessage(statsLine(i18n(LangText.STATS_TOTAL),
                         PlayerStats.total(any.uuid(), any.name(), stats.values())));
+            }
+        }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+    }
+
+    @Command(ROOT + " achievements [player]")
+    @CommandDescription("command_achievements")
+    public void achievementsCmd(CommandSender sender, @Argument(value = "player", suggestions = "online-players") @Nullable String name) {
+        if (name == null && !(sender instanceof Player)) {
+            sender.sendMessage(I.prefixed(LangText.ONLY_PLAYERS));
+            return;
+        }
+        if (!checkStats(sender)) return;
+        if (!plugin().getAchievements().isEnabled()) {
+            sender.sendMessage(I.prefixed(LangText.ACHIEVEMENTS_DISABLED));
+            return;
+        }
+        String player = name != null ? name : sender.getName();
+        stats().then(stats().loadAchievements(player), unlocked -> {
+            if (name == null && sender instanceof Player viewer) {
+                if (viewer.isOnline()) plugin().getAchievements().showMenu(viewer, unlocked);
+            } else {
+                plugin().getAchievements().sendList(sender, player, unlocked);
             }
         }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
     }
@@ -507,6 +534,9 @@ public class CommandSurvivalGames {
     public void debugCmd(CommandSender sender) {
         sender.sendMessage(DEBUG_HEADER);
         sender.sendMessage(debugLine("Version", plugin().getPluginMeta().getVersion()));
+        UpdateChecker.Update update = plugin().getUpdateChecker().getUpdate();
+        sender.sendMessage(debugLine("Latest version",
+                update == null ? "installed (or not checked)" : update.version() + " (" + update.behind() + " behind)"));
         sender.sendMessage(debugLine("Network", network().getMode().name()
                 + (network().isGameServer() ? " (arena " + (network().getArena() == null ? "-" : network().getArena().getName()) + ")" : "")));
         sender.sendMessage(debugLine("Arenas", plugin().getArenaManager().getArenas().size() + ""));

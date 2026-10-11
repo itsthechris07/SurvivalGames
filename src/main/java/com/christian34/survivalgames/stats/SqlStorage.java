@@ -16,17 +16,19 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * The statistics in a MySQL/MariaDB database (Paper ships the driver): one row per player and game type. Several
- * servers of a network can use the same table.
+ * The statistics in a MySQL/MariaDB database (Paper ships the driver): one row per player and game type, the
+ * achievements in &lt;table&gt;_achievements. Several servers of a network can use the same tables.
  *
  * @author Christian34
  */
 public class SqlStorage implements StatsStorage {
-    private static final Pattern TABLE = Pattern.compile("[A-Za-z0-9_]{1,64}");
+    // MySQL allows 64 characters: room for the table of the achievements (_achievements)
+    private static final Pattern TABLE = Pattern.compile("[A-Za-z0-9_]{1,50}");
     private final String url;
     private final String user;
     private final String password;
     private final String table;
+    private final String achievementTable;
     @Nullable
     private Connection connection;
 
@@ -36,6 +38,7 @@ public class SqlStorage implements StatsStorage {
         this.user = user;
         this.password = password;
         this.table = table;
+        this.achievementTable = table + "_achievements";
     }
 
     /**
@@ -53,6 +56,11 @@ public class SqlStorage implements StatsStorage {
                         + "PRIMARY KEY (uuid, type))");
             }
             addRatingColumn(connection);
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + achievementTable + " ("
+                        + "uuid CHAR(36) NOT NULL, achievement VARCHAR(32) NOT NULL, unlocked BIGINT NOT NULL, "
+                        + "PRIMARY KEY (uuid, achievement))");
+            }
         }
         return connection;
     }
@@ -154,6 +162,37 @@ public class SqlStorage implements StatsStorage {
             throw failed(ex);
         }
         return players;
+    }
+
+    @Override
+    public Map<String, Long> loadAchievements(UUID uuid) {
+        Map<String, Long> achievements = new HashMap<>();
+        try (PreparedStatement statement = connection().prepareStatement(
+                "SELECT achievement, unlocked FROM " + achievementTable + " WHERE uuid = ?")) {
+            statement.setString(1, uuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    achievements.put(result.getString("achievement"), result.getLong("unlocked"));
+                }
+            }
+        } catch (SQLException ex) {
+            throw failed(ex);
+        }
+        return achievements;
+    }
+
+    @Override
+    public boolean addAchievement(UUID uuid, String name, String achievement, long time) {
+        // another server of the network may have added it already
+        try (PreparedStatement statement = connection().prepareStatement("INSERT IGNORE INTO " + achievementTable
+                + " (uuid, achievement, unlocked) VALUES (?, ?, ?)")) {
+            statement.setString(1, uuid.toString());
+            statement.setString(2, achievement);
+            statement.setLong(3, time);
+            return statement.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            throw failed(ex);
+        }
     }
 
     @Override

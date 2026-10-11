@@ -34,6 +34,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 /**
  * /sg arena: admins create arenas from a map (a folder in maps/, an imported world or a generated world), set the
  * lobby and the spawn points in a copy of the map, the number of players, the world border and the game type.
+ * /sg lobby: the lobby world the players of all arenas without a lobby of their own wait in.
  *
  * @author Christian34
  */
@@ -41,6 +42,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 public class CommandArena {
     static final String ARENA = ROOT + " arena";
     static final String ONE_ARENA = ARENA + " <arena>";
+    static final String LOBBY = ROOT + " lobby";
 
     private static SurvivalGames plugin() {
         return SurvivalGames.getInstance();
@@ -149,6 +151,9 @@ public class CommandArena {
         sender.sendMessage(arena.isGenerated()
                 ? i18n(LangText.ARENA_INFO_GENERATED, arena.getSeed() == null ? "-" : arena.getSeed())
                 : i18n(LangText.ARENA_INFO_MAP, arena.getMapName()));
+        if (arena.usesLobbyWorld()) {
+            sender.sendMessage(i18n(LangText.ARENA_INFO_LOBBY, arenas().getLobby().getMapName()));
+        }
         sender.sendMessage(i18n(LangText.ARENA_INFO_PLAYERS, arena.getMinPlayers(), arena.getMaxPlayers(),
                 arena.getTeamSize(), arena.getName()));
         sender.sendMessage(i18n(LangText.ARENA_INFO_SPAWNS, arena.getSpawnCount(), arena.getName()));
@@ -166,18 +171,31 @@ public class CommandArena {
 
     // ---------------------------------------------------------------- editing the map
 
-    @Command(ONE_ARENA + " edit")
-    @CommandDescription("command_arena_edit")
-    public void editCmd(Player player, @Argument("arena") Arena arena) {
-        if (plugin().getUser(player).getGame() != null) {
-            send(player, LangText.ALREADY_IN_GAME, plugin().getUser(player).getGame().getArena().getName());
-            return;
+    /**
+     * @return false if the player is in a game or edits a map already (he got a message)
+     */
+    private static boolean checkFree(Player player) {
+        Game game = plugin().getUser(player).getGame();
+        if (game != null) {
+            send(player, LangText.ALREADY_IN_GAME, game.getArena().getName());
+            return false;
+        }
+        if (arenas().isEditingLobby(player)) {
+            send(player, LangText.ALREADY_EDITING_LOBBY);
+            return false;
         }
         Arena edited = arenas().getEditedArena(player);
         if (edited != null) {
             send(player, LangText.ALREADY_EDITING, edited.getName());
-            return;
+            return false;
         }
+        return true;
+    }
+
+    @Command(ONE_ARENA + " edit")
+    @CommandDescription("command_arena_edit")
+    public void editCmd(Player player, @Argument("arena") Arena arena) {
+        if (!checkFree(player)) return;
         if (!arena.isPlayable()) {
             arena.getMissingSetup().forEach(missing -> player.sendMessage(I.prefixed(missing)));
             return;
@@ -194,6 +212,11 @@ public class CommandArena {
     @Command(ARENA + " save")
     @CommandDescription("command_arena_save")
     public void saveCmd(Player player) {
+        if (arenas().isEditingLobby(player)) {
+            arenas().stopEditing(plugin().getUser(player));
+            send(player, LangText.LOBBY_EDIT_SAVED);
+            return;
+        }
         Arena arena = arenas().getEditedArena(player);
         if (arena == null) {
             send(player, LangText.NOT_EDITING);
@@ -227,6 +250,14 @@ public class CommandArena {
         if (location == null) return;
         arena.setLobby(location);
         send(player, LangText.LOBBY_SET, format(location));
+    }
+
+    @Command(ONE_ARENA + " lobby remove")
+    @CommandDescription("command_arena_lobby_remove")
+    public void lobbyRemoveCmd(CommandSender sender, @Argument("arena") Arena arena) {
+        arena.removeLobby();
+        arenas().lobbyChanged();
+        send(sender, LangText.ARENA_LOBBY_REMOVED, arena.getName());
     }
 
     @Command(ONE_ARENA + " center")
@@ -306,6 +337,83 @@ public class CommandArena {
         }
         arena.clearSpawns();
         send(sender, LangText.SPAWNS_CLEARED);
+    }
+
+    // ---------------------------------------------------------------- lobby world
+
+    @Command(LOBBY + " setworld <world>")
+    @CommandDescription("command_lobby_setworld")
+    public void lobbySetWorldCmd(CommandSender sender,
+                                 @Argument(value = "world", suggestions = "maps-and-worlds") String worldName) {
+        if (arenas().getLobbyEditWorld() != null) {
+            send(sender, LangText.LOBBY_BEING_EDITED);
+            return;
+        }
+        String map = worldName;
+        if (!arenas().getMapNames().contains(map)) {
+            // the name of a world of the server: imported (once)
+            World world = ArenaManager.getImportableWorld(worldName);
+            if (world == null) {
+                send(sender, LangText.MAP_OR_WORLD_NOT_FOUND, worldName);
+                return;
+            }
+            map = ArenaManager.toMapName(world.getName());
+            if (!arenas().getMapNames().contains(map)) {
+                if (map.isEmpty() || !arenas().importWorld(world, map)) {
+                    send(sender, LangText.WORLD_COPY_FAILED, world.getName());
+                    return;
+                }
+                send(sender, LangText.WORLD_IMPORTED, world.getName(), map);
+            }
+        }
+        arenas().setLobbyMap(map);
+        send(sender, LangText.LOBBY_WORLD_SET, map);
+    }
+
+    @Command(LOBBY + " remove")
+    @CommandDescription("command_lobby_remove")
+    public void lobbyRemoveWorldCmd(CommandSender sender) {
+        if (arenas().getLobbyEditWorld() != null) {
+            send(sender, LangText.LOBBY_BEING_EDITED);
+            return;
+        }
+        arenas().setLobbyMap(null);
+        send(sender, LangText.LOBBY_WORLD_REMOVED);
+    }
+
+    @Command(LOBBY + " edit")
+    @CommandDescription("command_lobby_edit")
+    public void lobbyEditCmd(Player player) {
+        if (!checkFree(player)) return;
+        if (!arenas().getLobby().isSet()) {
+            send(player, LangText.LOBBY_WORLD_MISSING);
+            return;
+        }
+        try {
+            arenas().startEditingLobby(plugin().getUser(player));
+        } catch (RuntimeException ex) {
+            send(player, LangText.LOBBY_WORLD_LOAD_FAILED);
+            return;
+        }
+        send(player, LangText.LOBBY_EDIT_STARTED);
+    }
+
+    @Command(LOBBY + " setspawn")
+    @CommandDescription("command_lobby_setspawn")
+    public void lobbySetSpawnCmd(Player player) {
+        World world = arenas().getLobbyEditWorld();
+        if (world == null || !player.getWorld().equals(world)) {
+            send(player, LangText.NOT_IN_LOBBY_WORLD);
+            return;
+        }
+        arenas().getLobby().setSpawn(player.getLocation());
+        send(player, LangText.LOBBY_SPAWN_SET, format(player.getLocation()));
+    }
+
+    @Command(LOBBY + " save")
+    @CommandDescription("command_lobby_save")
+    public void lobbySaveCmd(Player player) {
+        saveCmd(player);
     }
 
     // ---------------------------------------------------------------- settings

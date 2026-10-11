@@ -42,6 +42,7 @@ public class GameWorld {
     private final Long seed;
     private final String worldName;
     private final boolean kept;
+    private boolean prepared;
     @Nullable
     private World world;
 
@@ -113,8 +114,15 @@ public class GameWorld {
         return overworld.isDirectory() ? overworld : map;
     }
 
-    private File getWorldFolder() {
+    public File getWorldFolder() {
         return new File(getDimensionsFolder(), worldName);
+    }
+
+    /**
+     * the folder of the world has been filled already (a replay: the backup of a Varo) - it is loaded as it is
+     */
+    public void setPrepared() {
+        this.prepared = true;
     }
 
     /**
@@ -130,7 +138,7 @@ public class GameWorld {
     public World load() {
         if (world != null) return world;
         File worldFolder = getWorldFolder();
-        if (!exists()) {
+        if (!exists() && !prepared) {
             FileManager.deleteDirectory(worldFolder);
             if (map != null && !copyMap(getMapData(map), worldFolder)) {
                 FileManager.deleteDirectory(worldFolder);

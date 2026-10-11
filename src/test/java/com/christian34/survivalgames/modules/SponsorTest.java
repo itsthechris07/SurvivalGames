@@ -31,6 +31,7 @@ class SponsorTest extends PluginTestBase {
 
     @BeforeEach
     void setUpGame() {
+        plugin.getStats().setExecutor(Runnable::run);
         config().set("survival-games.lobby-countdown", 1);
         config().set("survival-games.start-countdown", 1);
         config().set("survival-games.grace-period", 0);
@@ -94,7 +95,9 @@ class SponsorTest extends PluginTestBase {
         assertTrue(steve.getInventory().contains(Material.COOKED_BEEF, 4));
         assertEquals(20, economy.balance(bob));
         assertContains(messages(steve), "Bob has sent you 4x");
-        assertContains(messages(bob), "You have sent 4x");
+        List<String> messages = messages(bob);
+        assertContains(messages, "You have sent 4x");
+        assertContains(messages, "Achievement unlocked! Sponsor");
     }
 
     @Test

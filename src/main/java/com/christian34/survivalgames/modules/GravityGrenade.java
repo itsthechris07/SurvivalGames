@@ -100,6 +100,7 @@ public class GravityGrenade implements Listener {
         List<FallingBlock> blocks = new ArrayList<>();
         for (Block block : getBlocks(center, radius)) {
             BlockData data = block.getBlockData();
+            plugin.getReplays().block(block);
             block.setType(Material.AIR);
             FallingBlock fallingBlock = world.spawn(block.getLocation().add(0.5, 0, 0.5), FallingBlock.class,
                     falling -> {

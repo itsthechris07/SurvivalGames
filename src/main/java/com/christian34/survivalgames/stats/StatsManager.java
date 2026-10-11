@@ -31,8 +31,8 @@ import java.util.function.Function;
 /**
  * The statistics of the players (stats in config.yml): games, wins, kills and deaths per game type, kept in stats.yml
  * or a MySQL database (shared by the servers of a network). The storage is only used by an own thread, so a slow
- * database doesn't hold up the server. The statistics of the online players and the best players are cached for the
- * placeholders.
+ * database doesn't hold up the server. The statistics and the achievements of the online players and the best players
+ * are cached for the placeholders.
  *
  * @author Christian34
  */
@@ -49,6 +49,10 @@ public class StatsManager implements Listener {
     /**
      * the best players of all game types
      */
+    /**
+     * the achievements of the online players (key - when they got it)
+     */
+    private final Map<UUID, Map<String, Long>> achievements = new ConcurrentHashMap<>();
     private volatile Map<Stat, List<PlayerStats>> top = Map.of();
     @Nullable
     private StatsStorage storage;
@@ -100,6 +104,7 @@ public class StatsManager implements Listener {
         this.service = null;
         this.storage = null;
         cache.clear();
+        achievements.clear();
         this.top = Map.of();
         if (service != null) {
             service.shutdown();
@@ -207,6 +212,7 @@ public class StatsManager implements Listener {
                 copy.put(type.getKey(), copy.getOrDefault(type.getKey(), PlayerStats.empty(uuid, name)).plus(stat, amount, name));
                 return Map.copyOf(copy);
             });
+            checkAchievements(uuid, name);
         });
     }
 
@@ -284,7 +290,70 @@ public class StatsManager implements Listener {
     }
 
     private void loadCache(UUID uuid) {
-        run(storage -> cache.put(uuid, Map.copyOf(storage.load(uuid))));
+        run(storage -> {
+            Map<String, PlayerStats> stats = Map.copyOf(storage.load(uuid));
+            achievements.put(uuid, Map.copyOf(storage.loadAchievements(uuid)));
+            cache.put(uuid, stats);
+            // what he reached while he was away (the win of his team in a Varo) or before there were achievements
+            if (!stats.isEmpty()) checkAchievements(uuid, stats.values().iterator().next().name());
+        });
+    }
+
+    // ---------------------------------------------------------------- achievements
+
+    /**
+     * the achievements for the statistics of an online player (on the thread of the storage)
+     */
+    private void checkAchievements(UUID uuid, String name) {
+        Map<String, PlayerStats> stats = cache.get(uuid);
+        Achievements manager = plugin.getAchievements();
+        if (stats == null || manager == null) return;
+        manager.onStats(PlayerStats.total(uuid, name, stats.values()));
+    }
+
+    /**
+     *  the achievements of an online player (key - when he got it), null if they aren't loaded (yet)
+     */
+    @Nullable
+    public Map<String, Long> getCachedAchievements(UUID uuid) {
+        return achievements.get(uuid);
+    }
+
+    /**
+     * @return the achievements of the player (key - when he got it), empty if there is no player with statistics and
+     * this name
+     */
+    public CompletableFuture<Map<String, Long>> loadAchievements(String name) {
+        Player online = Bukkit.getPlayerExact(name);
+        UUID uuid = online == null ? null : online.getUniqueId();
+        return query(storage -> {
+            UUID player = uuid != null ? uuid : storage.find(name);
+            return player == null ? Map.of() : storage.loadAchievements(player);
+        });
+    }
+
+    /**
+     * the player gets the achievement
+     *
+     * @param unlocked runs on the main thread if he didn't have it yet
+     */
+    public void unlock(UUID uuid, String name, String achievement, Runnable unlocked) {
+        Map<String, Long> cached = achievements.get(uuid);
+        if (cached != null && cached.containsKey(achievement)) return;
+        long time = System.currentTimeMillis();
+        run(storage -> {
+            if (!storage.addAchievement(uuid, name, achievement, time)) return;
+            achievements.computeIfPresent(uuid, (key, old) -> {
+                Map<String, Long> copy = new HashMap<>(old);
+                copy.put(achievement, time);
+                return Map.copyOf(copy);
+            });
+            if (Bukkit.isPrimaryThread()) {
+                unlocked.run();
+            } else if (plugin.isEnabled()) {
+                Bukkit.getScheduler().runTask(plugin, unlocked);
+            }
+        });
     }
 
     @EventHandler
@@ -296,7 +365,10 @@ public class StatsManager implements Listener {
     public void onQuit(PlayerQuitEvent e) {
         UUID uuid = e.getPlayer().getUniqueId();
         // after the statistics of his game have been saved
-        run(storage -> cache.remove(uuid));
+        run(storage -> {
+            cache.remove(uuid);
+            achievements.remove(uuid);
+        });
     }
 
 }

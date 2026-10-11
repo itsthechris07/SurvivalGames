@@ -74,4 +74,17 @@ class SqlStorageTest {
         assertThrows(IllegalArgumentException.class, () -> new SqlStorage("jdbc:h2:mem:x", "sa", "", "stats; DROP"));
     }
 
+    @Test
+    void achievementsAreKeptOnce() {
+        assertTrue(storage.loadAchievements(steve).isEmpty());
+        assertTrue(storage.addAchievement(steve, "Steve", "first_win", 1000));
+        assertFalse(storage.addAchievement(steve, "Steve", "first_win", 2000), "he has it already");
+        assertTrue(storage.addAchievement(steve, "Steve", "legend", 3000));
+        assertTrue(storage.addAchievement(alex, "Alex", "first_win", 4000));
+
+        assertEquals(Map.of("first_win", 1000L, "legend", 3000L), storage.loadAchievements(steve));
+        assertEquals(Map.of("first_win", 4000L), storage.loadAchievements(alex));
+        assertTrue(storage.load(steve).isEmpty(), "achievements are no statistics");
+    }
+
 }

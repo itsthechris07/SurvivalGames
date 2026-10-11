@@ -110,6 +110,8 @@ tasks {
 
     test {
         useJUnitPlatform()
+        // the update checker doesn't ask GitHub in tests
+        systemProperty("sg.offline", "true")
         testLogging {
             events("failed", "skipped")
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

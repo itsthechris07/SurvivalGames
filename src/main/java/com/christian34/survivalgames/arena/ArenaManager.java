@@ -3,6 +3,7 @@ package com.christian34.survivalgames.arena;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.files.FileManager;
+import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -29,7 +30,7 @@ import java.util.UUID;
 /**
  * The arenas of arenas.yml, their maps in plugins/SurvivalGames/maps and the copies admins edit
  * (/sg arena &lt;arena&gt; edit): the spawn points and the lobby are set in such a copy, which is saved back into the map
- * when the last admin leaves it.
+ * when the last admin leaves it. The lobby world (/sg lobby) is edited the same way.
  *
  * @author Christian34
  */
@@ -37,6 +38,12 @@ public class ArenaManager {
     private final SurvivalGames plugin;
     private final Map<String, Arena> arenas = new HashMap<>();
     private final Map<String, EditWorld> editWorlds = new HashMap<>();
+    private final Lobby lobby = new Lobby();
+    /**
+     * the copy of the lobby world admins edit right now
+     */
+    @Nullable
+    private EditWorld lobbyEdit;
 
     /**
      * the copy of a map admins edit right now
@@ -64,6 +71,28 @@ public class ArenaManager {
 
     private static String key(String name) {
         return name.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * the lobby world the players of all arenas without a lobby of their own wait in
+     */
+    public Lobby getLobby() {
+        return lobby;
+    }
+
+    /**
+     * @param map a map in maps/, null: no lobby world
+     */
+    public void setLobbyMap(@Nullable String map) {
+        lobby.setMap(map);
+        lobbyChanged();
+    }
+
+    /**
+     * the lobby world or the arenas using it have changed: the waiting games load their copy again
+     */
+    public void lobbyChanged() {
+        plugin.getGameManager().getGames().forEach(Game::reloadLobby);
     }
 
     @Nullable
@@ -130,6 +159,13 @@ public class ArenaManager {
     }
 
     /**
+     * @return the name of the map a world of the server is imported as
+     */
+    public static String toMapName(String worldName) {
+        return worldName.replace(" ", "_").replaceAll("[^A-Za-z0-9_]", "");
+    }
+
+    /**
      * copies a (loaded) world of the server into plugins/SurvivalGames/maps
      *
      * @return false if the map already exists or the world couldn't be copied
@@ -176,43 +212,117 @@ public class ArenaManager {
     }
 
     /**
-     * @return true if the world is a copy of a map an admin edits
+     * @return true if the player edits the lobby world
      */
-    public boolean isEditWorld(World world) {
-        return editWorlds.values().stream().anyMatch(editWorld -> world.equals(editWorld.world.getWorld()));
+    public boolean isEditingLobby(Player player) {
+        return lobbyEdit != null && lobbyEdit.editors.contains(player.getUniqueId());
     }
 
     /**
-     * the player (whose state is saved) gets into a copy of the map in creative mode
+     * @return true if the player edits the map of an arena or the lobby world
      */
-    public void startEditing(GamePlayer gamePlayer, Arena arena) {
+    public boolean isEditing(Player player) {
+        return isEditingLobby(player) || getEditedArena(player) != null;
+    }
+
+    /**
+     * @return the world of the copy of the lobby world that is edited right now, null if nobody edits it
+     */
+    @Nullable
+    public World getLobbyEditWorld() {
+        return lobbyEdit == null ? null : lobbyEdit.world.getWorld();
+    }
+
+    /**
+     * @return the world of the copy the player edits (the map of an arena or the lobby world), null if he edits none
+     */
+    @Nullable
+    public World getEditWorld(Player player) {
+        if (isEditingLobby(player)) return getLobbyEditWorld();
+        Arena arena = getEditedArena(player);
+        return arena == null ? null : getEditWorld(arena);
+    }
+
+    /**
+     * @return true if the world is a copy of a map an admin edits
+     */
+    public boolean isEditWorld(World world) {
+        return world.equals(getLobbyEditWorld())
+                || editWorlds.values().stream().anyMatch(editWorld -> world.equals(editWorld.world.getWorld()));
+    }
+
+    /**
+     * the player (whose state is saved) gets into the copy in creative mode
+     *
+     * @return the world of the copy
+     */
+    private World enter(GamePlayer gamePlayer, EditWorld editWorld) {
         Player player = gamePlayer.getPlayer();
-        EditWorld editWorld = editWorlds.computeIfAbsent(key(arena.getName()),
-                key -> new EditWorld(arena.createWorld("edit_" + key, false)));
+        plugin.getReplays().leave(player);
         World world = editWorld.world.load();
         editWorld.editors.add(player.getUniqueId());
         gamePlayer.getStorage().store();
         gamePlayer.getStorage().cleanPlayer();
         player.setGameMode(GameMode.CREATIVE);
-        Location lobby = arena.getLobby(world);
-        player.teleport(lobby != null ? lobby : arena.getCenter(world));
+        return world;
     }
 
     /**
-     * the player leaves the copy of the map and gets his state back - the last one saves the map
+     * the player leaves the copy and gets his state back
+     *
+     * @return true if he was the last one editing it
      */
-    public void stopEditing(GamePlayer gamePlayer) {
+    private boolean exit(GamePlayer gamePlayer, EditWorld editWorld) {
         Player player = gamePlayer.getPlayer();
-        Arena arena = getEditedArena(player);
-        if (arena == null) return;
-        EditWorld editWorld = editWorlds.get(key(arena.getName()));
         editWorld.editors.remove(player.getUniqueId());
         gamePlayer.getStorage().restore();
         if (editWorld.world.getWorld() != null && player.getWorld().equals(editWorld.world.getWorld())) {
             // the saved location was in the edit world (should not happen) - out of it
             player.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
         }
-        if (!editWorld.editors.isEmpty()) return;
+        return editWorld.editors.isEmpty();
+    }
+
+    /**
+     * the player (whose state is saved) gets into a copy of the map in creative mode
+     */
+    public void startEditing(GamePlayer gamePlayer, Arena arena) {
+        EditWorld editWorld = editWorlds.computeIfAbsent(key(arena.getName()),
+                key -> new EditWorld(arena.createWorld("edit_" + key, false)));
+        World world = enter(gamePlayer, editWorld);
+        Location lobby = arena.getLobby(world);
+        gamePlayer.getPlayer().teleport(lobby != null ? lobby : arena.getCenter(world));
+    }
+
+    /**
+     * the player (whose state is saved) gets into a copy of the lobby world in creative mode
+     */
+    public void startEditingLobby(GamePlayer gamePlayer) {
+        if (lobbyEdit == null) this.lobbyEdit = new EditWorld(lobby.createEditWorld());
+        World world = enter(gamePlayer, lobbyEdit);
+        gamePlayer.getPlayer().teleport(lobby.getSpawn(world));
+    }
+
+    /**
+     * the player leaves the copy of the map (or the lobby world) and gets his state back - the last one saves it
+     */
+    public void stopEditing(GamePlayer gamePlayer) {
+        Player player = gamePlayer.getPlayer();
+        if (lobbyEdit != null && isEditingLobby(player)) {
+            EditWorld editWorld = lobbyEdit;
+            if (!exit(gamePlayer, editWorld)) return;
+            this.lobbyEdit = null;
+            if (editWorld.world.closeAndSaveToMap()) {
+                lobbyChanged();
+            } else {
+                Debug.warn("The changes of the lobby world couldn't be saved");
+            }
+            return;
+        }
+        Arena arena = getEditedArena(player);
+        if (arena == null) return;
+        EditWorld editWorld = editWorlds.get(key(arena.getName()));
+        if (!exit(gamePlayer, editWorld)) return;
         editWorlds.remove(key(arena.getName()));
         if (arena.isGenerated()) {
             // nothing to save: the world is generated again for every game, the positions are in arenas.yml
@@ -226,7 +336,9 @@ public class ArenaManager {
      * the plugin is disabled: all admins leave the copies (the maps are saved)
      */
     public void stopAll() {
-        for (EditWorld editWorld : new ArrayList<>(editWorlds.values())) {
+        List<EditWorld> edited = new ArrayList<>(editWorlds.values());
+        if (lobbyEdit != null) edited.add(lobbyEdit);
+        for (EditWorld editWorld : edited) {
             for (UUID editor : new ArrayList<>(editWorld.editors)) {
                 Player player = Bukkit.getPlayer(editor);
                 if (player != null) stopEditing(plugin.getUser(player));

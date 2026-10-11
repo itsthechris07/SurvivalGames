@@ -67,8 +67,10 @@ public class CommandManager {
                 .commandManager(this.manager)
                 .audienceProvider(sender -> sender)
                 .commandPrefix("/sg help")
-                .colors(MinecraftHelp.helpColors(NamedTextColor.GRAY, NamedTextColor.AQUA, NamedTextColor.GRAY,
-                        NamedTextColor.GRAY, NamedTextColor.WHITE))
+                // the colors of the lists of the plugin (dark gray lines, yellow commands, gray texts); the texts of
+                // messages.yml may have their own colors (gold title)
+                .colors(MinecraftHelp.helpColors(NamedTextColor.DARK_GRAY, NamedTextColor.YELLOW, NamedTextColor.GRAY,
+                        NamedTextColor.GRAY, NamedTextColor.DARK_GRAY))
                 .maxResultsPerPage(10)
                 .messageProvider((sender, key, arguments) -> helpMessage(key, arguments))
                 // the descriptions of the commands are keys of messages.yml
@@ -114,6 +116,7 @@ public class CommandManager {
         annotationParser.parse(new CommandLeaderboard());
         annotationParser.parse(new CommandBounty());
         annotationParser.parse(new CommandSettings());
+        annotationParser.parse(new CommandReplay());
     }
 
     private static LegacyPaperCommandManager<CommandSender> createPaperManager(SurvivalGames instance) {

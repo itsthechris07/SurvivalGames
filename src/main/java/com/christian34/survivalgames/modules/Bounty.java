@@ -9,6 +9,7 @@ import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.stats.Achievement;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -117,6 +118,7 @@ public class Bounty {
         double total = bounties.values().stream().mapToDouble(Double::doubleValue).sum();
         if (claimed && economy().pay(killer.getUuid(), total)) {
             game.announce(LangText.BOUNTY_CLAIMED, killer.getName(), economy().format(total), target.getName());
+            plugin.getAchievements().unlock(killer.getUuid(), killer.getName(), Achievement.BOUNTY_HUNTER);
         } else {
             refund(target.getName(), bounties);
         }

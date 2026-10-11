@@ -74,7 +74,7 @@ public class PlayerListener implements Listener {
         GamePlayer gamePlayer = plugin.getUser(player);
         Game game = gamePlayer.getGame();
         if (game != null) game.leave(gamePlayer, Game.LeaveReason.QUIT);
-        if (plugin.getArenaManager().getEditedArena(player) != null) plugin.getArenaManager().stopEditing(gamePlayer);
+        if (plugin.getArenaManager().isEditing(player)) plugin.getArenaManager().stopEditing(gamePlayer);
         plugin.getSidebar().remove(player);
         plugin.removeUser(player);
         deaths.remove(player.getUniqueId());

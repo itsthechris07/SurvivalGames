@@ -310,4 +310,101 @@ class VaroRulesTest extends PluginTestBase {
         assertEquals(3, temp.list().length);
     }
 
+    @Test
+    void backupsAreUnpackedAgain(@org.junit.jupiter.api.io.TempDir File temp) throws IOException {
+        File worldFolder = new File(temp, "world");
+        assertTrue(new File(worldFolder, "region").mkdirs());
+        Files.writeString(new File(worldFolder, "region/r.0.0.mca").toPath(), "region");
+        File saved = new File(temp, "varo1.yml");
+        Files.writeString(saved.toPath(), "state: RUNNING");
+        File backup = new File(temp, "2026-10-10.zip");
+        Backups.zip(worldFolder, saved, backup);
+
+        File restoredWorld = new File(temp, "restored");
+        File restoredGame = new File(temp, "games/varo1.yml");
+        Backups.unzip(backup, restoredWorld, restoredGame);
+        assertEquals("region", Files.readString(new File(restoredWorld, "region/r.0.0.mca").toPath()));
+        assertEquals("state: RUNNING", Files.readString(restoredGame.toPath()));
+        assertEquals(List.of(backup), Backups.list(temp));
+        assertTrue(Backups.list(new File(temp, "nothing")).isEmpty());
+    }
+
+    @Test
+    void foreignZipFilesCantWriteOutsideOfTheWorld(@org.junit.jupiter.api.io.TempDir File temp) throws IOException {
+        File backup = new File(temp, "evil.zip");
+        try (var zip = new java.util.zip.ZipOutputStream(Files.newOutputStream(backup.toPath()))) {
+            zip.putNextEntry(new ZipEntry("world/../../evil.txt"));
+            zip.write("evil".getBytes());
+            zip.closeEntry();
+        }
+        File worldFolder = new File(temp, "a/world");
+        assertThrows(IOException.class, () -> Backups.unzip(backup, worldFolder, new File(temp, "game.yml")));
+        assertFalse(new File(temp, "evil.txt").exists());
+    }
+
+    /**
+     * runs the command and waits for the backup it writes
+     */
+    private void backup() {
+        execute(admin, "sg game varo1 backup");
+        server.getScheduler().waitAsyncTasksFinished();
+        server.getScheduler().performOneTick();
+    }
+
+    @Test
+    void adminsMakeBackups() {
+        execute(admin, "sg game varo1 backups");
+        assertContains(messages(admin), "There are no backups of varo1 yet");
+        config().set("varo.backups", 0);
+        startGame();
+        backup();
+        List<File> backups = VaroGame.getBackups(game.getArena());
+        assertEquals(1, backups.size(), "also with backups: 0");
+        String name = backups.getFirst().getName().replace(".zip", "");
+        List<String> messages = messages(admin);
+        assertContains(messages, "Saving the world of varo1 for a backup...");
+        assertContains(messages, "Backup " + name + " of varo1 has been made.");
+
+        execute(admin, "sg game varo1 backups");
+        messages = messages(admin);
+        assertContains(messages, "Backups of varo1");
+        assertContains(messages, name + " - ");
+        execute(steve, "sg game varo1 backup");
+        assertEquals(1, VaroGame.getBackups(game.getArena()).size(), "only admins");
+    }
+
+    @Test
+    void aBackupBringsTheGameBack() throws IOException {
+        config().set("varo.backups", 0);
+        startGame();
+        File worldFolder = game.getGameWorld().getWorldFolder();
+        Files.createDirectories(worldFolder.toPath());
+        Files.writeString(new File(worldFolder, "saved.txt").toPath(), "in the backup");
+        backup();
+        String name = VaroGame.getBackups(game.getArena()).getFirst().getName().replace(".zip", "");
+        Files.writeString(new File(worldFolder, "later.txt").toPath(), "after the backup");
+        execute(admin, "sg game varo1 strike Steve griefing");
+        assertEquals(1, game.getParticipant(steve.getUniqueId()).getStrikes().size());
+        messages(admin);
+
+        execute(admin, "sg game varo1 restore nothing");
+        assertContains(messages(admin), "There is no backup nothing.");
+        execute(admin, "sg game varo1 restore " + name);
+        assertContains(messages(admin), "everything since then is lost");
+        assertSame(game, plugin.getGameManager().getGame(game.getArena()), "only with --confirm");
+
+        execute(admin, "sg game varo1 restore " + name + " --confirm");
+        List<String> messages = messages(admin);
+        assertContains(messages, "Admin has restored the game from the backup " + name + ".");
+        assertContains(messages, "The backup " + name + " of varo1 has been restored.");
+        VaroGame restored = (VaroGame) plugin.getGameManager().getGame(game.getArena());
+        assertNotSame(game, restored);
+        assertEquals(GameState.RUNNING, restored.getState());
+        assertTrue(restored.getParticipant(steve.getUniqueId()).getStrikes().isEmpty(), "the game of the backup");
+        assertSame(restored, plugin.getUser(steve).getGame(), "the players are back in the game");
+        assertSame(restored, plugin.getUser(admin).getGame());
+        assertTrue(new File(worldFolder, "saved.txt").isFile());
+        assertFalse(new File(worldFolder, "later.txt").exists(), "the world of the backup");
+    }
+
 }

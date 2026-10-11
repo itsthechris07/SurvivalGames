@@ -36,6 +36,10 @@ stats:
     enabled: true
     games: [ survival-games ]
     k-factor: 32
+  # achievements of the players (first win, 3 kills in a game, a win without armor, ...): /sg achievements - saved
+  # with the statistics
+  achievements:
+    enabled: true
 
 # standalone: the games run next to each other on this server (players join with /sg join or a [sg] sign)
 # game: this server runs exactly one game (network.arena), the players come from the lobby server and go back there
@@ -132,6 +136,8 @@ survival-games:
     enabled: true
     # the number of maps to choose from (the arena of the game is one of them)
     maps: 5
+    # the map of the last round isn't offered again right away (if there are other maps)
+    block-last: true
     end-seconds: 10
   # fireworks for the winners
   fireworks: true
@@ -304,3 +310,23 @@ parties:
 npcs:
   # linked NPCs show the state of the game (Citizens: an extra hologram line, FancyNpcs: behind the display name)
   show-status: true
+
+# the games are recorded and can be watched again (/sg replay): the players, their items, the blocks they change and
+# the messages of the game - in a copy of the map, with pause, speed and jumps (permission sg.replay)
+replays:
+  enabled: true
+  # the game types that are recorded - a Varo gets one recording per day and is played in the backup of the world from
+  # the beginning of that day (varo.backups, they have to be kept at least as long as the recordings); while a Varo
+  # is running only admins (sg.admin) can watch its recordings
+  games:
+    - survival-games
+    - varo
+  # the newest recordings that are kept per arena (plugins/SurvivalGames/replays), 0: all of them
+  keep: 10
+  # the replays that can be watched at the same time - every one has its own world
+  max-playbacks: 2
+
+# checks GitHub for new versions of SurvivalGames (at the start and every 12 hours) and tells the console and the
+# admins (sg.admin) every time they join - only the list of releases is requested, nothing is sent about the server
+update-checker:
+  enabled: true

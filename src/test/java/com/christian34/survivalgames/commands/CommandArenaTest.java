@@ -116,6 +116,80 @@ class CommandArenaTest extends PluginTestBase {
     }
 
     @Test
+    void lobbyWorldIsSetUpInACopy() {
+        execute(admin, "sg lobby edit");
+        assertContains(messages(admin), "There is no lobby world yet");
+        execute(admin, "sg lobby setworld nope");
+        assertContains(messages(admin), "There is no map nope in maps/");
+
+        createMap("hub");
+        execute(admin, "sg lobby setworld hub");
+        assertContains(messages(admin), "The players wait in the lobby world maps/hub now");
+        execute(admin, "sg lobby setspawn");
+        assertContains(messages(admin), "Go into the lobby world first: /sg lobby edit");
+
+        admin.getInventory().addItem(new ItemStack(Material.DIAMOND));
+        execute(admin, "sg lobby edit");
+        var editWorld = plugin.getArenaManager().getLobbyEditWorld();
+        assertNotNull(editWorld);
+        assertEquals(editWorld, admin.getWorld());
+        assertEquals(GameMode.CREATIVE, admin.getGameMode());
+        execute(admin, "sg lobby edit");
+        assertContains(messages(admin), "You are already editing the lobby world");
+
+        admin.teleport(new Location(editWorld, 5, 80, 5));
+        execute(admin, "sg lobby setspawn");
+        assertContains(messages(admin), "The spawn of the lobby world has been set to 5 80 5.");
+        execute(admin, "sg lobby save");
+        assertEquals(world, admin.getWorld());
+        assertTrue(admin.getInventory().contains(Material.DIAMOND));
+        assertNull(plugin.getArenaManager().getLobbyEditWorld());
+        assertContains(messages(admin), "The lobby world has been saved.");
+
+        execute(admin, "sg lobby remove");
+        assertFalse(plugin.getArenaManager().getLobby().isSet());
+    }
+
+    @Test
+    void playersWaitInTheLobbyWorld() {
+        createMap("hub");
+        execute(admin, "sg lobby setworld hub");
+        var game = createGame("a1", GameType.SURVIVAL_GAMES, 2);
+        assertFalse(arena("a1").usesLobbyWorld(), "the arena has a lobby of its own");
+        PlayerMock steve = addPlayer("Steve");
+        execute(steve, "sg join a1");
+        assertEquals(game.getWorld(), steve.getWorld());
+        execute(steve, "sg leave");
+
+        execute(admin, "sg arena a1 lobby remove");
+        assertTrue(arena("a1").usesLobbyWorld());
+        execute(admin, "sg arena a1 info");
+        assertContains(messages(admin), "Lobby: lobby world (maps/hub)");
+        execute(steve, "sg join a1");
+        var lobby = steve.getWorld();
+        assertTrue(lobby.getName().startsWith("sg_lobby_a1_"), lobby.getName());
+        assertTrue(game.hasWorld(lobby));
+        assertEquals(game, plugin.getUser(steve).getGame());
+
+        // every game has its own copy: the players of different games don't meet
+        var other = createGame("a2", GameType.SURVIVAL_GAMES, 2);
+        execute(admin, "sg arena a2 lobby remove");
+        PlayerMock alex = addPlayer("Alex");
+        execute(alex, "sg join a2");
+        assertTrue(alex.getWorld().getName().startsWith("sg_lobby_a2_"), alex.getWorld().getName());
+        assertFalse(game.hasWorld(alex.getWorld()));
+        assertTrue(other.hasWorld(alex.getWorld()));
+
+        game.start();
+        assertEquals(game.getWorld(), steve.getWorld(), "the game is played in the map of the arena");
+        assertEquals(game, plugin.getUser(steve).getGame());
+        seconds(config().getInt("survival-games.start-countdown") + 1);
+        assertNull(server.getWorld(lobby.getName()), "the copy of the lobby world is unloaded when the game begins");
+        execute(steve, "sg leave");
+        assertEquals(world, steve.getWorld());
+    }
+
+    @Test
     void spawnPoints() {
         createArena("a1", GameType.SURVIVAL_GAMES, 3);
         execute(admin, "sg arena a1 spawn list");

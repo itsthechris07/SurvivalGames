@@ -4,6 +4,7 @@ import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
+import com.christian34.survivalgames.arena.Lobby;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
@@ -59,6 +60,12 @@ public abstract class Game {
     protected final SurvivalGames plugin;
     protected final Arena arena;
     protected final GameWorld gameWorld;
+    /**
+     * the copy of the lobby world the players wait in (arenas without a lobby of their own), null: none or the game
+     * has begun
+     */
+    @Nullable
+    private GameWorld lobbyWorld;
     protected final Teams teams = new Teams();
     protected final Map<UUID, Participant> participants = new ConcurrentHashMap<>();
     private final List<GamePlayer> members = new CopyOnWriteArrayList<>();
@@ -132,6 +139,13 @@ public abstract class Game {
 
     public GameWorld getGameWorld() {
         return gameWorld;
+    }
+
+    /**
+     * @return true if the players of the game may be in the world: its own world or its copy of the lobby world
+     */
+    public boolean hasWorld(World world) {
+        return world.equals(gameWorld.getWorld()) || lobbyWorld != null && world.equals(lobbyWorld.getWorld());
     }
 
     public GameState getState() {
@@ -267,6 +281,7 @@ public abstract class Game {
         for (GamePlayer member : members) {
             member.getPlayer().sendMessage(message);
         }
+        plugin.getReplays().message(this, message);
     }
 
     public void broadcast(LangText text, Object... arguments) {
@@ -376,6 +391,7 @@ public abstract class Game {
     private void enter(GamePlayer gamePlayer, boolean spectator) {
         Player player = gamePlayer.getPlayer();
         if (plugin.getBuildMode().isBuilding(player)) plugin.getBuildMode().toggle(player);
+        plugin.getReplays().leave(player);
         gamePlayer.getStorage().store();
         gamePlayer.getStorage().cleanPlayer();
         gamePlayer.setGame(this);
@@ -416,7 +432,7 @@ public abstract class Game {
         plugin.getSidebar().remove(player);
         plugin.getTabSupport().release(player);
         plugin.getEssentials().leaveGame(player);
-        if (player.getWorld().equals(gameWorld.getWorld())) {
+        if (hasWorld(player.getWorld())) {
             // no saved location (e.g. a crash) - out of the game world
             player.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
         }
@@ -477,11 +493,61 @@ public abstract class Game {
     }
 
     /**
-     * the lobby of the arena, otherwise the center
+     * the lobby of the arena, otherwise the lobby world (while the players wait), otherwise the center
      */
     public Location getLobby() {
         Location lobby = arena.getLobby(getWorld());
-        return lobby != null ? lobby : safe(arena.getCenter(getWorld()));
+        if (lobby != null) return lobby;
+        World world = loadLobbyWorld();
+        return world != null ? plugin.getArenaManager().getLobby().getSpawn(world) : safe(arena.getCenter(getWorld()));
+    }
+
+    /**
+     * @return the copy of the lobby world of this game (loaded while the players wait), null if the arena has a lobby
+     * of its own, there is no lobby world or the game has begun
+     */
+    @Nullable
+    private World loadLobbyWorld() {
+        if (lobbyWorld != null && lobbyWorld.getWorld() != null) return lobbyWorld.getWorld();
+        if (stopped || state != GameState.LOBBY || !arena.usesLobbyWorld()) return null;
+        try {
+            String name = gameWorld.getWorldName();
+            GameWorld copy = plugin.getArenaManager().getLobby().createWorld(name.substring(name.indexOf('_') + 1));
+            this.lobbyWorld = copy;
+            World world = copy.load();
+            Lobby.setup(world);
+            return world;
+        } catch (RuntimeException ex) {
+            Debug.warn("Couldn't load the lobby world for the game of arena '" + arena.getName() + "'", ex);
+            return null;
+        }
+    }
+
+    /**
+     * the lobby world or the lobby of the arena has changed: a waiting game loads its copy again - unless players are
+     * in it, they keep the old one until the game begins
+     */
+    public void reloadLobby() {
+        World world = lobbyWorld == null ? null : lobbyWorld.getWorld();
+        if (world != null && !world.getPlayers().isEmpty()) return;
+        closeLobby();
+        loadLobbyWorld();
+    }
+
+    /**
+     * the copy of the lobby world isn't needed anymore (the game has begun or stops)
+     */
+    private void closeLobby() {
+        if (lobbyWorld == null) return;
+        World world = lobbyWorld.getWorld();
+        if (world != null) {
+            Location spawn = Bukkit.getWorlds().getFirst().getSpawnLocation();
+            for (Player player : world.getPlayers()) {
+                player.teleport(spawn);
+            }
+        }
+        if (!lobbyWorld.unload()) Debug.warn("The lobby world of the game of arena '" + arena.getName() + "' stays loaded");
+        this.lobbyWorld = null;
     }
 
     /**
@@ -893,6 +959,8 @@ public abstract class Game {
     protected void begin() {
         countdown = -1;
         setState(GameState.RUNNING);
+        closeLobby();
+        plugin.getReplays().begin(this);
         World world = getWorld();
         int size = arena.getBorderSize();
         if (size > 0) {
@@ -1052,6 +1120,7 @@ public abstract class Game {
         if (killer != null && killer != participant) {
             killer.addKill();
             plugin.getStats().add(killer.getUuid(), killer.getName(), getType(), Stat.KILLS);
+            plugin.getAchievements().onKill(this, killer);
             Rewards.give(plugin, this, killer.getUuid(), killer.getName(), EconomySupport.Reward.KILL);
         }
         plugin.getBounty().onEliminated(this, participant, killer);
@@ -1099,6 +1168,7 @@ public abstract class Game {
             for (UUID member : winner.getMembers()) {
                 plugin.getStats().add(member, getName(member), getType(), Stat.WINS);
             }
+            plugin.getAchievements().onWin(this, winner);
             String names = String.join(", ", winner.getMembers().stream().map(this::getName).toList());
             if (arena.getTeamSize() == 1) {
                 broadcast(LangText.GAME_WON_SOLO, names, arena.getDisplayName());
@@ -1188,6 +1258,7 @@ public abstract class Game {
         if (stopped) return;
         stopped = true;
         ticker.cancel();
+        plugin.getReplays().stop(this);
         for (GamePlayer member : members) {
             leave(member, LeaveReason.STOP);
         }
@@ -1200,6 +1271,7 @@ public abstract class Game {
                 player.teleport(spawn);
             }
         }
+        closeLobby();
         if (!gameWorld.unload()) Debug.warn("The world of the game of arena '" + arena.getName() + "' stays loaded");
     }
 

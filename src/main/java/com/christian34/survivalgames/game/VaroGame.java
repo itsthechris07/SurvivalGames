@@ -28,6 +28,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -35,6 +37,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
@@ -50,6 +53,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  */
 public class VaroGame extends Game {
     private static final Set<Integer> TIME_WARNINGS = Set.of(300, 60, 30, 10, 5, 4, 3, 2, 1);
+    private static final DateTimeFormatter BACKUP_TIME = DateTimeFormatter.ofPattern("HH-mm-ss");
     private final File file;
     private Clock clock = Clock.systemDefaultZone();
     @Nullable
@@ -217,6 +221,14 @@ public class VaroGame extends Game {
      */
     public String today() {
         return LocalDateTime.now(clock).minusHours(getDayStartHour()).toLocalDate().toString();
+    }
+
+    /**
+     * @return the day of the play time the game began on, null if it hasn't begun yet
+     */
+    @Nullable
+    public String getStartDay() {
+        return startDay;
     }
 
     /**
@@ -478,29 +490,74 @@ public class VaroGame extends Game {
      * newest backups are kept (backups: their number, 0: none)
      */
     public void backup() {
-        int keep = settings().getInt("backups");
+        if (settings().getInt("backups") > 0) backup(today());
+    }
+
+    /**
+     * an admin makes a backup right now: backups/&lt;arena&gt;/&lt;day&gt;_&lt;time&gt;.zip (also with backups: 0)
+     */
+    public CompletableFuture<File> backupNow() {
+        return backup(today() + "_" + LocalTime.now(clock).format(BACKUP_TIME));
+    }
+
+    /**
+     * @param name the name of the zip file (without .zip)
+     * @return the backup once it has been written
+     */
+    private CompletableFuture<File> backup(String name) {
         World world = gameWorld.getWorld();
-        if (keep <= 0 || world == null) return;
+        if (world == null) return CompletableFuture.failedFuture(new IllegalStateException("the world isn't loaded"));
+        save();
         try {
-            save();
             world.save();
         } catch (RuntimeException ex) {
-            Debug.warn("Couldn't save the world of the Varo in arena '" + arena.getName() + "' for a backup", ex);
-            return;
+            // the world is saved every few minutes anyway
+            Debug.warn("Couldn't save the world of the Varo in arena '" + arena.getName() + "' for a backup - it "
+                    + "contains the world as it was saved the last time", ex);
         }
+        int keep = settings().getInt("backups");
         File source = GameWorld.getFolder(world);
-        File folder = new File(FileManager.getPluginFolder(), "backups/" + arena.getName());
-        File target = new File(folder, today() + ".zip");
+        File folder = getBackupFolder(arena);
+        File target = new File(folder, name + ".zip");
+        CompletableFuture<File> future = new CompletableFuture<>();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Couldn't create " + folder);
                 Backups.zip(source, file, target);
-                Backups.prune(folder, keep);
+                if (keep > 0) Backups.prune(folder, keep);
                 Debug.info("Backup of the Varo in arena '" + arena.getName() + "': " + target.getName());
+                future.complete(target);
             } catch (IOException | RuntimeException ex) {
                 Debug.warn("Couldn't back up the Varo in arena '" + arena.getName() + "'", ex);
+                future.completeExceptionally(ex);
             }
         });
+        return future;
+    }
+
+    /**
+     * the folder with the backups of the Varo of the arena
+     */
+    public static File getBackupFolder(Arena arena) {
+        return new File(FileManager.getPluginFolder(), "backups/" + arena.getName());
+    }
+
+    /**
+     * @return the backups of the Varo of the arena, the newest one first
+     */
+    public static List<File> getBackups(Arena arena) {
+        return Backups.list(getBackupFolder(arena));
+    }
+
+    /**
+     * a backup takes the place of the world and the saved game of the Varo of the arena (its game is stopped)
+     */
+    static void restore(Arena arena, File backup) throws IOException {
+        GameWorld world = arena.createWorld(arena.getName(), true);
+        world.delete();
+        File file = getFile(arena);
+        if (file.isFile() && !file.delete()) throw new IOException("Couldn't delete " + file);
+        Backups.unzip(backup, world.getWorldFolder(), file);
     }
 
     /**

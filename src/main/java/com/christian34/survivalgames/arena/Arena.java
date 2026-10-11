@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 
 /**
  * The setup of an arena in arenas.yml: the game type, the map (a folder in maps/ or a generated world), the lobby
- * and spawn points (coordinates in the map), the center and size of the world border and the number of players.
+ * (without one the players wait in the {@link Lobby} world) and spawn points (coordinates in the map), the center and size of the world border and the number of players.
  * Settings that aren't set come from the section of the game type in config.yml.
  *
  * @author Christian34
@@ -165,7 +165,7 @@ public class Arena {
 
     // ---------------------------------------------------------------- locations (coordinates without a world)
 
-    private static Map<String, Object> serialize(Location location) {
+    static Map<String, Object> serialize(Location location) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("x", location.getX());
         map.put("y", location.getY());
@@ -176,7 +176,7 @@ public class Arena {
     }
 
     @Nullable
-    private static Location deserialize(@Nullable Object object, World world) {
+    static Location deserialize(@Nullable Object object, World world) {
         Map<?, ?> map;
         if (object instanceof ConfigurationSection section) {
             map = section.getValues(false);
@@ -207,6 +207,20 @@ public class Arena {
 
     public boolean hasLobby() {
         return file().getData().isSet(path("lobby"));
+    }
+
+    /**
+     * the arena has no lobby of its own anymore: the players wait in the lobby world (without one at the center)
+     */
+    public void removeLobby() {
+        set("lobby", null);
+    }
+
+    /**
+     * @return true if the players wait in the lobby world of the server instead of the map of the arena
+     */
+    public boolean usesLobbyWorld() {
+        return !hasLobby() && plugin.getArenaManager().getLobby().isSet();
     }
 
     private List<Object> getRawSpawns() {
@@ -310,7 +324,7 @@ public class Arena {
     public List<Component> getWarnings() {
         List<Component> warnings = new ArrayList<>();
         if (getSpawnCount() == 0) warnings.add(I.i18n(LangText.SETUP_NO_SPAWNS, name));
-        if (!hasLobby()) warnings.add(I.i18n(LangText.SETUP_NO_LOBBY, name));
+        if (!hasLobby() && !usesLobbyWorld()) warnings.add(I.i18n(LangText.SETUP_NO_LOBBY, name));
         int max = getInt("max-players", 1);
         if (getSpawnCount() > 0 && getSpawnCount() < max) {
             warnings.add(I.i18n(LangText.SETUP_FEW_SPAWNS, getSpawnCount(), max));

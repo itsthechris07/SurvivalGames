@@ -28,6 +28,7 @@ class VaroFlowTest extends PluginTestBase {
 
     @BeforeEach
     void setUpGame() {
+        plugin.getStats().setExecutor(Runnable::run);
         config().set("varo.start-countdown", 3);
         // both players stand next to each other on their spawn points
         config().set("varo.combat-radius", 0);
@@ -97,7 +98,11 @@ class VaroFlowTest extends PluginTestBase {
         assertEquals(1, participant(admin).getKills());
         assertEquals(GameState.ENDED, game.getState());
         assertEquals("Wolves", game.getWinner());
-        assertContains(messages(admin), "Team Wolves has won in varo1!");
+        java.util.List<String> messages = messages(admin);
+        assertContains(messages, "Team Wolves has won in varo1!");
+        assertContains(messages, "Achievement unlocked! Survivor - Win a Varo alive");
+        assertContains(messages, "Achievement unlocked! Spotless - Win a Varo without a strike");
+        assertNotContains(messages(steve), "Survivor");
     }
 
     @Test

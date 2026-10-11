@@ -26,6 +26,7 @@ class BountyTest extends PluginTestBase {
 
     @BeforeEach
     void setUpGame() {
+        plugin.getStats().setExecutor(Runnable::run);
         config().set("survival-games.lobby-countdown", 1);
         config().set("survival-games.start-countdown", 1);
         config().set("survival-games.grace-period", 0);
@@ -73,6 +74,7 @@ class BountyTest extends PluginTestBase {
         alex.setKiller(bob);
         alex.setHealth(0);
         assertContains(messages(steve), "Bob has claimed the bounty of $70 on Alex!");
+        assertContains(messages(bob), "Achievement unlocked! Bounty hunter");
         assertEquals(80, economy.balance(bob), "10 left + 70");
         assertEquals(50, economy.balance(steve));
         assertEquals(0, total(alex));

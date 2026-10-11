@@ -19,6 +19,7 @@ a network.
 - **[Getting started](getting-started.md)** – install the plugin, set up an arena and start the first game
 - **[Survival Games](survival-games.md)** – map voting, kits, loot, grace period, bounties, sponsors, deathmatch
 - **[Varo](varo.md)** – play time per day, one life, the world border, optional rules, backups, the extras
+- **[Replays](replays.md)** – every round and every Varo day is recorded and can be watched again
 - **[Network](network.md)** – one game per server behind Velocity or BungeeCord, the lobby server
 - **[Integrations](integrations.md)** – Vault, parties, join NPCs, Bedrock forms, TAB, EssentialsX, Multiverse
 - **[Commands and permissions](commands.md)** – everything under `/sg`

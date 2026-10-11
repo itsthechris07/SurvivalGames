@@ -36,6 +36,10 @@ public class SgMiniPlaceholders {
         }
         builder.audiencePlaceholder(Player.class, "stats", (player, queue, context) ->
                 tag(Placeholders.value(plugin, player, "stats_" + String.join("_", arguments(queue, 2)))));
+        for (String key : List.of("achievements", "achievements_total")) {
+            builder.audiencePlaceholder(Player.class, key, (player, queue, context) ->
+                    tag(Placeholders.value(plugin, player, key)));
+        }
         builder.globalPlaceholder("top", (queue, context) ->
                 tag(Placeholders.value(plugin, null, "top_" + String.join("_", arguments(queue, 3)))));
         builder.globalPlaceholder("games", (queue, context) -> tag(Placeholders.value(plugin, null, "games")));

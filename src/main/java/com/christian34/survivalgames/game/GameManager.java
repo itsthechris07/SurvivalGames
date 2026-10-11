@@ -12,8 +12,11 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -30,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GameManager {
     private final SurvivalGames plugin;
     private final Map<String, Game> games = new ConcurrentHashMap<>();
+    @Nullable
+    private String lastPlayed;
 
     public GameManager(SurvivalGames plugin) {
         this.plugin = plugin;
@@ -69,7 +74,21 @@ public class GameManager {
             case VARO -> new VaroGame(plugin, arena);
         };
         games.put(key(arena), game);
+        // the copy of the lobby world isn't loaded while the first player joins
+        game.reloadLobby();
         return game;
+    }
+
+    /**
+     * @return the name of the arena the last round of Survival Games began in (map voting), null: none yet
+     */
+    @Nullable
+    public String getLastPlayed() {
+        return lastPlayed;
+    }
+
+    void setLastPlayed(Arena arena) {
+        this.lastPlayed = arena.getName();
     }
 
     public List<Game> getGames() {
@@ -202,6 +221,38 @@ public class GameManager {
     }
 
     /**
+     * a backup takes the place of the world and the saved game of the Varo of the arena (it may have no game right
+     * now) - everybody leaves the game, who can play in the restored game joins it again
+     *
+     * @return the game as it was when the backup was made
+     * @throws IOException the backup couldn't be unpacked (the arena has no game then - restore another backup)
+     */
+    public VaroGame restoreVaro(Arena arena, File backup) throws IOException {
+        Game game = getGame(arena);
+        List<GamePlayer> members = game == null ? List.of() : game.getMembers();
+        // their money has been taken or paid back since the backup
+        Map<UUID, Map<UUID, Double>> bounties = game == null ? null : new HashMap<>(game.getBounties());
+        if (game != null) {
+            removeGame(game);
+            if (game.getGameWorld().getWorld() != null) throw new IOException("the world of the game is still loaded");
+        }
+        VaroGame.restore(arena, backup);
+        VaroGame next = (VaroGame) createGame(arena);
+        if (bounties != null) {
+            next.getBounties().clear();
+            next.getBounties().putAll(bounties);
+            next.save();
+        }
+        for (GamePlayer member : members) {
+            Player player = member.getPlayer();
+            if (player.isOnline() && member.getGame() == null && next.getJoinDenial(player.getUniqueId()) == null) {
+                next.join(member);
+            }
+        }
+        return next;
+    }
+
+    /**
      * joins the game of the arena, otherwise watches it while it is running - a party leader takes the members of
      * their party into the lobby
      *
@@ -213,14 +264,14 @@ public class GameManager {
             player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
             return;
         }
-        if (plugin.getArenaManager().getEditedArena(player) != null) {
+        if (plugin.getArenaManager().isEditing(player)) {
             player.sendMessage(I.prefixed(LangText.EDITING_ARENA));
             return;
         }
         List<GamePlayer> followers = new ArrayList<>();
         for (Player member : plugin.getPartySupport().getFollowers(player)) {
             GamePlayer follower = plugin.getUser(member);
-            if (follower.getGame() == null && plugin.getArenaManager().getEditedArena(member) == null
+            if (follower.getGame() == null && !plugin.getArenaManager().isEditing(member)
                     && !VanishSupport.isVanished(member)) {
                 followers.add(follower);
             }

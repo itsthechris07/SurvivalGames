@@ -78,7 +78,7 @@ public class SurvivalGame extends Game {
         if (MapVoting.isEnabled(plugin, arena)) {
             this.mapVoting = new MapVoting(plugin, this);
             // nothing to choose from
-            if (mapVoting.getOptions().size() < 2) this.mapVoting = null;
+            if (!mapVoting.hasChoice()) this.mapVoting = null;
         }
     }
 
@@ -255,6 +255,7 @@ public class SurvivalGame extends Game {
     @Override
     protected void onBegin() {
         this.seconds = 0;
+        plugin.getGameManager().setLastPlayed(arena);
         this.graceLeft = Math.max(0, settings().getInt("grace-period"));
         if (graceLeft > 0) {
             broadcast(LangText.SG_STARTED_GRACE, graceLeft);

@@ -251,4 +251,53 @@ class MapVotingTest extends PluginTestBase {
         assertSame(next, gameOf(steve));
     }
 
+    @Test
+    void theMapOfTheLastRoundIsBlocked() {
+        createGame();
+        Arena arena3 = createArena("arena3", GameType.SURVIVAL_GAMES, 4);
+        game = (SurvivalGame) plugin.getGameManager().createGame(arena3);
+        plugin.getGameManager().setLastPlayed(arena2);
+        MapVoting voting = game.getMapVoting();
+        assertEquals(List.of("arena3", "arena1"), voting.getOptions().stream().map(Arena::getName).toList());
+        execute(steve, "sg join arena3");
+        messages(steve);
+        execute(steve, "sg vote arena2");
+        assertContains(messages(steve), "You can't vote for arena2.");
+        assertEquals(0, voting.getVotes(arena2));
+
+        // another round has been played somewhere else
+        plugin.getGameManager().setLastPlayed(game.getArena());
+        assertEquals(List.of("arena1", "arena2"), voting.getOptions().stream().map(Arena::getName).sorted().toList(),
+                "the own arena is blocked too");
+    }
+
+    @Test
+    void theLastMapStaysIfItIsTheOnlyOne() {
+        createGame();
+        plugin.getGameManager().setLastPlayed(arena2);
+        assertEquals(List.of("arena1"), game.getMapVoting().getOptions().stream().map(Arena::getName).toList());
+        plugin.getGameManager().setLastPlayed(game.getArena());
+        assertEquals(List.of("arena2"), game.getMapVoting().getOptions().stream().map(Arena::getName).toList());
+    }
+
+    @Test
+    void theBeginningRoundIsRemembered() {
+        createGame();
+        assertNull(plugin.getGameManager().getLastPlayed());
+        join();
+        for (int tick = 0; tick < 20 * 30 && game.getState() != GameState.RUNNING; tick++) {
+            server.getScheduler().performOneTick();
+        }
+        assertEquals(GameState.RUNNING, game.getState());
+        assertEquals("arena1", plugin.getGameManager().getLastPlayed());
+    }
+
+    @Test
+    void blockingTheLastMapCanBeTurnedOff() {
+        config().set("survival-games.map-voting.block-last", false);
+        createGame();
+        plugin.getGameManager().setLastPlayed(arena2);
+        assertEquals(List.of("arena1", "arena2"), game.getMapVoting().getOptions().stream().map(Arena::getName).toList());
+    }
+
 }

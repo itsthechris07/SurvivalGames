@@ -5,7 +5,7 @@ the number of players, the team size and the world border.
 
 ## Lobby
 
-The players wait in the lobby of the arena: nobody can break blocks, take damage or get hungry. With teams
+The players wait in the [lobby world](getting-started.md#the-lobby-world) or the lobby of the arena: nobody can break blocks, take damage or get hungry. With teams
 (`team-size` > 1) they choose a team with the team item or `/sg team`; who has no team at the start gets one.
 
 Once `min-players` are there, the **lobby countdown** (`lobby-countdown`) starts. When the game is full it is
@@ -19,6 +19,7 @@ game and up to `map-voting.maps` - 1 other arenas of Survival Games with the sam
 draw: the arena of the game stays).
 
 - Players with the permission `sg.vote.2` ... `sg.vote.5` have 2 ... 5 votes.
+- The map of the last round can't be chosen again right away (`map-voting.block-last`) – unless it is the only one.
 - There is nothing to vote for with only one arena, and on a [game server](network.md) (one arena per server).
 
 ### Kits
@@ -115,3 +116,5 @@ else watch a running game.
 - **Fireworks** for the winners (`fireworks`).
 - **Rewards:** money and commands for kills, wins and games – see [rewards](configuration.md#rewards).
 - **Rating:** every player has an Elo rating per game type, see [statistics](configuration.md#statistics).
+- **Replay:** the round has been recorded – a click on the message at the end (or `/sg replay`) plays it again in a
+  copy of the map, see [replays](replays.md).

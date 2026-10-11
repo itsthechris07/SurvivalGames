@@ -11,7 +11,8 @@ files automatically – your values and comments stay.
 | `loot.yml` | the [loot](#loot) of the chests in Survival Games |
 | `messages.yml`, `messages_de.yml` | the [messages](customization.md) |
 | `arenas.yml` | the arenas: game type, map, lobby, center, spawn points, players |
-| `maps/` | the maps of the arenas (world folders) |
+| `lobby.yml` | the [lobby world](getting-started.md#the-lobby-world): its map and spawn |
+| `maps/` | the maps of the arenas and the lobby world (world folders) |
 | `games/<arena>.yml` | a running Varo: state, teams, players, play time, their inventories in the game, backpacks, bounties |
 | `signs.yml` | the join signs |
 | `stats.yml` | the [statistics](#statistics) (with `stats.storage: file`) |
@@ -19,7 +20,8 @@ files automatically – your values and comments stay.
 | `leaderboards.yml` | the [leaderboards](#leaderboards): holograms and signs |
 | `npcs.yml` | the [join NPCs](integrations.md#join-npcs) |
 | `backups/<uuid>.yml` | the inventory, location, ... of players outside of the games while they play (restored after a crash) |
-| `backups/<arena>/<day>.zip` | the [backups](varo.md#backups) of a Varo |
+| `backups/<arena>/<day>.zip`, `<day>_<time>.zip` | the [backups](varo.md#backups) of a Varo |
+| `replays/<id>.sgr` | the recordings of the [replays](replays.md) |
 
 !!! warning
     Don't edit `arenas.yml` and `games/` while the server is running – use the commands.
@@ -36,6 +38,7 @@ files automatically – your values and comments stay.
 | `survival-games.deathmatch.minutes` | `20` | when the deathmatch starts |
 | `survival-games.world-border.shrink-after` | `8` | minutes until the border starts shrinking (0: only in the deathmatch) |
 | `survival-games.map-voting.enabled` | `true` | the players [vote for the map](survival-games.md#map-voting) in the lobby |
+| `survival-games.map-voting.block-last` | `true` | the map of the last round can't be voted for again right away |
 | `survival-games.reveal.minutes` | `12` | when [lightnings](survival-games.md#lightnings) start to show where the players are |
 | `<game type>.advancements` | `false` | players make progress in their advancements while they are in a game |
 | `<game type>.fireworks` | `true` | fireworks for the winners |
@@ -48,7 +51,13 @@ files automatically – your values and comments stay.
 | `varo.backups` | `7` | the number of [backups](varo.md#backups) of a Varo that are kept |
 | `stats.storage` | `file` | `file` (`stats.yml`) or `mysql` (see [statistics](#statistics)) |
 | `stats.rating.games` | `[ survival-games ]` | the game types with an [Elo rating](#rating) |
+| `stats.achievements.enabled` | `true` | the players get [achievements](#achievements) |
+| `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 12 hours – admins (`sg.admin`) read it when they join |
 | `rewards.enabled` | `false` | [money](#rewards) for kills, wins and games |
+| `replays.enabled` | `true` | the games are recorded and can be watched again (see [replays](replays.md)) |
+| `replays.games` | both | the game types that are recorded |
+| `replays.keep` | `10` | the newest recordings that are kept per arena (`0`: all of them) |
+| `replays.max-playbacks` | `2` | the replays that can be watched at the same time (every one has its own world) |
 | `modules.<module>.games` | | the game types an extra is used in |
 
 Arenas override `min-players`, `max-players`, `team-size` and `world-border.size` of their game type
@@ -107,6 +116,31 @@ The best players in the world, without other plugins – updated every minute:
   (or above the block a wall sign hangs on) gets their skin. Only admins can create the signs; sneak to break them.
 
 `/sg leaderboard list` lists all of them. For holograms of other plugins use the [placeholders](placeholders.md).
+
+### Achievements
+
+With `stats.achievements.enabled` the players collect achievements. They are kept with the statistics (`stats.yml` or
+the table `<table>_achievements` of the database), so there are none with `stats.enabled: false`. A new achievement
+is announced in the chat, `/sg achievements` shows the own ones in a menu, `/sg achievements <player>` lists those of
+another player. The names and descriptions are texts of `messages.yml` (`achievement_...`).
+
+| Achievement | How to get it |
+|---|---|
+| Tribute, Veteran | play 1 / 50 games |
+| First strike, Hunter | kill 1 / 100 players |
+| Victor, Champion, Legend | win 1 / 10 / 50 games |
+| First blood | the first kill of a game |
+| Rampage, Unstoppable | 3 / 5 kills in one game |
+| Bare skin | win without wearing armor |
+| Pacifist | win without a kill |
+| Last breath | win with one heart or less |
+| Bounty hunter | collect the bounty on a player |
+| Sponsor | send an item to a player as a spectator |
+| Survivor | win a Varo alive |
+| Spotless | win a Varo without a strike |
+
+Games, kills and wins count over all game types. What a player reached while they were offline (their team won a
+Varo) comes with their next join.
 
 ## Rewards
 

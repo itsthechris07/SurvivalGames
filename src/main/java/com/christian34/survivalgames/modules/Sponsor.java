@@ -9,6 +9,7 @@ import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.stats.Achievement;
 import com.christian34.survivalgames.user.GamePlayer;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -123,6 +124,7 @@ public class Sponsor {
         player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
         player.sendMessage(I.prefixed(LangText.SPONSOR_RECEIVED, sponsor.getName(), item.getAmount(), Items.name(item)));
         sponsor.sendMessage(I.prefixed(LangText.SPONSOR_SENT, item.getAmount(), Items.name(item), target.getName()));
+        plugin.getAchievements().unlock(sponsor.getUniqueId(), sponsor.getName(), Achievement.SPONSOR);
     }
 
 }

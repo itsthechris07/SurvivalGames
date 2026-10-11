@@ -1,10 +1,12 @@
 package com.christian34.survivalgames.commands;
 
+import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
+import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.Teams;
@@ -27,7 +29,10 @@ import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import static com.christian34.survivalgames.commands.CommandSurvivalGames.ADMIN;
@@ -123,6 +128,97 @@ public class CommandGame {
         VaroGame next = plugin().getGameManager().resetVaro(varo, !teams);
         next.broadcast(LangText.RESET_DONE, sender.getName());
         send(sender, LangText.RESET_DONE_ADMIN, arena.getName());
+    }
+
+    @Command(GAME + " backup")
+    @CommandDescription("command_game_backup")
+    @Permission(ADMIN)
+    public void backupCmd(CommandSender sender, @Argument("arena") Arena arena) {
+        Game game = game(sender, arena);
+        if (game == null) return;
+        if (!(game instanceof VaroGame varo)) {
+            send(sender, LangText.ONLY_VARO);
+            return;
+        }
+        send(sender, LangText.BACKUP_STARTED, arena.getName());
+        varo.backupNow().whenComplete((file, error) -> {
+            if (!plugin().isEnabled()) return;
+            Bukkit.getScheduler().runTask(plugin(), () -> {
+                if (error != null) {
+                    send(sender, LangText.BACKUP_FAILED);
+                } else {
+                    send(sender, LangText.BACKUP_DONE, backupName(file), arena.getName());
+                }
+            });
+        });
+    }
+
+    private static String backupName(File backup) {
+        return backup.getName().substring(0, backup.getName().length() - ".zip".length());
+    }
+
+    @Command(GAME + " backups")
+    @CommandDescription("command_game_backups")
+    @Permission(ADMIN)
+    public void backupsCmd(CommandSender sender, @Argument("arena") Arena arena) {
+        if (arena.getType() != GameType.VARO) {
+            send(sender, LangText.ONLY_VARO);
+            return;
+        }
+        List<File> backups = VaroGame.getBackups(arena);
+        if (backups.isEmpty()) {
+            send(sender, LangText.BACKUP_NONE, arena.getName());
+            return;
+        }
+        sender.sendMessage(I.i18n(LangText.BACKUP_LIST_TITLE, arena.getName()));
+        for (File backup : backups) {
+            sender.sendMessage(I.i18n(LangText.BACKUP_LIST_ENTRY, backupName(backup),
+                    CommandSurvivalGames.formatDate(backup.lastModified()),
+                    String.format(Locale.ROOT, "%.1f", backup.length() / (1024.0 * 1024.0)), arena.getName()));
+        }
+    }
+
+    @Suggestions("backups")
+    public List<String> backupNames(CommandContext<CommandSender> context, String input) {
+        Arena arena = context.getOrDefault("arena", null);
+        return arena == null ? List.of() : VaroGame.getBackups(arena).stream().map(CommandGame::backupName).toList();
+    }
+
+    @Command(GAME + " restore <backup>")
+    @CommandDescription("command_game_restore")
+    @Permission(ADMIN)
+    public void restoreCmd(CommandSender sender, @Argument("arena") Arena arena,
+                           @Argument(value = "backup", suggestions = "backups") String name,
+                           @Flag("confirm") boolean confirm) {
+        if (arena.getType() != GameType.VARO) {
+            send(sender, LangText.ONLY_VARO);
+            return;
+        }
+        // the game may be gone after a restore that failed
+        if (plugin().getGameManager().getGame(arena) == null && !arena.isPlayable()) {
+            send(sender, LangText.NO_GAME_IN_ARENA, arena.getName());
+            return;
+        }
+        String wanted = name.toLowerCase(Locale.ROOT).endsWith(".zip") ? name.substring(0, name.length() - 4) : name;
+        File backup = VaroGame.getBackups(arena).stream().filter(file -> backupName(file).equalsIgnoreCase(wanted))
+                .findFirst().orElse(null);
+        if (backup == null) {
+            send(sender, LangText.BACKUP_NOT_FOUND, name, arena.getName());
+            return;
+        }
+        if (!confirm) {
+            send(sender, LangText.RESTORE_CONFIRM, backupName(backup), arena.getName());
+            return;
+        }
+        try {
+            VaroGame next = plugin().getGameManager().restoreVaro(arena, backup);
+            next.broadcast(LangText.RESTORE_DONE, sender.getName(), backupName(backup));
+            send(sender, LangText.RESTORE_DONE_ADMIN, backupName(backup), arena.getName());
+        } catch (IOException | RuntimeException ex) {
+            Debug.warn("Couldn't restore the backup " + backup.getName() + " of the Varo in arena '" + arena.getName()
+                    + "'", ex);
+            send(sender, LangText.RESTORE_FAILED, arena.getName());
+        }
     }
 
     @Suggestions("out-players")
