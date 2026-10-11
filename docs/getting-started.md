@@ -12,6 +12,11 @@
 
 All setup commands need the permission `sg.admin` (operators have it).
 
+!!! tip "Everything in a menu"
+    `/sg admin` shows the arenas and the games in a menu: a click on an arena leads through the steps below (edit the
+    map, set the lobby, the center and the spawn points where you stand, save, create the game), a click on a game
+    starts or stops it. Only the name of a new arena has to be typed.
+
 ## 1. The map
 
 Every arena plays on a map – a world folder that stays untouched; each game plays in a copy of it.
@@ -66,6 +71,7 @@ the others in their next round.
 `/sg arena <name> creategame` creates the game of the arena – also after every restart. Players join with:
 
 - `/sg join [arena]` – without an arena they join the fullest game that is waiting
+- `/sg games` (or `/sg` and "Play") – a menu with all games, a click joins one or watches it
 - a **sign** with `[sg]` in the first line and the arena in the second (only admins can create it). It shows the state
   and the players, a click joins the game (or watches it while it runs). Sneak to break it.
 - `/sg spectate [arena]` to watch a running game

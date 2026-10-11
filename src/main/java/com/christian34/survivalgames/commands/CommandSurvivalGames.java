@@ -3,6 +3,7 @@ package com.christian34.survivalgames.commands;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.UpdateChecker;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.game.AdminMenus;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
@@ -72,12 +73,33 @@ public class CommandSurvivalGames {
     @Command(ROOT)
     @CommandDescription("command_version")
     public void mainCmd(CommandSender sender) {
-        sender.sendMessage(I.prefixed(LangText.PLUGIN_INFO, plugin().getPluginMeta().getVersion()));
+        if (sender instanceof Player player) {
+            Menus.openMain(player);
+        } else {
+            sender.sendMessage(I.prefixed(LangText.PLUGIN_INFO, plugin().getPluginMeta().getVersion()));
+        }
+    }
+
+    @Command(ROOT + " games")
+    @CommandDescription("command_games")
+    public void gamesCmd(Player player) {
+        Menus.openGames(player);
+    }
+
+    @Command(ROOT + " admin")
+    @CommandDescription("command_admin")
+    @Permission(ADMIN)
+    public void adminCmd(Player player) {
+        AdminMenus.open(player);
     }
 
     @Command(ROOT + " help [query]")
     @CommandDescription("command_help")
     public void helpCmd(CommandSender sender, @Argument("query") @Greedy @Nullable String query) {
+        // cloud looks for whole commands ("sg arena"): /sg help arena means the same
+        if (query != null && !query.isBlank() && !List.of(ROOT.split("\\|")).contains(query.split(" ")[0])) {
+            query = "sg " + query;
+        }
         commandManager.getMinecraftHelp().queryCommands(query == null ? "" : query, sender);
     }
 

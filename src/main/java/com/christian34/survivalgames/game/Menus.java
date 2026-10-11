@@ -9,6 +9,9 @@ import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.modules.Kits;
 import com.christian34.survivalgames.modules.Sponsor;
+import com.christian34.survivalgames.network.NetworkManager;
+import com.christian34.survivalgames.network.ServerStatus;
+import com.christian34.survivalgames.replay.Replays;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -16,6 +19,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +37,109 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 public final class Menus {
 
     private Menus() {
+    }
+
+    /**
+     * the button runs a command of the plugin for the player (without the leading slash)
+     */
+    static void run(Player player, String command) {
+        SurvivalGames.getInstance().getCommandManager().run(player, command);
+    }
+
+    /**
+     * the main menu (/sg): play, statistics, achievements, replays, help - and the administration for admins
+     */
+    public static void openMain(Player player) {
+        SurvivalGames plugin = SurvivalGames.getInstance();
+        Menu menu = new Menu(i18n(LangText.GUI_MAIN));
+        if (plugin.getUser(player).getGame() != null || plugin.getReplays().getPlayback(player) != null) {
+            menu.button(ItemStack.of(Material.RED_BED), i18n(LangText.GUI_MAIN_LEAVE), List.of(),
+                    clicker -> run(clicker, "sg leave"));
+        } else {
+            menu.button(ItemStack.of(Material.IRON_SWORD), i18n(LangText.GUI_MAIN_PLAY),
+                    I.itemLines(LangText.GUI_MAIN_PLAY_LORE), Menus::openGames);
+        }
+        if (plugin.getStats().isEnabled()) {
+            menu.button(ItemStack.of(Material.PAPER), i18n(LangText.GUI_MAIN_STATS),
+                    I.itemLines(LangText.GUI_MAIN_STATS_LORE), clicker -> run(clicker, "sg stats"));
+            menu.button(ItemStack.of(Material.GOLD_INGOT), i18n(LangText.GUI_MAIN_TOP),
+                    I.itemLines(LangText.GUI_MAIN_TOP_LORE), clicker -> run(clicker, "sg top"));
+        }
+        if (plugin.getAchievements().isEnabled()) {
+            menu.button(ItemStack.of(Material.NETHER_STAR), i18n(LangText.GUI_MAIN_ACHIEVEMENTS),
+                    I.itemLines(LangText.GUI_MAIN_ACHIEVEMENTS_LORE), clicker -> run(clicker, "sg achievements"));
+        }
+        if (plugin.getReplays().isEnabled() && player.hasPermission(Replays.PERMISSION)) {
+            menu.button(ItemStack.of(Material.CLOCK), i18n(LangText.GUI_MAIN_REPLAYS),
+                    I.itemLines(LangText.GUI_MAIN_REPLAYS_LORE), clicker -> run(clicker, "sg replay"));
+        }
+        menu.button(ItemStack.of(Material.BOOK), i18n(LangText.GUI_MAIN_HELP),
+                I.itemLines(LangText.GUI_MAIN_HELP_LORE, plugin.getPluginMeta().getVersion()),
+                clicker -> run(clicker, "sg help"));
+        if (player.hasPermission(SurvivalGames.ADMIN_PERMISSION)) {
+            menu.button(ItemStack.of(Material.COMMAND_BLOCK), i18n(LangText.GUI_MAIN_ADMIN),
+                    I.itemLines(LangText.GUI_MAIN_ADMIN_LORE), AdminMenus::open);
+        }
+        menu.show(player);
+    }
+
+    /**
+     * all games (on a lobby server: the game servers) with their state - click: join the game or watch it
+     */
+    public static void openGames(Player player) {
+        SurvivalGames plugin = SurvivalGames.getInstance();
+        Menu menu = new Menu(i18n(LangText.GUI_GAMES));
+        if (plugin.getNetworkManager().isLobby()) {
+            for (NetworkManager.Server server : plugin.getNetworkManager().getServers()) {
+                ServerStatus status = plugin.getNetworkManager().getStatus(server.name());
+                GameType type = GameType.parse(status.type());
+                List<Component> lore = gameLore(type == null ? Component.text(status.arena()) : i18n(type.getDisplayName()),
+                        SignManager.stateText(status), status.players(), status.maxPlayers());
+                if (status.isJoinable() || status.isRunning()) {
+                    lore.add(i18n(status.isJoinable() ? LangText.GUI_GAME_JOIN : LangText.GUI_GAME_WATCH));
+                }
+                Material icon = status.isJoinable() ? Material.LIME_CONCRETE
+                        : status.isRunning() ? Material.ORANGE_CONCRETE : Material.GRAY_CONCRETE;
+                menu.button(ItemStack.of(icon), Component.text(server.name(), NamedTextColor.YELLOW), lore,
+                        clicker -> run(clicker, "sg join " + server.name()));
+            }
+        } else {
+            for (Game game : plugin.getGameManager().getGames()) {
+                ServerStatus status = ServerStatus.of(game);
+                List<Component> lore = gameLore(i18n(game.getType().getDisplayName()), SignManager.stateText(status),
+                        status.players(), status.maxPlayers());
+                boolean lobby = game.getState() == GameState.LOBBY;
+                lore.add(i18n(lobby ? LangText.GUI_GAME_JOIN : LangText.GUI_GAME_WATCH));
+                String name = game.getArena().getName();
+                menu.button(ItemStack.of(gameIcon(game.getState())), game.getArena().getDisplayName(), lore,
+                        clicker -> run(clicker, (lobby ? "sg join " : "sg spectate ") + name));
+            }
+        }
+        if (menu.getButtons().isEmpty()) {
+            player.sendMessage(I.prefixed(LangText.NO_GAMES));
+            return;
+        }
+        menu.show(player);
+    }
+
+    /**
+     * @return the lines below a game in a menu: its type, state and players
+     */
+    static List<Component> gameLore(Component type, Component state, int players, int maxPlayers) {
+        List<Component> lore = new ArrayList<>();
+        lore.add(type.colorIfAbsent(NamedTextColor.GRAY));
+        lore.add(i18n(LangText.GUI_GAME_STATE, state));
+        lore.add(i18n(LangText.GUI_GAME_PLAYERS, players, maxPlayers));
+        lore.add(Component.empty());
+        return lore;
+    }
+
+    static Material gameIcon(GameState state) {
+        return switch (state) {
+            case LOBBY -> Material.LIME_CONCRETE;
+            case STARTING, RUNNING -> Material.ORANGE_CONCRETE;
+            case ENDED -> Material.GRAY_CONCRETE;
+        };
     }
 
     /**
@@ -174,9 +281,12 @@ public final class Menus {
         menu.show(player);
     }
 
-    private static ItemStack head(Player player) {
+    /**
+     * @return the head of the player (without a skin if he is offline)
+     */
+    static ItemStack head(@Nullable Player player) {
         ItemStack head = ItemStack.of(Material.PLAYER_HEAD);
-        if (head.getItemMeta() instanceof SkullMeta meta) {
+        if (player != null && head.getItemMeta() instanceof SkullMeta meta) {
             meta.setPlayerProfile(player.getPlayerProfile());
             head.setItemMeta(meta);
         }

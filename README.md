@@ -35,7 +35,8 @@ one game per server in a network behind Velocity/BungeeCord.
 - Replays: every round of Survival Games and every day of a Varo is recorded and can be watched again in a copy of the
   map (`/sg replay`) – pause, speed, jumps and the view of every player, without a client mod
 - Rewards (money and console commands), bounties, fireworks, the inventory of the killer after a death
-- Settings menu in the game: `/sg settings`
+- Menus instead of commands: a main menu for the players (`/sg`), all games (`/sg games`), and for admins the setup
+  of the arenas, the control of the games and the settings (`/sg admin`, `/sg settings`)
 - Teams (menu or `/sg team create <name> [color]`), team chat (`@message`), separate chat per game, scoreboard
 - Extras (per game type): backpack, chest lock with a `[Lock]` sign, gravity grenade, toxic rain, tracker, supply drops,
   kits, bounties, sponsors, item restrictions

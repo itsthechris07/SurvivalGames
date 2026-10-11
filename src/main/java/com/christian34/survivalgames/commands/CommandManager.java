@@ -153,6 +153,15 @@ public class CommandManager {
         return text == null ? Component.text(key) : I.text(text);
     }
 
+    /**
+     * runs a command for the sender like he typed it (the buttons of the menus) - errors are sent to him
+     *
+     * @param command without the leading slash
+     */
+    public void run(CommandSender sender, String command) {
+        manager.commandExecutor().executeCommand(sender, command).exceptionally(failure -> null);
+    }
+
     public org.incendo.cloud.CommandManager<CommandSender> getManager() {
         return manager;
     }

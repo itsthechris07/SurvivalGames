@@ -7,7 +7,8 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 
 | Command | |
 |---|---|
-| `/sg` | the plugin version |
+| `/sg` | the main menu: play, statistics, achievements, replays, help (console: the plugin version) |
+| `/sg games` | all games in a menu – a click joins a game or watches it while it runs |
 | `/sg join [arena]` | joins a game (without: the fullest free game; on a lobby server: an arena is a server) |
 | `/sg spectate [arena]` | watches a running game |
 | `/sg leave` | leaves your game |
@@ -37,6 +38,10 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 | `/sg replay leave` | leaves the replay (also `/sg leave`) |
 
 ## Admins (`sg.admin`)
+
+`/sg admin` (or the button in the main menu `/sg`) opens the **menu of the admins**: the arenas with the steps of their
+setup (edit the map, set lobby, center and spawn points where you stand, save, create the game) and the games with
+their controls (start, deathmatch, backups, players, stop). Its buttons run the commands below.
 
 ### Arenas
 
@@ -101,6 +106,7 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 
 | Command | |
 |---|---|
+| `/sg admin` | the menu of the admins: arenas, games, settings, reload |
 | `/sg settings [type] [setting] [value]` | changes a switch or number of a game type in `config.yml` (without a value: a [menu](configuration.md#changing-settings-in-the-game)) |
 | `/sg build` | build mode: change the world of your game (e.g. in the lobby) |
 | `/sg replay delete <id>` | deletes the recording of a [replay](replays.md) |

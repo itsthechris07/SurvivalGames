@@ -2,9 +2,11 @@ package com.christian34.survivalgames.lib;
 
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.lib.lang.I;
+import com.christian34.survivalgames.lib.lang.LangText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -39,6 +41,13 @@ public class Menu {
      * the marker of the corner button in the rows of {@link #layout(int, boolean)}
      */
     private static final char CORNER = 'c';
+    /**
+     * the buttons of one page, if a menu has more buttons than a chest has slots: 5 rows, the last row has the arrows
+     */
+    static final int PAGE_SIZE = 5 * 9;
+    private static final int PREVIOUS_SLOT = PAGE_SIZE + 3;
+    private static final int NEXT_SLOT = PAGE_SIZE + 5;
+    private static final int CORNER_SLOT = PAGE_SIZE + 8;
     private final Component title;
     private final List<Button> buttons = new ArrayList<>();
     @Nullable
@@ -86,7 +95,19 @@ public class Menu {
      */
     public void show(Player player) {
         if (SurvivalGames.getInstance().getBedrockForms().show(player, this)) return;
-        player.openInventory(new Chest(this).getInventory());
+        show(player, 0);
+    }
+
+    private void show(Player player, int page) {
+        player.openInventory(new Chest(this, page).getInventory());
+    }
+
+    /**
+     * @return the number of pages of the chest menu (forms show all buttons in one list)
+     */
+    int getPages() {
+        int capacity = corner == null ? 6 * 9 : PAGE_SIZE;
+        return buttons.size() <= capacity ? 1 : (buttons.size() + PAGE_SIZE - 1) / PAGE_SIZE;
     }
 
     /**
@@ -100,8 +121,7 @@ public class Menu {
         return all;
     }
     /**
-     * @return up to 5 buttons centered with gaps in one row, otherwise full rows (at most 6, more buttons aren't
-     * shown)
+     * @return up to 5 buttons centered with gaps in one row, otherwise full rows (at most 6, more buttons get pages)
      */
     static String[] layout(int buttons) {
         if (buttons <= 5) {
@@ -121,7 +141,23 @@ public class Menu {
         private final Inventory inventory;
         private final Map<Integer, Button> slots = new HashMap<>();
 
-        Chest(Menu menu) {
+        /**
+         * @param page the page to show, starting at 0 (menus with more buttons than slots have arrows in the last row)
+         */
+        Chest(Menu menu, int page) {
+            int pages = menu.getPages();
+            if (pages > 1) {
+                this.inventory = Bukkit.createInventory(this, 6 * 9, menu.title);
+                int current = Math.max(0, Math.min(page, pages - 1));
+                int first = current * PAGE_SIZE;
+                for (int slot = 0; slot < PAGE_SIZE && first + slot < menu.buttons.size(); slot++) {
+                    put(slot, menu.buttons.get(first + slot));
+                }
+                if (current > 0) put(PREVIOUS_SLOT, arrow(menu, LangText.GUI_PAGE_PREVIOUS, current - 1, pages));
+                if (current < pages - 1) put(NEXT_SLOT, arrow(menu, LangText.GUI_PAGE_NEXT, current + 1, pages));
+                if (menu.corner != null) put(CORNER_SLOT, menu.corner);
+                return;
+            }
             String[] rows = layout(menu.buttons.size(), menu.corner != null);
             this.inventory = Bukkit.createInventory(this, rows.length * 9, menu.title);
             int next = 0;
@@ -133,6 +169,11 @@ public class Menu {
                     put(slot, menu.buttons.get(next++));
                 }
             }
+        }
+
+        private static Button arrow(Menu menu, LangText name, int page, int pages) {
+            return new Button(ItemStack.of(Material.ARROW), I.i18n(name, page + 1, pages), List.of(),
+                    player -> menu.show(player, page));
         }
 
         private void put(int slot, Button button) {
