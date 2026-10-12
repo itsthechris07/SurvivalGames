@@ -60,6 +60,10 @@ public class VaroGame extends Game {
     private String startDay;
     private int borderDay;
     private int ticks;
+    private List<String> playHoursSetting = List.of();
+    private PlayHours playHours = new PlayHours(List.of(), entry -> {
+    });
+    private boolean open = true;
 
     public VaroGame(SurvivalGames plugin, Arena arena) {
         super(plugin, arena, arena.createWorld(arena.getName(), true));
@@ -261,6 +265,40 @@ public class VaroGame extends Game {
         return Math.max(0, getPlayTime() - participant.getPlayed(today()));
     }
 
+    /**
+     * @return the hours of the day the game can be played in (play-hours, always without them)
+     */
+    public PlayHours getPlayHours() {
+        ConfigurationSection settings = settings();
+        List<String> entries = settings.isString("play-hours") ? List.of(settings.getString("play-hours", ""))
+                : settings.getStringList("play-hours");
+        if (!entries.equals(playHoursSetting)) {
+            this.playHoursSetting = entries;
+            this.playHours = new PlayHours(entries, entry -> Debug.warn("Invalid time frame in varo.play-hours: '"
+                    + entry + "' (e.g. \"18:00-20:00\" or \"sat,sun 14:00-22:00\")"));
+        }
+        return playHours;
+    }
+
+    /**
+     * @return the seconds the player can play right now: his play time of today, at most until the play hours end
+     */
+    public int getSessionTime(Participant participant) {
+        return Math.min(getRemaining(participant), getPlayHours().secondsLeft(LocalDateTime.now(clock)));
+    }
+
+    /**
+     * @return the time until the participant can play again: on the next day if his play time is used up and not
+     * before the play hours begin
+     */
+    private Duration getWait(Participant participant) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime time = getRemaining(participant) > 0 ? now : now.plus(getTimeUntilNextDay());
+        PlayHours hours = getPlayHours();
+        if (!hours.isOpen(time)) time = hours.nextOpening(time);
+        return Duration.between(now, time);
+    }
+
     // ---------------------------------------------------------------- joining and leaving
 
     @Override
@@ -275,10 +313,11 @@ public class VaroGame extends Game {
             case STARTING, RUNNING -> {
                 if (participant == null) return i18n(LangText.GAME_RUNNING, arena.getName());
                 if (!participant.isAlive()) return i18n(LangText.KICK_ELIMINATED);
+                Duration wait = getWait(participant);
                 if (getRemaining(participant) <= 0) {
-                    Duration wait = getTimeUntilNextDay();
                     return i18n(LangText.KICK_NO_TIME_LEFT, wait.toHours(), wait.toMinutesPart());
                 }
+                if (!wait.isZero()) return i18n(LangText.KICK_OUTSIDE_HOURS, wait.toHours(), wait.toMinutesPart());
                 return null;
             }
             default -> {
@@ -341,7 +380,7 @@ public class VaroGame extends Game {
     private void startSession(Player player, Participant participant) {
         int protection = Math.max(0, settings().getInt("join-protection"));
         participant.protect(protection);
-        player.sendMessage(I.prefixed(LangText.SESSION_STARTED, formatTime(getRemaining(participant)), protection));
+        player.sendMessage(I.prefixed(LangText.SESSION_STARTED, formatTime(getSessionTime(participant)), protection));
     }
 
     @Override
@@ -420,6 +459,8 @@ public class VaroGame extends Game {
         broadcast(LangText.VARO_STARTED, formatTime(getPlayTime()));
         int peaceful = settings().getInt("peaceful-days");
         if (peaceful > 0) broadcast(LangText.VARO_PEACEFUL, peaceful);
+        PlayHours hours = getPlayHours();
+        if (hours.isRestricted()) broadcast(LangText.VARO_PLAY_HOURS, String.join(", ", hours.getEntries()));
         giveTrackers();
         for (GamePlayer member : getPlayers()) {
             Participant participant = getParticipant(member.getPlayer().getUniqueId());
@@ -436,13 +477,17 @@ public class VaroGame extends Game {
         checkNewDay();
         String today = today();
         int playTime = getPlayTime();
+        // the seconds until the play hours end
+        int hours = getPlayHours().secondsLeft(LocalDateTime.now(clock));
+        if (hours <= 0 && open) broadcast(LangText.VARO_PLAY_HOURS_OVER);
+        this.open = hours > 0;
         for (GamePlayer member : getPlayers()) {
             Player player = member.getPlayer();
             Participant participant = getParticipant(player.getUniqueId());
             if (participant == null || !participant.isAlive() || player.isDead()) continue;
             int played = participant.getPlayed(today) + 1;
             participant.setPlayed(today, played);
-            int remaining = playTime - played;
+            int remaining = Math.min(playTime - played, hours);
             if (remaining > 0) {
                 if (TIME_WARNINGS.contains(remaining)) {
                     player.sendMessage(I.prefixed(LangText.TIME_WARNING, formatTime(remaining)));
@@ -452,9 +497,12 @@ public class VaroGame extends Game {
             } else if (isInCombat(player)) {
                 // no escaping from a fight
                 player.sendActionBar(i18n(LangText.ACTIONBAR_ENEMY_NEARBY));
+            } else if (played < playTime) {
+                Duration wait = getWait(participant);
+                kick(member, I.prefixed(LangText.KICK_OUTSIDE_HOURS, wait.toHours(), wait.toMinutesPart()));
             } else {
                 broadcast(LangText.PLAYER_TIME_OVER, player.getName());
-                Duration wait = getTimeUntilNextDay();
+                Duration wait = getWait(participant);
                 kick(member, I.prefixed(LangText.KICK_TIME_OVER, wait.toHours(), wait.toMinutesPart()));
             }
         }

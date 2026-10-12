@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -405,6 +407,88 @@ class VaroRulesTest extends PluginTestBase {
         assertSame(restored, plugin.getUser(admin).getGame());
         assertTrue(new File(worldFolder, "saved.txt").isFile());
         assertFalse(new File(worldFolder, "later.txt").exists(), "the world of the backup");
+    }
+
+    // play hours
+
+    /**
+     * the time of the server (2026-10-12 is a monday)
+     */
+    private void time(LocalDateTime time) {
+        game.setClock(Clock.fixed(time.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
+    }
+
+    @Test
+    void theGameIsLeftWhenThePlayHoursEnd() {
+        config().set("varo.play-hours", List.of("18:00-20:00"));
+        time(LocalDateTime.of(2026, 10, 12, 19, 59, 30));
+        startGame();
+        assertContains(messages(steve), "The Varo can only be played at these times: 18:00-20:00");
+        assertEquals(30, game.getSessionTime(participant(steve)));
+        seconds(1);
+        assertContains(messages(steve), "Your play time ends in 00:30");
+        execute(steve, "sg time");
+        assertContains(messages(steve), "The Varo can only be played at these times: 18:00-20:00");
+
+        time(LocalDateTime.of(2026, 10, 12, 20, 0));
+        seconds(1);
+        assertNull(plugin.getUser(steve).getGame());
+        List<String> messages = messages(steve);
+        assertContains(messages, "The play hours are over for now.");
+        assertContains(messages, "The Varo can't be played right now.");
+        assertContains(messages, "You can play again in 22h 0min");
+        assertNotContains(messages, "has used up the play time");
+        assertTrue(game.getRemaining(participant(steve)) > 0, "the play time of the day isn't used up");
+
+        execute(steve, "sg join varo1");
+        assertNull(plugin.getUser(steve).getGame());
+        assertContains(messages(steve), "The Varo can't be played right now.");
+
+        time(LocalDateTime.of(2026, 10, 13, 18, 0));
+        assertNull(game.getJoinDenial(steve.getUniqueId()));
+        execute(steve, "sg join varo1");
+        assertSame(game, plugin.getUser(steve).getGame());
+    }
+
+    @Test
+    void playHoursOfTheDaysOfTheWeek() {
+        config().set("varo.play-hours", List.of("sat,sun 14:00-22:00"));
+        time(LocalDateTime.of(2026, 10, 10, 15, 0));
+        startGame();
+        seconds(1);
+        assertSame(game, plugin.getUser(steve).getGame());
+
+        time(LocalDateTime.of(2026, 10, 12, 15, 0));
+        seconds(1);
+        assertNull(plugin.getUser(steve).getGame(), "not on a monday");
+        String denial = PlainTextComponentSerializer.plainText().serialize(game.getJoinDenial(steve.getUniqueId()));
+        assertTrue(denial.contains("You can play again in 119h 0min"), denial);
+    }
+
+    @Test
+    void noPlayTimeLeftWaitsForThePlayHoursOfTheNextDay() {
+        config().set("varo.play-hours", List.of("18:00-20:00"));
+        config().set("varo.play-time", 1);
+        time(LocalDateTime.of(2026, 10, 12, 18, 0));
+        startGame();
+        seconds(60);
+        assertNull(plugin.getUser(steve).getGame());
+        assertContains(messages(steve), "Your play time for today is over");
+        String denial = PlainTextComponentSerializer.plainText().serialize(game.getJoinDenial(steve.getUniqueId()));
+        assertTrue(denial.contains("Your play time for today is over"), denial);
+        assertTrue(denial.contains("You can play again in 24h 0min"), "not at midnight: " + denial);
+    }
+
+    @Test
+    void enemiesNearbyKeepThePlayerInTheGameAfterThePlayHours() {
+        config().set("varo.play-hours", List.of("18:00-20:00"));
+        config().set("varo.combat-radius", 20);
+        time(LocalDateTime.of(2026, 10, 12, 19, 0));
+        startGame();
+        steve.teleport(admin.getLocation());
+        time(LocalDateTime.of(2026, 10, 12, 20, 0));
+        seconds(2);
+        assertSame(game, plugin.getUser(steve).getGame(), "no escape from a fight");
     }
 
 }

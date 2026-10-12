@@ -44,6 +44,7 @@ files automatically – your values and comments stay.
 | `<game type>.fireworks` | `true` | fireworks for the winners |
 | `varo.play-time` | `15` | minutes every player may play per day |
 | `varo.day-start-hour` | `0` | the hour (0-23) a new day starts |
+| `varo.play-hours` | `[ ]` | the [times of the day](varo.md#playing-every-day) a Varo can be played at, e.g. `[ "18:00-20:00" ]` (empty: always) |
 | `varo.team-size` | `2` | players per team |
 | `varo.strikes` | `[ coordinates, inventory, out ]` | the consequences of the 1st, 2nd, ... [strike](varo.md#strikes) |
 | `varo.peaceful-days`, `inactive-days`, `coordinates-from-day` | `0` | the [optional rules](varo.md#optional-rules) of a Varo |

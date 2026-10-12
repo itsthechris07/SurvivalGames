@@ -301,6 +301,7 @@ session_started: '<gray>You can play <yellow>{0} <gray>today. You are protected 
 kick_eliminated: '<red>You are out of the game.'
 kick_no_time_left: "<red>Your play time for today is over.\n<gray>You can play again in <yellow>{0}h {1}min<gray>."
 kick_time_over: "<red>Your play time for today is over.\n<gray>You can play again in <yellow>{0}h {1}min<gray>."
+kick_outside_hours: "<red>The Varo can't be played right now.\n<gray>You can play again in <yellow>{0}h {1}min<gray>."
 time_warning: '<red>Your play time ends in <yellow>{0}<red>!'
 actionbar_time_left: '<gray>Play time left: <yellow>{0}'
 actionbar_enemy_nearby: '<red>Enemy nearby - you can''t leave now!'
@@ -308,6 +309,8 @@ player_time_over: '<yellow>{0} <gray>has used up the play time for today.'
 new_day: '<gold>Day <yellow>{0} <gold>has begun - everybody has their full play time again!'
 border_shrinks: '<red>The world border shrinks to <yellow>{0} <red>blocks!'
 varo_peaceful: '<green>No PvP for the first <yellow>{0} <green>days - farm and build!'
+varo_play_hours: '<gray>The Varo can only be played at these times: <yellow>{0}'
+varo_play_hours_over: '<red>The play hours are over for now.'
 varo_pvp_enabled: '<red>The peaceful days are over - PvP is on from now on!'
 varo_inactive_out: '<yellow>{0} <gray>hasn''t played for <yellow>{1} <gray>days and is out of the game.'
 varo_coordinates_title: '<gold>Day {0} - <gray>this is where everybody is:'

@@ -10,6 +10,7 @@ import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.game.Participant;
+import com.christian34.survivalgames.game.PlayHours;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.I;
@@ -281,6 +282,10 @@ public class CommandSurvivalGames {
         }
         player.sendMessage(I.prefixed(LangText.TIME_LEFT, Game.formatTime(varo.getRemaining(participant)),
                 participant.getKills()));
+        PlayHours hours = varo.getPlayHours();
+        if (hours.isRestricted()) {
+            player.sendMessage(I.prefixed(LangText.VARO_PLAY_HOURS, String.join(", ", hours.getEntries())));
+        }
     }
 
     @Command(ROOT + " ping [player]")

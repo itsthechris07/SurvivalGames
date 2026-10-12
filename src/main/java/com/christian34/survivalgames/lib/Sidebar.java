@@ -162,7 +162,7 @@ public class Sidebar {
                         lines.add(i18n(LangText.SCOREBOARD_STRIKES, participant.getStrikes().size()));
                     }
                     if (game instanceof VaroGame varo && participant.isAlive()) {
-                        lines.add(i18n(LangText.SCOREBOARD_TIME_LEFT, Game.formatTime(varo.getRemaining(participant))));
+                        lines.add(i18n(LangText.SCOREBOARD_TIME_LEFT, Game.formatTime(varo.getSessionTime(participant))));
                     }
                 }
                 if (game instanceof SurvivalGame sg) {

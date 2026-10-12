@@ -155,6 +155,10 @@ varo:
   play-time: 15
   # the hour (0-23) a new day starts - the play time is reset then
   day-start-hour: 0
+  # the times of the day the game can be played at (empty: always), e.g. [ "18:00-20:00" ] or for some days of the
+  # week [ "mon-fri 18:00-20:00", "sat,sun 14:00-22:00" ] - outside of them nobody can join and everybody in the game
+  # leaves it (server time, "22:00-02:00" ends on the next day)
+  play-hours: [ ]
   # seconds without damage after joining (0: none)
   join-protection: 10
   # the play time doesn't run out while an enemy is this close (blocks, 0: always runs out) - you can't log out of a fight

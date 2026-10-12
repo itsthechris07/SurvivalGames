@@ -21,6 +21,11 @@ game they get their normal inventory and location back** – inside the game the
   leaves the game (on a [game server](network.md): back to the lobby) and can't join again until the next day.
 - **No escape from a fight:** while an enemy is within `combat-radius` blocks, the play time doesn't run out.
 - **Join protection:** after joining, a player can't be hurt for `join-protection` seconds (unless they attack).
+- **Play hours:** with `play-hours` the game can only be played at certain times of the day (server time), e.g.
+  `[ "18:00-20:00" ]` or different ones for the days of the week: `[ "mon-fri 18:00-20:00", "sat,sun 14:00-22:00" ]`.
+  Outside of them nobody can join and everybody in the game leaves it (with the same warnings as for the play time,
+  and not while an enemy is nearby). `"22:00-02:00"` ends on the next day – choose a `day-start-hour` outside of
+  the play hours then. Empty (default): the game can be played all day.
 - **A new day** starts at `day-start-hour` (server time). Everybody has their full play time again and the **world
   border** shrinks by `world-border.shrink-per-day` blocks until `world-border.min-size`.
 
