@@ -12,9 +12,13 @@ import com.christian34.survivalgames.modules.Sponsor;
 import com.christian34.survivalgames.network.NetworkManager;
 import com.christian34.survivalgames.network.ServerStatus;
 import com.christian34.survivalgames.replay.Replays;
+import com.christian34.survivalgames.stats.PlayerStats;
+import com.christian34.survivalgames.stats.Stat;
+import com.christian34.survivalgames.stats.StatsManager;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -61,9 +65,9 @@ public final class Menus {
         }
         if (plugin.getStats().isEnabled()) {
             menu.button(ItemStack.of(Material.PAPER), i18n(LangText.GUI_MAIN_STATS),
-                    I.itemLines(LangText.GUI_MAIN_STATS_LORE), clicker -> run(clicker, "sg stats"));
+                    I.itemLines(LangText.GUI_MAIN_STATS_LORE), Menus::openStats);
             menu.button(ItemStack.of(Material.GOLD_INGOT), i18n(LangText.GUI_MAIN_TOP),
-                    I.itemLines(LangText.GUI_MAIN_TOP_LORE), clicker -> run(clicker, "sg top"));
+                    I.itemLines(LangText.GUI_MAIN_TOP_LORE), clicker -> openTop(clicker, Stat.WINS));
         }
         if (plugin.getAchievements().isEnabled()) {
             menu.button(ItemStack.of(Material.NETHER_STAR), i18n(LangText.GUI_MAIN_ACHIEVEMENTS),
@@ -120,6 +124,70 @@ public final class Menus {
             return;
         }
         menu.show(player);
+    }
+
+    /**
+     * the statistics of the player per game type and of all of them, the best players in the corner
+     */
+    public static void openStats(Player player) {
+        StatsManager manager = SurvivalGames.getInstance().getStats();
+        if (!manager.isEnabled()) {
+            player.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+            return;
+        }
+        UUID uuid = player.getUniqueId();
+        manager.then(manager.load(uuid), stats -> {
+            if (!player.isOnline()) return;
+            Menu menu = new Menu(i18n(LangText.GUI_STATS, player.getName()));
+            // an information, a click changes nothing
+            for (GameType type : GameType.values()) {
+                PlayerStats typeStats = stats.getOrDefault(type.getKey(), PlayerStats.empty(uuid, player.getName()));
+                List<Component> lore = statsLore(typeStats);
+                if (manager.isRated(type)) lore.add(i18n(LangText.GUI_STATS_RATING, typeStats.get(Stat.RATING)));
+                menu.button(ItemStack.of(type == GameType.VARO ? Material.GRASS_BLOCK : Material.IRON_SWORD),
+                        i18n(type.getDisplayName()), lore, Menus::openStats);
+            }
+            menu.button(ItemStack.of(Material.BOOK), i18n(LangText.STATS_TOTAL),
+                    statsLore(PlayerStats.total(uuid, player.getName(), stats.values())), Menus::openStats);
+            menu.corner(ItemStack.of(Material.GOLD_INGOT), i18n(LangText.GUI_MAIN_TOP),
+                    I.itemLines(LangText.GUI_MAIN_TOP_LORE), clicker -> openTop(clicker, Stat.WINS));
+            menu.show(player);
+        }, () -> player.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+    }
+
+    private static List<Component> statsLore(PlayerStats stats) {
+        return new ArrayList<>(I.itemLines(LangText.GUI_STATS_LORE, stats.games(), stats.wins(), stats.kills(),
+                stats.deaths(), stats.formatKillDeathRatio()));
+    }
+
+    /**
+     * the best players of a statistic in all game types (click: their statistics in the chat) and the other lists
+     */
+    public static void openTop(Player player, Stat stat) {
+        StatsManager manager = SurvivalGames.getInstance().getStats();
+        if (!manager.isEnabled()) {
+            player.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+            return;
+        }
+        manager.then(manager.top(stat, null), top -> {
+            if (!player.isOnline()) return;
+            Component statName = i18n(stat.getDisplayName());
+            Menu menu = new Menu(i18n(LangText.GUI_TOP, statName));
+            for (int i = 0; i < top.size(); i++) {
+                PlayerStats entry = top.get(i);
+                menu.button(head(Bukkit.getPlayer(entry.uuid())), i18n(LangText.GUI_TOP_ENTRY, i + 1, entry.name()),
+                        List.of(i18n(LangText.GUI_TOP_VALUE, statName, entry.get(stat))),
+                        clicker -> run(clicker, "sg stats " + entry.name()));
+            }
+            boolean rated = Arrays.stream(GameType.values()).anyMatch(manager::isRated);
+            for (Stat other : Stat.values()) {
+                if (other == stat || other == Stat.RATING && !rated) continue;
+                menu.button(ItemStack.of(Material.PAPER), i18n(other.getDisplayName()).colorIfAbsent(NamedTextColor.YELLOW),
+                        I.itemLines(LangText.GUI_TOP_OTHER_LORE), clicker -> openTop(clicker, other));
+            }
+            menu.corner(ItemStack.of(Material.ARROW), i18n(LangText.GUI_BACK), List.of(), Menus::openStats);
+            menu.show(player);
+        }, () -> player.sendMessage(I.prefixed(LangText.STATS_ERROR)));
     }
 
     /**

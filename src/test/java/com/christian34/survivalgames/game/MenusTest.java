@@ -3,6 +3,7 @@ package com.christian34.survivalgames.game;
 import com.christian34.survivalgames.FakeForms;
 import com.christian34.survivalgames.PluginTestBase;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.stats.Stat;
 import org.bukkit.Location;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,8 +58,6 @@ class MenusTest extends PluginTestBase {
         assertEquals(List.of("Play", "Statistics", "Top players", "Achievements", "Replays", "Help"), forms.buttons());
         assertTrue(forms.lore("Help").contains("Version " + plugin.getPluginMeta().getVersion()));
 
-        click(steve, "Statistics");
-        assertContains(messages(steve), "There are no statistics of Steve yet.");
         click(steve, "Help");
         assertFalse(messages(steve).isEmpty());
     }
@@ -97,7 +96,7 @@ class MenusTest extends PluginTestBase {
         assertEquals("Administration", forms.buttons().getLast());
         click(admin, "Administration");
         assertEquals("Administration", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("Arenas", "Games", "Settings", "Reload"), forms.buttons());
+        assertEquals(List.of("Arenas", "Games", "Lobby world", "Settings", "Reload"), forms.buttons());
 
         execute(steve, "sg admin");
         assertContains(messages(steve), "permission");
@@ -112,6 +111,57 @@ class MenusTest extends PluginTestBase {
         assertFalse(forms.buttons().contains("Play"));
         click(steve, "Leave");
         assertNull(plugin.getUser(steve).getGame());
+    }
+
+    // ---------------------------------------------------------------- statistics
+
+    @Test
+    void theStatisticsOfThePlayer() {
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.SURVIVAL_GAMES, Stat.GAMES, 4);
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.SURVIVAL_GAMES, Stat.WINS, 1);
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.SURVIVAL_GAMES, Stat.KILLS, 6);
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.SURVIVAL_GAMES, Stat.DEATHS, 3);
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.VARO, Stat.GAMES, 1);
+
+        execute(steve, "sg");
+        click(steve, "Statistics");
+        assertEquals("Statistics of Steve", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("Survival Games", "Varo", "Total", "Top players"), forms.buttons());
+        assertEquals(List.of("Games: 4", "Wins: 1", "Kills: 6", "Deaths: 3", "K/D: 2.00", "Rating: 1000"),
+                forms.lore("Survival Games"));
+        assertEquals(List.of("Games: 1", "Wins: 0", "Kills: 0", "Deaths: 0", "K/D: 0.00"), forms.lore("Varo"));
+        assertEquals("Games: 5", forms.lore("Total").getFirst());
+    }
+
+    @Test
+    void newPlayersSeeEmptyStatistics() {
+        execute(steve, "sg");
+        click(steve, "Statistics");
+        assertEquals("Games: 0", forms.lore("Total").getFirst());
+        assertTrue(messages(steve).isEmpty());
+    }
+
+    @Test
+    void theBestPlayers() {
+        PlayerMock alex = addPlayer("Alex");
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.SURVIVAL_GAMES, Stat.WINS, 2);
+        plugin.getStats().add(alex.getUniqueId(), "Alex", GameType.VARO, Stat.WINS, 5);
+        plugin.getStats().add(steve.getUniqueId(), "Steve", GameType.SURVIVAL_GAMES, Stat.KILLS, 9);
+
+        execute(steve, "sg");
+        click(steve, "Top players");
+        assertEquals("Top 10: Wins", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("#1 Alex", "#2 Steve", "Games", "Kills", "Deaths", "Rating", "Back"), forms.buttons());
+        assertEquals(List.of("Wins: 5"), forms.lore("#1 Alex"));
+
+        click(steve, "Kills");
+        assertEquals("Top 10: Kills", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("#1 Steve", "Games", "Wins", "Deaths", "Rating", "Back"), forms.buttons());
+        click(steve, "#1 Steve");
+        assertContains(messages(steve), "Statistics of Steve");
+
+        click(steve, "Back");
+        assertEquals("Statistics of Steve", FakeForms.plain(forms.last().getTitle()));
     }
 
     // ---------------------------------------------------------------- games
@@ -167,6 +217,7 @@ class MenusTest extends PluginTestBase {
         assertEquals("Arena castle", FakeForms.plain(forms.last().getTitle()));
         assertEquals(List.of("Edit the map", "Setup", "Create the game", "Back"), forms.buttons());
         assertTrue(forms.lore("Setup").contains("Spawn points: 0"));
+        assertEquals("Click to change it", forms.lore("Setup").getLast());
 
         click(admin, "Edit the map");
         assertSame(arena, plugin.getArenaManager().getEditedArena(admin));
@@ -200,6 +251,104 @@ class MenusTest extends PluginTestBase {
         assertEquals("Arenas", FakeForms.plain(forms.last().getTitle()));
         click(admin, "Back");
         assertEquals("Administration", FakeForms.plain(forms.last().getTitle()));
+    }
+
+    @Test
+    void theNumbersOfAnArenaAreChangedWithTheMenu() {
+        Arena arena = createArena("castle", GameType.SURVIVAL_GAMES, 0);
+        arena.setPlayers(2, 8);
+        execute(admin, "sg admin");
+        click(admin, "Arenas");
+        click(admin, "castle");
+        click(admin, "Setup");
+        assertEquals("Setup of castle", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("Players needed", "Players at most", "Players per team", "World border", "Details", "Back"),
+                forms.buttons());
+        assertEquals(List.of("Value: 2", "Click to change"), forms.lore("Players needed"));
+
+        click(admin, "Players at most");
+        assertEquals("Players at most: 8", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("-5", "-1", "+1", "+5", "Back"), forms.buttons());
+        assertEquals(List.of("Value: 13"), forms.lore("+5"));
+        click(admin, "+5");
+        assertEquals(13, arena.getMaxPlayers());
+        assertEquals("Players at most: 13", FakeForms.plain(forms.last().getTitle()), "the menu is shown again");
+        click(admin, "-1");
+        assertEquals(12, arena.getMaxPlayers());
+        assertEquals(2, arena.getMinPlayers());
+        click(admin, "Back");
+
+        // more players needed than there may be: the maximum follows
+        click(admin, "Players needed");
+        assertEquals(List.of("-1", "+1", "+5", "Back"), forms.buttons(), "not below 1");
+        click(admin, "+5");
+        click(admin, "+5");
+        click(admin, "+5");
+        assertEquals(17, arena.getMinPlayers());
+        assertEquals(17, arena.getMaxPlayers());
+        click(admin, "Back");
+
+        click(admin, "Players per team");
+        click(admin, "+1");
+        assertEquals(2, arena.getTeamSize());
+        click(admin, "Back");
+
+        int border = arena.getBorderSize();
+        click(admin, "World border");
+        click(admin, "+100");
+        click(admin, "-10");
+        assertEquals(border + 90, arena.getBorderSize());
+        click(admin, "Back");
+
+        messages(admin);
+        click(admin, "Details");
+        assertContains(messages(admin), "World border: " + (border + 90));
+        execute(admin, "sg admin");
+        click(admin, "Arenas");
+        click(admin, "castle");
+        click(admin, "Setup");
+        click(admin, "Back");
+        assertEquals("Arena castle", FakeForms.plain(forms.last().getTitle()));
+    }
+
+    // ---------------------------------------------------------------- lobby world
+
+    @Test
+    void theLobbyWorldIsSetUpWithTheMenu() {
+        createMap("hub");
+        execute(admin, "sg admin");
+        assertTrue(forms.lore("Lobby world").contains("Map: none"));
+        click(admin, "Lobby world");
+        assertEquals("Lobby world", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("Choose the world", "Back"), forms.buttons());
+
+        click(admin, "Choose the world");
+        assertEquals("Choose the lobby world", FakeForms.plain(forms.last().getTitle()));
+        assertTrue(forms.buttons().contains("hub"));
+        assertEquals("a map in maps/", forms.lore("hub").getFirst());
+        click(admin, "hub");
+        assertTrue(plugin.getArenaManager().getLobby().isSet());
+        assertEquals("hub", plugin.getArenaManager().getLobby().getMapName());
+        assertEquals(List.of("Edit the lobby world", "Choose the world", "Remove the lobby world", "Back"),
+                forms.buttons());
+        assertTrue(forms.lore("Choose the world").contains("Now: hub"));
+
+        click(admin, "Edit the lobby world");
+        assertTrue(plugin.getArenaManager().isEditingLobby(admin));
+        execute(admin, "sg admin");
+        assertTrue(forms.lore("Lobby world").contains("Map: hub"));
+        click(admin, "Lobby world");
+        assertEquals(List.of("Set the spawn", "Save the lobby world", "Back"), forms.buttons());
+        messages(admin);
+        click(admin, "Set the spawn");
+        assertFalse(messages(admin).isEmpty());
+        click(admin, "Save the lobby world");
+        assertFalse(plugin.getArenaManager().isEditingLobby(admin));
+        assertTrue(forms.buttons().contains("Edit the lobby world"), "the menu is shown again");
+
+        click(admin, "Remove the lobby world");
+        assertFalse(plugin.getArenaManager().getLobby().isSet());
+        assertEquals(List.of("Choose the world", "Back"), forms.buttons());
     }
 
     // ---------------------------------------------------------------- controlling games

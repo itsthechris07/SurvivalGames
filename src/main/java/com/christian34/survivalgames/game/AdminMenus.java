@@ -2,12 +2,15 @@ package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.arena.ArenaManager;
+import com.christian34.survivalgames.arena.Lobby;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -15,16 +18,22 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
+import java.util.function.IntSupplier;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
 
 /**
- * The menus of the admins (/sg admin): the arenas with the steps of their setup and the games with their controls.
+ * The menus of the admins (/sg admin): the arenas with the steps of their setup, the lobby world and the games with
+ * their controls.
  * The buttons run the commands of the plugin, so the menus do and say the same as the commands.
  *
  * @author Christian34
  */
 public final class AdminMenus {
+
+    private static final int[] PLAYER_STEPS = {-5, -1, 1, 5};
+    private static final int[] BORDER_STEPS = {-100, -10, 10, 100};
 
     private AdminMenus() {
     }
@@ -62,6 +71,10 @@ public final class AdminMenus {
         menu.button(icon(Material.IRON_SWORD), i18n(LangText.GUI_ADMIN_GAMES),
                 I.itemLines(LangText.GUI_ADMIN_GAMES_LORE, plugin().getGameManager().getGames().size()),
                 AdminMenus::openGames);
+        Lobby lobby = plugin().getArenaManager().getLobby();
+        menu.button(icon(Material.OAK_DOOR), i18n(LangText.GUI_ADMIN_LOBBY),
+                I.itemLines(LangText.GUI_ADMIN_LOBBY_LORE, lobby.isSet() ? lobby.getMapName() : i18n(LangText.GUI_LOBBY_NONE)),
+                AdminMenus::openLobby);
         menu.button(icon(Material.COMPARATOR), i18n(LangText.GUI_ADMIN_SETTINGS),
                 I.itemLines(LangText.GUI_ADMIN_SETTINGS_LORE), clicker -> Menus.run(clicker, "sg settings"));
         menu.button(icon(Material.REPEATER), i18n(LangText.GUI_ADMIN_RELOAD),
@@ -139,8 +152,7 @@ public final class AdminMenus {
         }
         setup.add(Component.empty());
         setup.add(i18n(LangText.GUI_ARENA_SETUP_CLICK));
-        menu.button(icon(Material.BOOK), i18n(LangText.GUI_ARENA_SETUP), setup,
-                clicker -> Menus.run(clicker, command + "info"));
+        menu.button(icon(Material.BOOK), i18n(LangText.GUI_ARENA_SETUP), setup, clicker -> openSetup(clicker, arena));
         if (game == null) {
             menu.button(icon(Material.EMERALD), i18n(LangText.GUI_ARENA_CREATE_GAME),
                     I.itemLines(LangText.GUI_ARENA_CREATE_GAME_LORE), run(command + "creategame", again));
@@ -153,6 +165,113 @@ public final class AdminMenus {
                     I.itemLines(LangText.GUI_ARENA_REMOVE_GAME_LORE), run(command + "removegame", again));
         }
         back(menu, AdminMenus::openArenas);
+        menu.show(player);
+    }
+
+    /**
+     * the numbers of an arena (click: change one of them) and its whole setup in the chat
+     */
+    public static void openSetup(Player player, Arena arena) {
+        String command = "sg arena " + arena.getName() + " ";
+        Consumer<Player> again = clicker -> openSetup(clicker, arena);
+        Menu menu = new Menu(i18n(LangText.GUI_SETUP, arena.getName()));
+        number(menu, Material.PLAYER_HEAD, LangText.GUI_SETUP_MIN_PLAYERS, arena::getMinPlayers, PLAYER_STEPS, 1, 1000,
+                value -> command + "players " + value + " " + Math.max(value, arena.getMaxPlayers()), again);
+        number(menu, Material.PLAYER_HEAD, LangText.GUI_SETUP_MAX_PLAYERS, arena::getMaxPlayers, PLAYER_STEPS, 1, 1000,
+                value -> command + "players " + Math.min(value, arena.getMinPlayers()) + " " + value, again);
+        number(menu, Material.WHITE_BANNER, LangText.GUI_SETUP_TEAM_SIZE, arena::getTeamSize, PLAYER_STEPS, 1, 100,
+                value -> command + "teamsize " + value, again);
+        number(menu, Material.IRON_BARS, LangText.GUI_SETUP_BORDER, arena::getBorderSize, BORDER_STEPS, 0, 60000000,
+                value -> command + "border " + value, again);
+        menu.button(icon(Material.BOOK), i18n(LangText.GUI_SETUP_DETAILS), I.itemLines(LangText.GUI_SETUP_DETAILS_LORE),
+                clicker -> Menus.run(clicker, command + "info"));
+        back(menu, clicker -> openArena(clicker, arena));
+        menu.show(player);
+    }
+
+    /**
+     * a button with the value of a number - a click opens the menu that changes it
+     */
+    private static void number(Menu menu, Material material, LangText name, IntSupplier value, int[] steps, int min,
+                               int max, IntFunction<String> command, Consumer<Player> previous) {
+        menu.button(icon(material), i18n(name), List.of(i18n(LangText.GUI_SETTINGS_VALUE, value.getAsInt()),
+                        i18n(LangText.GUI_SETTINGS_CHANGE)),
+                clicker -> openNumber(clicker, name, value, steps, min, max, command, previous));
+    }
+
+    /**
+     * buttons that make a number smaller or bigger (chest menus have no text fields) - every click runs the command
+     * with the new value and shows the menu again
+     *
+     * @param steps   the changes to choose from, e.g. -5, -1, +1, +5
+     * @param command the command that sets the number to the value
+     */
+    private static void openNumber(Player player, LangText name, IntSupplier value, int[] steps, int min, int max,
+                                   IntFunction<String> command, Consumer<Player> previous) {
+        int current = value.getAsInt();
+        Menu menu = new Menu(i18n(LangText.GUI_NUMBER, i18n(name), current));
+        for (int step : steps) {
+            int changed = current + step;
+            if (changed < min || changed > max) continue;
+            menu.button(icon(step < 0 ? Material.RED_DYE : Material.LIME_DYE),
+                    Component.text((step > 0 ? "+" : "") + step, step < 0 ? NamedTextColor.RED : NamedTextColor.GREEN),
+                    List.of(i18n(LangText.GUI_SETTINGS_VALUE, changed)), run(command.apply(changed),
+                            clicker -> openNumber(clicker, name, value, steps, min, max, command, previous)));
+        }
+        back(menu, previous);
+        menu.show(player);
+    }
+
+    // ---------------------------------------------------------------- lobby world
+
+    /**
+     * the lobby world of all arenas: choose its map, edit it (set the spawn where the admin stands, save) or remove it
+     */
+    public static void openLobby(Player player) {
+        ArenaManager arenas = plugin().getArenaManager();
+        Lobby lobby = arenas.getLobby();
+        Menu menu = new Menu(i18n(LangText.GUI_LOBBY));
+        if (arenas.isEditingLobby(player)) {
+            // the admin walks to the spawn, so the menu stays closed
+            menu.button(icon(Material.HEAVY_WEIGHTED_PRESSURE_PLATE), i18n(LangText.GUI_LOBBY_SET_SPAWN),
+                    I.itemLines(LangText.GUI_ARENA_HERE_LORE), clicker -> Menus.run(clicker, "sg lobby setspawn"));
+            menu.button(icon(Material.LIME_DYE), i18n(LangText.GUI_LOBBY_SAVE),
+                    I.itemLines(LangText.GUI_ARENA_SAVE_LORE), run("sg lobby save", AdminMenus::openLobby));
+        } else {
+            if (lobby.isSet()) {
+                menu.button(icon(Material.WOODEN_AXE), i18n(LangText.GUI_LOBBY_EDIT),
+                        I.itemLines(LangText.GUI_LOBBY_EDIT_LORE), clicker -> Menus.run(clicker, "sg lobby edit"));
+            }
+            menu.button(icon(Material.GRASS_BLOCK), i18n(LangText.GUI_LOBBY_CHOOSE),
+                    I.itemLines(LangText.GUI_LOBBY_CHOOSE_LORE, lobby.isSet() ? lobby.getMapName() : i18n(LangText.GUI_LOBBY_NONE)),
+                    AdminMenus::openLobbyWorlds);
+            if (lobby.isSet()) {
+                menu.button(icon(Material.BARRIER), i18n(LangText.GUI_LOBBY_REMOVE),
+                        I.itemLines(LangText.GUI_LOBBY_REMOVE_LORE), run("sg lobby remove", AdminMenus::openLobby));
+            }
+        }
+        back(menu, AdminMenus::open);
+        menu.show(player);
+    }
+
+    /**
+     * the maps in maps/ and the worlds of the server that can be imported (click: it becomes the lobby world)
+     */
+    public static void openLobbyWorlds(Player player) {
+        List<String> maps = plugin().getArenaManager().getMapNames();
+        Menu menu = new Menu(i18n(LangText.GUI_LOBBY_WORLDS));
+        for (String map : maps) {
+            menu.button(icon(Material.MAP), Component.text(map, NamedTextColor.YELLOW),
+                    I.itemLines(LangText.GUI_LOBBY_MAP_LORE), run("sg lobby setworld " + map, AdminMenus::openLobby));
+        }
+        for (World world : ArenaManager.getImportableWorlds()) {
+            String name = world.getName();
+            // the name is an argument of the command
+            if (maps.contains(name) || name.contains(" ")) continue;
+            menu.button(icon(Material.GRASS_BLOCK), Component.text(name, NamedTextColor.YELLOW),
+                    I.itemLines(LangText.GUI_LOBBY_WORLD_LORE), run("sg lobby setworld " + name, AdminMenus::openLobby));
+        }
+        back(menu, AdminMenus::openLobby);
         menu.show(player);
     }
 

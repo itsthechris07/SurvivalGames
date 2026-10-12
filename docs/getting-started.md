@@ -15,7 +15,8 @@ All setup commands need the permission `sg.admin` (operators have it).
 !!! tip "Everything in a menu"
     `/sg admin` shows the arenas and the games in a menu: a click on an arena leads through the steps below (edit the
     map, set the lobby, the center and the spawn points where you stand, save, create the game), a click on a game
-    starts or stops it. Only the name of a new arena has to be typed.
+    starts or stops it. The lobby world and the numbers of an arena (players, team size, world border) are set there
+    too. Only the name of a new arena has to be typed.
 
 ## 1. The map
 

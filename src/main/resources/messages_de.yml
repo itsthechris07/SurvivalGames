@@ -457,7 +457,7 @@ gui_arena_save: '<green>Karte speichern'
 gui_arena_save_lore: 'Speichert die Karte und bringt dich zurück'
 gui_arena_setup: '<white>Einrichtung'
 gui_arena_setup_lore: "<gray>Spieler: <yellow>{0}<gray>-<yellow>{1}\n<gray>Pro Team: <yellow>{2}\n<gray>Spawnpunkte: <yellow>{3}\n<gray>Weltrand: <yellow>{4}"
-gui_arena_setup_click: '<green>Klicken, um es im Chat zu ändern'
+gui_arena_setup_click: '<green>Klicken zum Ändern'
 gui_arena_create_game: '<green>Spiel erstellen'
 gui_arena_create_game_lore: "Danach können Spieler beitreten,\nauch nach jedem Neustart"
 gui_arena_game: '<gold>Spiel steuern'
@@ -488,6 +488,36 @@ gui_control_alive: '<green>am Leben'
 gui_control_out: '<red>ausgeschieden'
 gui_control_revive: '<green>Klicken zum Wiederbeleben'
 gui_control_strike: '<red>Klicken für einen Strike'
+gui_stats: '<dark_gray>Statistiken von {0}'
+gui_stats_lore: "<gray>Spiele: <white>{0}\n<gray>Siege: <white>{1}\n<gray>Kills: <white>{2}\n<gray>Tode: <white>{3}\n<gray>K/D: <white>{4}"
+gui_stats_rating: '<gray>Rating: <gold>{0}'
+gui_top: '<dark_gray>Top 10: {0}'
+gui_top_entry: '<gold>#{0} <yellow>{1}'
+gui_top_value: '<gray>{0}: <white>{1}'
+gui_top_other_lore: 'Klicken für diese Liste'
+gui_admin_lobby: '<light_purple>Lobby-Welt'
+gui_admin_lobby_lore: "Die Welt, in der die Spieler warten\n<gray>Karte: <yellow>{0}"
+gui_lobby: '<dark_gray>Lobby-Welt'
+gui_lobby_none: 'keine'
+gui_lobby_edit: '<green>Lobby-Welt bearbeiten'
+gui_lobby_edit_lore: "Bringt dich in eine Kopie davon:\nsetze dort den Spawn"
+gui_lobby_set_spawn: '<yellow>Spawn setzen'
+gui_lobby_save: '<green>Lobby-Welt speichern'
+gui_lobby_choose: '<yellow>Welt auswählen'
+gui_lobby_choose_lore: "Eine Karte aus maps/ oder eine Welt des Servers\n<gray>Jetzt: <yellow>{0}"
+gui_lobby_remove: '<red>Lobby-Welt entfernen'
+gui_lobby_remove_lore: "Die Spieler warten wieder in den Arenen,\ndie Karte bleibt in maps/"
+gui_lobby_worlds: '<dark_gray>Lobby-Welt auswählen'
+gui_lobby_map_lore: "eine Karte in maps/\n<green>Klicken zum Auswählen"
+gui_lobby_world_lore: "eine Welt des Servers,\nsie wird nach maps/ kopiert\n<green>Klicken zum Auswählen"
+gui_setup: '<dark_gray>Einrichtung von {0}'
+gui_setup_min_players: '<yellow>Nötige Spieler'
+gui_setup_max_players: '<yellow>Höchstens Spieler'
+gui_setup_team_size: '<yellow>Spieler pro Team'
+gui_setup_border: '<yellow>Weltrand'
+gui_setup_details: '<white>Details'
+gui_setup_details_lore: 'Zeigt die ganze Einrichtung im Chat'
+gui_number: '<dark_gray>{0}<dark_gray>: {1}'
 
 # ---------------------------------------------------------------- Scoreboard
 scoreboard_title: '{0}'

@@ -7,7 +7,7 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 
 | Command | |
 |---|---|
-| `/sg` | the main menu: play, statistics, achievements, replays, help (console: the plugin version) |
+| `/sg` | the main menu: play, your statistics and the best players, achievements, replays, help (console: the plugin version) |
 | `/sg games` | all games in a menu – a click joins a game or watches it while it runs |
 | `/sg join [arena]` | joins a game (without: the fullest free game; on a lobby server: an arena is a server) |
 | `/sg spectate [arena]` | watches a running game |
@@ -40,8 +40,9 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 ## Admins (`sg.admin`)
 
 `/sg admin` (or the button in the main menu `/sg`) opens the **menu of the admins**: the arenas with the steps of their
-setup (edit the map, set lobby, center and spawn points where you stand, save, create the game) and the games with
-their controls (start, deathmatch, backups, players, stop). Its buttons run the commands below.
+setup (edit the map, set lobby, center and spawn points where you stand, save, the number of players, the team size and
+the world border, create the game), the lobby world (choose a map or a world of the server, edit it, set its spawn)
+and the games with their controls (start, deathmatch, backups, players, stop). Its buttons run the commands below.
 
 ### Arenas
 

@@ -457,7 +457,7 @@ gui_arena_save: '<green>Save the map'
 gui_arena_save_lore: 'Saves the map and takes you back'
 gui_arena_setup: '<white>Setup'
 gui_arena_setup_lore: "<gray>Players: <yellow>{0}<gray>-<yellow>{1}\n<gray>Per team: <yellow>{2}\n<gray>Spawn points: <yellow>{3}\n<gray>World border: <yellow>{4}"
-gui_arena_setup_click: '<green>Click to change it in the chat'
+gui_arena_setup_click: '<green>Click to change it'
 gui_arena_create_game: '<green>Create the game'
 gui_arena_create_game_lore: "Players can join then,\nalso after every restart"
 gui_arena_game: '<gold>Control the game'
@@ -488,6 +488,36 @@ gui_control_alive: '<green>alive'
 gui_control_out: '<red>out'
 gui_control_revive: '<green>Click to revive'
 gui_control_strike: '<red>Click to give a strike'
+gui_stats: '<dark_gray>Statistics of {0}'
+gui_stats_lore: "<gray>Games: <white>{0}\n<gray>Wins: <white>{1}\n<gray>Kills: <white>{2}\n<gray>Deaths: <white>{3}\n<gray>K/D: <white>{4}"
+gui_stats_rating: '<gray>Rating: <gold>{0}'
+gui_top: '<dark_gray>Top 10: {0}'
+gui_top_entry: '<gold>#{0} <yellow>{1}'
+gui_top_value: '<gray>{0}: <white>{1}'
+gui_top_other_lore: 'Click to show this list'
+gui_admin_lobby: '<light_purple>Lobby world'
+gui_admin_lobby_lore: "The world the players wait in\n<gray>Map: <yellow>{0}"
+gui_lobby: '<dark_gray>Lobby world'
+gui_lobby_none: 'none'
+gui_lobby_edit: '<green>Edit the lobby world'
+gui_lobby_edit_lore: "Takes you into a copy of it:\nset the spawn there"
+gui_lobby_set_spawn: '<yellow>Set the spawn'
+gui_lobby_save: '<green>Save the lobby world'
+gui_lobby_choose: '<yellow>Choose the world'
+gui_lobby_choose_lore: "A map of maps/ or a world of the server\n<gray>Now: <yellow>{0}"
+gui_lobby_remove: '<red>Remove the lobby world'
+gui_lobby_remove_lore: "The players wait in the arenas again,\nthe map stays in maps/"
+gui_lobby_worlds: '<dark_gray>Choose the lobby world'
+gui_lobby_map_lore: "a map in maps/\n<green>Click to choose"
+gui_lobby_world_lore: "a world of the server,\nit is copied into maps/\n<green>Click to choose"
+gui_setup: '<dark_gray>Setup of {0}'
+gui_setup_min_players: '<yellow>Players needed'
+gui_setup_max_players: '<yellow>Players at most'
+gui_setup_team_size: '<yellow>Players per team'
+gui_setup_border: '<yellow>World border'
+gui_setup_details: '<white>Details'
+gui_setup_details_lore: 'Shows the whole setup in the chat'
+gui_number: '<dark_gray>{0}<dark_gray>: {1}'
 
 # ---------------------------------------------------------------- scoreboard
 scoreboard_title: '{0}'
