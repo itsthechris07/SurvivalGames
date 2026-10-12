@@ -7,7 +7,8 @@ Images for the plugin pages on SpigotMC, Modrinth and Hangar.
 | `icon.png` | 512×512 | Project icon (Modrinth, Hangar, SpigotMC) |
 | `banner.png` | 1600×500 | Header at the top of the description |
 | `how-it-works.png` | 1600×900 | Gallery / description: the two game types (Survival Games round, Varo days) |
-| `features.png` | 1600×900 | Gallery / description: feature overview |
+| `features.png` | 1600×900 | Gallery / description: the server side (maps, menus, statistics, replays, integrations) |
+| `gameplay.png` | 1600×900 | Gallery / description: what happens in the games (voting, kits, loot, Varo rules, extras) |
 
 Copies for the documentation are in `docs/assets/` – copy them again after a change.
 

@@ -35,7 +35,7 @@ body{margin:0}
 </div>
 <div style="padding-bottom: 30px">
 <div style="font-size: 23px; font-weight: 600">Lobby</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Pick a team. The countdown starts once enough players are there – shorter when the game is full.</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Vote for the map, pick a kit and a team. The countdown starts once enough players are there.</div>
 </div>
 </div>
 
@@ -45,8 +45,8 @@ body{margin:0}
 <div style="width: 4px; flex-grow: 1; background: #3A3340"></div>
 </div>
 <div style="padding-bottom: 30px">
-<div style="font-size: 23px; font-weight: 600">Spawn points</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Everybody stands on a spawn point around the center, frozen until the start countdown is over.</div>
+<div style="font-size: 23px; font-weight: 600">Spawn points &amp; grace period</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Everybody stands frozen on a spawn point around the center. Then a minute of peace to loot the chests.</div>
 </div>
 </div>
 
@@ -56,8 +56,8 @@ body{margin:0}
 <div style="width: 4px; flex-grow: 1; background: #3A3340"></div>
 </div>
 <div style="padding-bottom: 30px">
-<div style="font-size: 23px; font-weight: 600">Grace period &amp; loot</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">A minute of peace to loot the chests – refilled every few minutes, better loot near the center.</div>
+<div style="font-size: 23px; font-weight: 600">The hunt</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">A compass tracks the nearest enemy, supply drops land near the center and lightnings reveal who hides.</div>
 </div>
 </div>
 
@@ -78,7 +78,7 @@ body{margin:0}
 </div>
 <div>
 <div style="font-size: 23px; font-weight: 600">Last one standing wins</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">The dead watch as spectators. Then the next round starts on a fresh copy of the map.</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">The dead watch and sponsor items. Afterwards the replay is ready and the next round starts on a fresh map.</div>
 </div>
 </div>
 
@@ -119,22 +119,30 @@ body{margin:0}
 </div>
 </div>
 
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 28px">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 28px">
 <div>
 <div style="font-size: 23px; font-weight: 600"><svg style="vertical-align: -3px; margin-right: 6px" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 15 15"></polyline><line x1="9" y1="2" x2="15" y2="2"></line></svg>Minutes per day</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Join, play your time, leave. Outside of the game you get your own inventory back.</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Play your time, then leave – at set play hours if you like.</div>
 </div>
 <div>
 <div style="font-size: 23px; font-weight: 600"><svg style="vertical-align: -3px; margin-right: 6px" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z"></path></svg>One life</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">The first death is the last one. When the last player of a team is out, the team is out.</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">The first death is the last one. The last team standing wins.</div>
 </div>
 <div>
 <div style="font-size: 23px; font-weight: 600"><svg style="vertical-align: -3px; margin-right: 6px" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4B95FF" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"></path></svg>No escape</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">With an enemy nearby the time doesn’t run out. Join protection after coming back.</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">No logout during a fight: a villager stands in for you.</div>
 </div>
 <div>
 <div style="font-size: 23px; font-weight: 600"><svg style="vertical-align: -3px; margin-right: 6px" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3FD08A" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="3" width="18" height="18" stroke-dasharray="4 3"></rect><polyline points="9 6 12 9 15 6"></polyline><polyline points="9 18 12 15 15 18"></polyline></svg>Shrinking world</div>
-<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Every new day the border gets smaller. The world and the game survive every restart.</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">The border gets smaller every day. Restarts change nothing.</div>
+</div>
+<div>
+<div style="font-size: 23px; font-weight: 600"><svg style="vertical-align: -3px; margin-right: 6px" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6BFF" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"><rect x="5" y="3" width="14" height="18"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="13" y2="16"></line></svg>Your rules</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Strikes, peaceful days, banned items, daily coordinates.</div>
+</div>
+<div>
+<div style="font-size: 23px; font-weight: 600"><svg style="vertical-align: -3px; margin-right: 6px" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter"><path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 3 3 8 8 8"></polyline><path d="M10 8.5v7l6-3.5z"></path></svg>Backups &amp; replays</div>
+<div style="font-size: 18px; line-height: 1.45; color: #D6CFD8">Every day is backed up and recorded – restore or watch it.</div>
 </div>
 </div>
 </div>

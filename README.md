@@ -17,6 +17,8 @@ one game per server in a network behind Velocity/BungeeCord.
 
 ![Features](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/features.png)
 
+![Gameplay](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/gameplay.png)
+
 - Arenas with their own map (a folder in `maps/`, an imported world or a generated one), set up in a copy of the map
   (`/sg arena <arena> edit`), spawn points or a spawn circle, lobby, center and world border
 - Server modes: `standalone` (games run "on the side", players join with `/sg join` or a `[sg]` sign), `game` (one
