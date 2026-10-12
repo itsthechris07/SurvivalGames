@@ -109,6 +109,11 @@ tasks {
         dependsOn(shadowJar)
     }
 
+    jar {
+        // the shadow jar has no classifier, both writing the same file breaks the validation of the Hangar upload
+        archiveClassifier = "plain"
+    }
+
     test {
         useJUnitPlatform()
         // the update checker doesn't ask GitHub in tests
