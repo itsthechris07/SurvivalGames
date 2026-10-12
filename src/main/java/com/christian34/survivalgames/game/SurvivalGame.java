@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
@@ -394,6 +395,7 @@ public class SurvivalGame extends Game {
     public void startDeathmatch() {
         if (deathmatch || getState() != GameState.RUNNING) return;
         this.deathmatch = true;
+        plugin.getTelemetry().used(Telemetry.Feature.DEATHMATCH);
         this.deathmatchIn = -1;
         this.graceLeft = 0;
         for (GamePlayer member : getPlayers()) {

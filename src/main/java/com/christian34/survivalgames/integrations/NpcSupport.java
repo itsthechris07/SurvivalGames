@@ -2,6 +2,7 @@ package com.christian34.survivalgames.integrations;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.SignManager;
@@ -181,6 +182,7 @@ public class NpcSupport {
         }
         Link link = links.get(key);
         if (link == null) return false;
+        plugin.getTelemetry().joined(Telemetry.Join.NPC);
         plugin.getSignManager().join(player, link.target());
         return true;
     }

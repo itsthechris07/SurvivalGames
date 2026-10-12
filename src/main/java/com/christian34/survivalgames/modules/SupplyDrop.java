@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -156,6 +157,7 @@ public class SupplyDrop {
         block.setType(Material.CHEST);
         if (block.getState() instanceof Chest chest) plugin.getLoot().fillSupply(chest.getBlockInventory());
         drops.add(block);
+        plugin.getTelemetry().used(Telemetry.Feature.SUPPLY_DROP);
         World world = location.getWorld();
         world.playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 2, 1);
         world.spawnParticle(Particle.EXPLOSION, location.clone().add(0.5, 0.5, 0.5), 3);

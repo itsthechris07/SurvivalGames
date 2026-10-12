@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.commands;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.UpdateChecker;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.AdminMenus;
@@ -133,6 +134,7 @@ public class CommandSurvivalGames {
                 return;
             }
         }
+        plugin().getTelemetry().joined(Telemetry.Join.COMMAND);
         plugin().getGameManager().join(plugin().getUser(player), arena);
     }
 

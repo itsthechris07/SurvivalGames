@@ -2,6 +2,7 @@ package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -168,6 +169,7 @@ public class Kits {
             return;
         }
         participant.setKit(kit == null ? null : kit.name());
+        if (kit != null) plugin.getTelemetry().used(Telemetry.Feature.KIT);
         player.sendMessage(kit == null ? I.prefixed(LangText.KIT_NONE_CHOSEN) : I.prefixed(LangText.KIT_CHOSEN, kit.name()));
     }
 

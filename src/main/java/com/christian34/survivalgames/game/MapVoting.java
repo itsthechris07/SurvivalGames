@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -127,6 +128,7 @@ public class MapVoting {
     public boolean vote(Player player, Arena arena) {
         if (over || !getOptions().contains(arena)) return false;
         votes.put(player.getUniqueId(), arena.getName().toLowerCase(Locale.ROOT));
+        plugin.getTelemetry().used(Telemetry.Feature.MAP_VOTE);
         return true;
     }
 

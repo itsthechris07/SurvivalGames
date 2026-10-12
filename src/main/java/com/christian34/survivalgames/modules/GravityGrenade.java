@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -85,6 +86,7 @@ public class GravityGrenade implements Listener {
         if (!plugin.isModuleEnabled(MODULE, game) || game.getState() != GameState.RUNNING) return;
         Location center = e.getHitBlock() != null ? e.getHitBlock().getLocation().add(0.5, 0.5, 0.5)
                 : snowball.getLocation();
+        plugin.getTelemetry().used(Telemetry.Feature.GRAVITY_GRENADE);
         explode(center, snowball.getShooter() instanceof Player player ? player : null);
     }
 

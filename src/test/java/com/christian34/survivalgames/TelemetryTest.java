@@ -54,14 +54,54 @@ class TelemetryTest extends PluginTestBase {
             server.getScheduler().performOneTick();
         }
         assertEquals(GameState.RUNNING, game.getState());
-        assertTrue(plugin.getTelemetry().drainGameTypes().isEmpty(), "the game isn't over yet");
+        assertTrue(plugin.getTelemetry().drain(Telemetry.Chart.GAME_TYPES).isEmpty(), "the game isn't over yet");
 
         alex.setKiller(steve);
         alex.setHealth(0);
         assertEquals(GameState.ENDED, game.getState());
-        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().drainGameTypes());
-        assertEquals(Map.of("2", 1), plugin.getTelemetry().drainGameSizes());
-        assertTrue(plugin.getTelemetry().drainGameTypes().isEmpty(), "the counters start again after a submission");
+        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().drain(Telemetry.Chart.GAME_TYPES));
+        assertEquals(Map.of("2", 1), plugin.getTelemetry().drain(Telemetry.Chart.GAME_SIZES));
+        assertTrue(plugin.getTelemetry().drain(Telemetry.Chart.GAME_TYPES).isEmpty(), "the counters start again after a submission");
+        assertEquals(Map.of("< 5 min", 1), plugin.getTelemetry().drain(Telemetry.Chart.DURATIONS));
+        assertEquals(Map.of("before the deathmatch", 1), plugin.getTelemetry().drain(Telemetry.Chart.ENDINGS));
+        assertEquals(Map.of("command or menu", 2), plugin.getTelemetry().drain(Telemetry.Chart.JOINS));
+    }
+
+    @Test
+    void theSetupOfTheServerIsDescribed() {
+        Telemetry telemetry = plugin.getTelemetry();
+        assertEquals("none", telemetry.usedGameTypes());
+        assertTrue(telemetry.varoRules().isEmpty(), "no Varo on this server");
+        createArena("arena1", GameType.SURVIVAL_GAMES, 4);
+        assertEquals("survival-games", telemetry.usedGameTypes());
+        createArena("varo1", GameType.VARO, 4);
+        assertEquals("both", telemetry.usedGameTypes());
+        assertEquals(Map.of("survival-games", Map.of("1", 1), "varo", Map.of("2", 1)), telemetry.teamSizes());
+
+        // the defaults of config.yml
+        Map<String, Map<String, Integer>> modules = telemetry.modules();
+        assertEquals(Map.of("survival-games", 1), modules.get("kits"));
+        assertEquals(Map.of("varo", 1), modules.get("backpack"));
+        assertEquals(Map.of("both", 1), modules.get("bounty"));
+        config().set("modules.bounty.enabled", false);
+        assertEquals(Map.of("disabled", 1), telemetry.modules().get("bounty"));
+
+        assertTrue(telemetry.varoRules().containsKey("backups"));
+        assertFalse(telemetry.varoRules().containsKey("peaceful days"), "optional rules are off by default");
+        config().set("varo.peaceful-days", 3);
+        assertEquals(1, telemetry.varoRules().get("peaceful days"));
+    }
+
+    @Test
+    void usedFeaturesAreCounted() {
+        Telemetry telemetry = plugin.getTelemetry();
+        telemetry.used(Telemetry.Feature.KIT);
+        telemetry.used(Telemetry.Feature.KIT);
+        telemetry.used(Telemetry.Feature.REPLAY);
+        assertEquals(Map.of("kit chosen", 2, "replay watched", 1), telemetry.drain(Telemetry.Chart.FEATURES));
+        assertEquals("1-3 days", Telemetry.dayBucket(1));
+        assertEquals("8-14 days", Telemetry.dayBucket(14));
+        assertEquals("30+ min", Telemetry.minuteBucket(30));
     }
 
 }

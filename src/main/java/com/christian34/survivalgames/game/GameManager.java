@@ -2,6 +2,7 @@ package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.integrations.VanishSupport;
 import com.christian34.survivalgames.lib.lang.I;
@@ -294,6 +295,7 @@ public class GameManager {
                 if (game.getState() != GameState.LOBBY || !game.isJoinable()) break;
                 if (game.getJoinDenial(follower.getPlayer().getUniqueId()) != null) continue;
                 if (game.join(follower)) {
+                    plugin.getTelemetry().joined(Telemetry.Join.PARTY);
                     follower.getPlayer().sendMessage(I.prefixed(LangText.JOINED_WITH_PARTY, player.getName()));
                 }
             }

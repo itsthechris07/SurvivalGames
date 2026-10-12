@@ -54,7 +54,7 @@ files automatically – your values and comments stay.
 | `stats.rating.games` | `[ survival-games ]` | the game types with an [Elo rating](#rating) |
 | `stats.achievements.enabled` | `true` | the players get [achievements](#achievements) |
 | `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 12 hours – admins (`sg.admin`) read it when they join |
-| `plugins/bStats/config.yml` | | anonymous statistics ([bStats](https://bstats.org)): servers, players, versions, a few settings of the plugin and the number of games – `enabled: false` turns them off for all plugins |
+| `plugins/bStats/config.yml` | | anonymous statistics ([bStats](https://bstats.org)): servers, players, versions, the settings of the plugin (game types, extras, optional plugins) and how often games and features are used, without any names – `enabled: false` turns them off for all plugins |
 | `rewards.enabled` | `false` | [money](#rewards) for kills, wins and games |
 | `replays.enabled` | `true` | the games are recorded and can be watched again (see [replays](replays.md)) |
 | `replays.games` | both | the game types that are recorded |

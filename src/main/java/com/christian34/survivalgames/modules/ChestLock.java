@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
@@ -168,6 +169,7 @@ public class ChestLock implements Listener {
             sign.update();
         });
         player.sendMessage(I.prefixed(LangText.LOCK_CREATED, team.getDisplayName()));
+        plugin.getTelemetry().used(Telemetry.Feature.CHEST_LOCK);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

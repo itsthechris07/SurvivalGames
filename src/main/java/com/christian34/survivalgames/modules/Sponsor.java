@@ -2,6 +2,7 @@ package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Loot;
@@ -125,6 +126,7 @@ public class Sponsor {
         player.sendMessage(I.prefixed(LangText.SPONSOR_RECEIVED, sponsor.getName(), item.getAmount(), Items.name(item)));
         sponsor.sendMessage(I.prefixed(LangText.SPONSOR_SENT, item.getAmount(), Items.name(item), target.getName()));
         plugin.getAchievements().unlock(sponsor.getUniqueId(), sponsor.getName(), Achievement.SPONSOR);
+        plugin.getTelemetry().used(Telemetry.Feature.SPONSOR);
     }
 
 }

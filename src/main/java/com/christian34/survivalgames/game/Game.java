@@ -2,6 +2,7 @@ package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.arena.Lobby;
@@ -385,6 +386,7 @@ public abstract class Game {
         enter(gamePlayer, true);
         makeSpectator(gamePlayer, null);
         plugin.updateVisibility();
+        plugin.getTelemetry().used(Telemetry.Feature.SPECTATE);
         return true;
     }
 
@@ -696,6 +698,7 @@ public abstract class Game {
             return;
         }
         broadcast(LangText.TEAM_CREATED, player.getName(), team.getDisplayName(), team.getName());
+        plugin.getTelemetry().used(Telemetry.Feature.TEAM_CREATED);
         joinTeam(player.getUniqueId(), team);
     }
 
@@ -1158,8 +1161,8 @@ public abstract class Game {
 
     protected void end(@Nullable GameTeam winner) {
         countdown = -1;
+        plugin.getTelemetry().gamePlayed(this, winner == null);
         setState(GameState.ENDED);
-        plugin.getTelemetry().gamePlayed(this);
         this.winner = winner == null ? null : winner.getName();
         Title title;
         if (winner == null) {

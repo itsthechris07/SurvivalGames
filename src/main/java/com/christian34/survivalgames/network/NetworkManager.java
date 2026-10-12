@@ -2,6 +2,7 @@ package com.christian34.survivalgames.network;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.integrations.VanishSupport;
@@ -212,6 +213,7 @@ public class NetworkManager implements Listener {
         if (gamePlayer.getGame() != null || game == null) return;
         Component denial = game.getJoinDenial(player.getUniqueId());
         if (denial == null) {
+            plugin.getTelemetry().joined(Telemetry.Join.NETWORK);
             game.join(gamePlayer);
         } else if (game.maySpectate(player.getUniqueId())) {
             game.spectate(gamePlayer);

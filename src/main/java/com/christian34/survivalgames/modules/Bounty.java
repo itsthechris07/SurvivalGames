@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
@@ -100,6 +101,7 @@ public class Bounty {
         }
         game.getBounties().computeIfAbsent(target.getUuid(), key -> new ConcurrentHashMap<>())
                 .merge(setter.getUniqueId(), amount, Double::sum);
+        plugin.getTelemetry().used(Telemetry.Feature.BOUNTY);
         game.announce(LangText.BOUNTY_SET, setter.getName(), economy().format(amount), target.getName(),
                 economy().format(getTotal(game, target.getUuid())));
         save(game);

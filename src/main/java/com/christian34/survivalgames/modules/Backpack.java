@@ -2,6 +2,7 @@ package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -142,6 +143,7 @@ public class Backpack implements Listener {
     public void open(Game game, Player player) {
         Holder holder = open.computeIfAbsent(new Key(game, getKey(game, player, config())), Holder::new);
         player.openInventory(holder.getInventory());
+        plugin.getTelemetry().used(Telemetry.Feature.BACKPACK);
         player.playSound(player, Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1f);
     }
 

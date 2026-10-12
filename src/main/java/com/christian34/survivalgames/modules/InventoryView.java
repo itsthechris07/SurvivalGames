@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -119,6 +120,7 @@ public class InventoryView implements Listener {
         Snapshot snapshot = snapshots.get(id);
         if (snapshot == null || snapshot.time() + KEEP_MILLIS < System.currentTimeMillis()) return false;
         viewer.openInventory(new View(snapshot).getInventory());
+        plugin.getTelemetry().used(Telemetry.Feature.INVENTORY_VIEW);
         return true;
     }
 

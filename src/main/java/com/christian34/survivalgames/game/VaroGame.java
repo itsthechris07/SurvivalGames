@@ -2,6 +2,7 @@ package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.files.FileManager;
@@ -402,6 +403,7 @@ public class VaroGame extends Game {
         int seconds = settings().getInt("offline-npc-seconds");
         if (reason == LeaveReason.QUIT && seconds > 0 && getState() == GameState.RUNNING) {
             plugin.getOfflineNpc().spawn(player, seconds);
+            plugin.getTelemetry().used(Telemetry.Feature.OFFLINE_NPC);
         }
     }
 
@@ -704,6 +706,7 @@ public class VaroGame extends Game {
     public int strike(Participant participant, String reason, String by) {
         int number = participant.addStrike(new Participant.Strike(reason, by, System.currentTimeMillis()));
         announce(LangText.STRIKE_GIVEN, participant.getName(), number, reason);
+        plugin.getTelemetry().used(Telemetry.Feature.STRIKE);
         List<String> consequences = settings().getStringList("strikes");
         if (number <= consequences.size()) punish(participant, consequences.get(number - 1).trim().toLowerCase(Locale.ROOT));
         save();

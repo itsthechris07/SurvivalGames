@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -52,6 +53,7 @@ public class ToxicRain implements Listener {
      */
     public void setToxic(World world, boolean toxic) {
         if (toxic ? !this.toxic.add(world) : !this.toxic.remove(world)) return;
+        if (toxic) plugin.getTelemetry().used(Telemetry.Feature.TOXIC_RAIN);
         for (Player player : world.getPlayers()) {
             player.sendMessage(I.prefixed(toxic ? LangText.TOXIC_RAIN_STARTED : LangText.TOXIC_RAIN_STOPPED));
         }

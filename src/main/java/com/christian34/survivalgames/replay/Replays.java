@@ -2,6 +2,7 @@ package com.christian34.survivalgames.replay;
 
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.files.FileManager;
@@ -756,6 +757,7 @@ public final class Replays implements Listener {
         player.setGameMode(GameMode.SPECTATOR);
         plugin.getEssentials().joinGame(player, true);
         viewers.put(player.getUniqueId(), playback);
+        plugin.getTelemetry().used(Telemetry.Feature.REPLAY);
         playback.add(player);
         Recording.Info info = playback.getInfo();
         player.sendMessage(I.prefixed(LangText.REPLAY_STARTED, describe(info), Game.formatTime(info.seconds())));
