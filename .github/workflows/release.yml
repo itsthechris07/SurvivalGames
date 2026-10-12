@@ -1,9 +1,9 @@
 # Publishes a release when a version tag is pushed: GitHub,
 # then Modrinth and Hangar (build.gradle.kts, tokens in the environment "release"). SpigotMC has no upload API.
-#   1. set `version` in build.gradle.kts (e.g. 2.1.0) and commit
-#   2. git tag v2.1.0 && git push origin v2.1.0
+#   1. set `version` in build.gradle.kts (e.g. 1.1.0) and commit
+#   2. git tag v1.1.0 && git push origin v1.1.0
 # The release notes are the commit subjects since the previous tag.
-# Versions with a '-' (2.1.0-beta) become pre-releases on GitHub only.
+# Versions with a '-' (1.1.0-beta) become pre-releases on GitHub only.
 name: Release
 
 on:
