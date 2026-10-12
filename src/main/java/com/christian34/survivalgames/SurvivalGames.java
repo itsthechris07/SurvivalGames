@@ -98,6 +98,7 @@ public class SurvivalGames extends JavaPlugin {
     private Replays replays;
     private UpdateChecker updateChecker;
     private Achievements achievements;
+    private Telemetry telemetry;
 
     public static SurvivalGames getInstance() {
         return instance;
@@ -112,6 +113,7 @@ public class SurvivalGames extends JavaPlugin {
         GameWorld.deleteLeftovers();
         this.fileManager = new FileManager();
         loadTexts();
+        this.telemetry = new Telemetry(this);
         this.loot = new Loot(this);
         this.stats = new StatsManager(this);
         this.achievements = new Achievements(this);
@@ -168,6 +170,7 @@ public class SurvivalGames extends JavaPlugin {
         }
         this.updateChecker = new UpdateChecker(this);
         this.updateChecker.start();
+        telemetry.start();
     }
 
     @Override
@@ -403,6 +406,10 @@ public class SurvivalGames extends JavaPlugin {
 
     public Achievements getAchievements() {
         return achievements;
+    }
+
+    public Telemetry getTelemetry() {
+        return telemetry;
     }
 
 }

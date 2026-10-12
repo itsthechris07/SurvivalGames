@@ -34,6 +34,8 @@ one game per server in a network behind Velocity/BungeeCord.
   `/sg top`, leaderboard holograms and `[sgtop]` signs
 - Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...): `/sg achievements`
 - Update checker: admins read about new releases when they join
+- Anonymous statistics with [bStats](https://bstats.org) (servers, players, versions, a few settings and the number
+  of games) – turned off with `enabled: false` in `plugins/bStats/config.yml`
 - Replays: every round of Survival Games and every day of a Varo is recorded and can be watched again in a copy of the
   map (`/sg replay`) – pause, speed, jumps and the view of every player, without a client mod
 - Rewards (money and console commands), bounties, fireworks, the inventory of the killer after a death

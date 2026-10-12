@@ -1159,6 +1159,7 @@ public abstract class Game {
     protected void end(@Nullable GameTeam winner) {
         countdown = -1;
         setState(GameState.ENDED);
+        plugin.getTelemetry().gamePlayed(this);
         this.winner = winner == null ? null : winner.getName();
         Title title;
         if (winner == null) {

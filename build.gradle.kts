@@ -71,6 +71,8 @@ dependencies {
     implementation("org.incendo:cloud-annotations:2.1.0")
     implementation("org.incendo:cloud-paper:2.0.1")
     implementation("org.incendo:cloud-minecraft-extras:2.0.1")
+    // anonymous statistics (bstats.org), see Telemetry
+    implementation("org.bstats:bstats-bukkit:3.2.1")
 
     // tests run the plugin against a mocked Paper server
     testImplementation("io.papermc.paper:paper-api:26.2.build.129-stable")
@@ -116,7 +118,7 @@ tasks {
 
     test {
         useJUnitPlatform()
-        // the update checker doesn't ask GitHub in tests
+        // the update checker doesn't ask GitHub and bStats gets nothing in tests
         systemProperty("sg.offline", "true")
         testLogging {
             events("failed", "skipped")
@@ -192,10 +194,13 @@ tasks {
         }
         relocate("org.incendo.cloud", "com.christian34.survivalgames.libs.cloud")
         relocate("io.leangen.geantyref", "com.christian34.survivalgames.libs.geantyref")
+        // bStats refuses to start unless relocated
+        relocate("org.bstats", "com.christian34.survivalgames.libs.bstats")
     }
 }
 
-// uploads to Modrinth (modrinth) and Hangar (publishPluginPublicationToHangar), run by .github/workflows/release.yml;
+// uploads to Modrinth (modrinth, run by .github/workflows/release.yml) and Hangar (publishPluginPublicationToHangar,
+// not in the workflow, uploaded by hand);
 // -PpublishDryRun only shows what Modrinth would get
 val minecraftVersions = listOf("1.21.11", "26.1.1", "26.1.2", "26.2", "26.3")
 // the release notes, written by the workflow
