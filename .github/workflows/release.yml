@@ -1,5 +1,6 @@
 # Publishes a release when a version tag is pushed: GitHub,
-# then Modrinth and Hangar (build.gradle.kts, tokens in the environment "release"). SpigotMC has no upload API.
+# then Modrinth (build.gradle.kts, token in the environment "release"). Hangar is uploaded by hand (its API key was
+# rejected, the Gradle task publishPluginPublicationToHangar still exists), SpigotMC has no upload API.
 #   1. set `version` in build.gradle.kts (e.g. 1.1.0) and commit
 #   2. git tag v1.1.0 && git push origin v1.1.0
 # The release notes are the commit subjects since the previous tag.
@@ -77,8 +78,7 @@ jobs:
         run: gh release view "$GITHUB_REF_NAME" --json body --jq .body > notes.md
 
       # the build is reproducible: the same jar as in the GitHub release
-      - name: Upload to Modrinth and Hangar
+      - name: Upload to Modrinth
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          HANGAR_API_KEY: ${{ secrets.HANGAR_API_KEY }}
-        run: chmod +x gradlew && ./gradlew :modrinth :publishPluginPublicationToHangar --continue -PreleaseNotes=notes.md
+        run: chmod +x gradlew && ./gradlew :modrinth -PreleaseNotes=notes.md
