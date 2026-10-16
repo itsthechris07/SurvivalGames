@@ -84,7 +84,7 @@ dependencies {
     testImplementation("io.github.miniplaceholders:miniplaceholders-api:3.2.0")
     testImplementation("net.milkbowl.vault:VaultUnlockedAPI:2.20") { isTransitive = false }
     // the database of the statistics (MySQL on the servers, which ship its driver) - H2 speaks its dialect
-    testRuntimeOnly("com.h2database:h2:2.3.232")
+    testRuntimeOnly("com.h2database:h2:2.5.252")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
