@@ -1,6 +1,8 @@
 package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.PluginTestBase;
+import com.christian34.survivalgames.integrations.Placeholders;
+import com.christian34.survivalgames.network.ServerStatus;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.damage.DamageSource;
@@ -429,6 +431,8 @@ class VaroRulesTest extends PluginTestBase {
         time(LocalDateTime.of(2026, 10, 12, 19, 59, 30));
         startGame();
         assertContains(messages(steve), "The Varo can only be played at these times: 18:00-20:00");
+        assertNotContains(messages(admin), "outside of its play hours");
+        assertEquals("", Placeholders.value(plugin, steve, "opens"));
         assertEquals(30, game.getSessionTime(participant(steve)));
         seconds(1);
         assertContains(messages(steve), "Your play time ends in 00:30");
@@ -453,6 +457,30 @@ class VaroRulesTest extends PluginTestBase {
         assertNull(game.getJoinDenial(steve.getUniqueId()));
         execute(steve, "sg join varo1");
         assertSame(game, plugin.getUser(steve).getGame());
+    }
+
+    @Test
+    void startingOutsideOfThePlayHoursShowsWhenTheVaroOpens() {
+        config().set("varo.play-hours", List.of("18:00-20:00"));
+        time(LocalDateTime.of(2026, 10, 12, 21, 0));
+        startGame();
+        List<String> messages = messages(admin);
+        assertContains(messages, "The Varo in varo1 is outside of its play hours");
+        assertContains(messages, "can play again Tue 18:00");
+        assertContains(messages(steve), "The play hours begin Tue 18:00 - nobody can play until then.");
+        seconds(1);
+        assertNull(plugin.getUser(steve).getGame());
+
+        assertEquals("Tue 18:00", Placeholders.value(plugin, steve, "opens"));
+        assertEquals("Tue 18:00", Placeholders.value(plugin, null, "game_opens_varo1"));
+        String state = Placeholders.value(plugin, null, "game_state_varo1");
+        assertTrue(state.contains("Opens Tue 18:00"), "signs, NPCs and menus: " + state);
+        ServerStatus status = ServerStatus.of(game);
+        assertEquals(status, ServerStatus.parse(status.toMotd()), "lobby servers get it too");
+
+        time(LocalDateTime.of(2026, 10, 13, 18, 0));
+        assertNull(game.getOpening());
+        assertEquals("", Placeholders.value(plugin, null, "game_opens_varo1"));
     }
 
     @Test

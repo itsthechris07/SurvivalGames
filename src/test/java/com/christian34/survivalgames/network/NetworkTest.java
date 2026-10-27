@@ -8,6 +8,7 @@ import com.christian34.survivalgames.game.GameType;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,6 +57,9 @@ class NetworkTest extends PluginTestBase {
         assertEquals("SG;LOBBY;3;12;arena1;survival-games", status.toMotd());
         assertEquals(status, ServerStatus.parse(status.toMotd()));
         assertTrue(status.isJoinable());
+        var closed = new ServerStatus(ServerStatus.State.INGAME, 2, 12, "varo1", "varo", Instant.ofEpochSecond(1793210400));
+        assertEquals("SG;INGAME;2;12;varo1;varo;1793210400", closed.toMotd(), "a Varo outside of its play hours");
+        assertEquals(closed, ServerStatus.parse(closed.toMotd()));
         assertEquals(ServerStatus.OFFLINE, ServerStatus.parse("A Minecraft Server"));
         assertEquals(ServerStatus.OFFLINE, ServerStatus.parse(null));
     }

@@ -15,7 +15,7 @@ import java.util.List;
  * The placeholders for MiniPlaceholders (https://github.com/MiniPlaceholders/MiniPlaceholders), the same as those of
  * PlaceholderAPI ({@link Placeholders}) with arguments instead of underscores: &lt;sg_arena&gt;, &lt;sg_kills&gt;, ...
  * (of the viewer), &lt;sg_stats:wins&gt;, &lt;sg_stats:varo:kills&gt;, &lt;sg_top:wins:1:name&gt;, &lt;sg_games&gt;,
- * &lt;sg_game_players:castle&gt;, &lt;sg_game_max_players:castle&gt; and &lt;sg_game_state:castle&gt;.
+ * &lt;sg_game_players:castle&gt;, &lt;sg_game_max_players:castle&gt;, &lt;sg_game_state:castle&gt; and &lt;sg_game_opens:castle&gt;.
  *
  * @author Christian34
  */

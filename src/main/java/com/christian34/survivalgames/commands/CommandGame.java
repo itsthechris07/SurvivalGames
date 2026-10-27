@@ -31,6 +31,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -81,6 +82,10 @@ public class CommandGame {
         if (!(sender instanceof Player player) || !game.isMember(player)) {
             send(sender, LangText.GAME_STARTED_BY_YOU, game.getArena().getName());
         }
+        // the players leave again on the first tick
+        Instant opening = game instanceof VaroGame varo ? varo.getOpening() : null;
+        if (opening != null) send(sender, LangText.VARO_STARTED_CLOSED, game.getArena().getName(),
+                VaroGame.formatOpening(opening));
     }
 
     @Command(GAME + " start")

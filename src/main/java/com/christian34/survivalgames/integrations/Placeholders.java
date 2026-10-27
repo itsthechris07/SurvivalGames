@@ -27,10 +27,10 @@ import java.util.Map;
  * <ul>
  *     <li>the game of the player (the one he is in or takes part in): arena, type, state, players, max_players,
  *     teams_alive, players_alive, winner, day (Varo), team, kills, alive (true/false), time_left (mm:ss of today,
- *     Varo), strikes (Varo)</li>
+ *     Varo), strikes (Varo), opens (Varo outside of its play hours: when it can be played again, "Sat 18:00")</li>
  *     <li>games: the number of games on the server</li>
  *     <li>the game of an arena (on a lobby server: of a game server), e.g. for NPCs or holograms:
- *     game_players_&lt;arena&gt;, game_max_players_&lt;arena&gt;, game_state_&lt;arena&gt;</li>
+ *     game_players_&lt;arena&gt;, game_max_players_&lt;arena&gt;, game_state_&lt;arena&gt;, game_opens_&lt;arena&gt;</li>
  *     <li>the achievements of the player: achievements, achievements_total</li>
  *     <li>the statistics stats_[type_]&lt;stat&gt; and the best players top_&lt;stat&gt;_&lt;rank&gt;_name|value</li>
  * </ul>
@@ -42,11 +42,11 @@ public final class Placeholders {
      * the placeholders about the game of the player
      */
     static final List<String> PLAYER_GAME = List.of("arena", "type", "state", "players", "max_players", "teams_alive",
-            "players_alive", "winner", "day", "team", "kills", "alive", "time_left", "strikes");
+            "players_alive", "winner", "day", "team", "kills", "alive", "time_left", "strikes", "opens");
     /**
      * the placeholders about the game of an arena (game_&lt;kind&gt;_&lt;arena&gt;)
      */
-    static final List<String> ARENA_GAME = List.of("players", "max_players", "state");
+    static final List<String> ARENA_GAME = List.of("players", "max_players", "state", "opens");
 
     private Placeholders() {
     }
@@ -88,12 +88,13 @@ public final class Placeholders {
             case "time_left" -> game instanceof VaroGame varo
                     ? Game.formatTime(participant == null ? varo.getPlayTime() : varo.getRemaining(participant)) : "";
             case "strikes" -> String.valueOf(participant == null ? 0 : participant.getStrikes().size());
+            case "opens" -> opens(ServerStatus.of(game));
             default -> null;
         };
     }
 
     /**
-     * @param param &lt;kind&gt;_&lt;arena&gt; (kind: players, max_players, state), the arena (game server) as it is
+     * @param param &lt;kind&gt;_&lt;arena&gt; (kind: players, max_players, state, opens), the arena (game server) as it is
      */
     @Nullable
     private static String arenaGame(SurvivalGames plugin, String param) {
@@ -106,7 +107,7 @@ public final class Placeholders {
     }
 
     /**
-     * @param kind   players, max_players or state
+     * @param kind   players, max_players, state or opens
      * @param target the arena, on a lobby server the game server
      * @return the value, null if the kind doesn't exist
      */
@@ -117,8 +118,16 @@ public final class Placeholders {
             case "players" -> String.valueOf(status.players());
             case "max_players" -> String.valueOf(status.maxPlayers());
             case "state" -> I.legacy(SignManager.stateText(status));
+            case "opens" -> opens(status);
             default -> null;
         };
+    }
+
+    /**
+     * @return when a running Varo can be played again ("Sat 18:00"), empty if it can be played now
+     */
+    private static String opens(ServerStatus status) {
+        return status.opens() == null ? "" : VaroGame.formatOpening(status.opens());
     }
 
     /**

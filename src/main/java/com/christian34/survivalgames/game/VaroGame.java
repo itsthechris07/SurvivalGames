@@ -27,11 +27,14 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
@@ -55,6 +58,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 public class VaroGame extends Game {
     private static final Set<Integer> TIME_WARNINGS = Set.of(300, 60, 30, 10, 5, 4, 3, 2, 1);
     private static final DateTimeFormatter BACKUP_TIME = DateTimeFormatter.ofPattern("HH-mm-ss");
+    private static final DateTimeFormatter OPENING_TIME = DateTimeFormatter.ofPattern("HH:mm");
     private final File file;
     private Clock clock = Clock.systemDefaultZone();
     @Nullable
@@ -282,6 +286,29 @@ public class VaroGame extends Game {
     }
 
     /**
+     * @return the next time the play hours begin, null if the game can be played right now (or at any time)
+     */
+    @Nullable
+    public Instant getOpening() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        PlayHours hours = getPlayHours();
+        if (hours.isOpen(now)) return null;
+        return hours.nextOpening(now).atZone(clock.getZone()).toInstant();
+    }
+
+    /**
+     * @return the time the play hours begin as on signs, e.g. "Sat 18:00" (day names: weekdays in messages.yml)
+     */
+    public static String formatOpening(Instant opening) {
+        LocalDateTime time = LocalDateTime.ofInstant(opening, ZoneId.systemDefault());
+        String[] days = I.plain(LangText.WEEKDAYS).split(",");
+        int day = time.getDayOfWeek().getValue() - 1;
+        String name = day < days.length ? days[day].trim()
+                : time.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
+        return name + " " + time.format(OPENING_TIME);
+    }
+
+    /**
      * @return the seconds the player can play right now: his play time of today, at most until the play hours end
      */
     public int getSessionTime(Participant participant) {
@@ -463,6 +490,13 @@ public class VaroGame extends Game {
         if (peaceful > 0) broadcast(LangText.VARO_PEACEFUL, peaceful);
         PlayHours hours = getPlayHours();
         if (hours.isRestricted()) broadcast(LangText.VARO_PLAY_HOURS, String.join(", ", hours.getEntries()));
+        Instant opening = getOpening();
+        if (opening != null) {
+            // the players leave on the first tick, e.g. after the lobby countdown in the evening
+            broadcast(LangText.VARO_OPENS, formatOpening(opening));
+            Debug.warn("The Varo in arena '" + arena.getName() + "' has begun outside of its play hours, nobody can "
+                    + "play until " + formatOpening(opening));
+        }
         giveTrackers();
         for (GamePlayer member : getPlayers()) {
             Participant participant = getParticipant(member.getPlayer().getUniqueId());

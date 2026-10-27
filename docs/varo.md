@@ -25,7 +25,9 @@ game they get their normal inventory and location back** – inside the game the
   `[ "18:00-20:00" ]` or different ones for the days of the week: `[ "mon-fri 18:00-20:00", "sat,sun 14:00-22:00" ]`.
   Outside of them nobody can join and everybody in the game leaves it (with the same warnings as for the play time,
   and not while an enemy is nearby). `"22:00-02:00"` ends on the next day – choose a `day-start-hour` outside of
-  the play hours then. Empty (default): the game can be played all day.
+  the play hours then. Empty (default): the game can be played all day. Join signs, NPCs and the games menu show
+  when a running Varo opens again (`Opens Sat 18:00`, also `%sg_opens%`); an admin who starts a Varo outside of its
+  play hours gets a warning, as everybody leaves it right away.
 - **A new day** starts at `day-start-hour` (server time). Everybody has their full play time again and the **world
   border** shrinks by `world-border.shrink-per-day` blocks until `world-border.min-size`.
 

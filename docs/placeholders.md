@@ -11,7 +11,8 @@ or a Varo they take part in while they are outside of it. Without a game they ar
 | `%sg_games%` | the number of games on this server |
 | `%sg_game_players_<arena>%` | players in the game of an arena, e.g. `%sg_game_players_castle%` (on a lobby server: of a game server) |
 | `%sg_game_max_players_<arena>%` | its maximum number of players |
-| `%sg_game_state_<arena>%` | its state, like on the join signs |
+| `%sg_game_state_<arena>%` | its state, like on the join signs (a Varo outside of its play hours: `Opens Sat 18:00`) |
+| `%sg_game_opens_<arena>%` | when a running Varo can be played again, e.g. `Sat 18:00` (empty while it can be played) |
 
 ## Game
 
@@ -36,6 +37,7 @@ or a Varo they take part in while they are outside of it. Without a game they ar
 | `%sg_alive%` | `true` if the player is still in the game |
 | `%sg_time_left%` | the play time left today (Varo) |
 | `%sg_strikes%` | the number of strikes of the player (Varo) |
+| `%sg_opens%` | when the Varo of the player can be played again (play hours), e.g. `Sat 18:00`, empty while it can be played |
 
 ## Statistics
 
