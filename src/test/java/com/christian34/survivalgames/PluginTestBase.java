@@ -14,6 +14,7 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
@@ -203,7 +204,7 @@ public abstract class PluginTestBase {
      * @return false if the damage has been cancelled
      */
     @SuppressWarnings("removal")
-    protected boolean fall(PlayerMock victim) {
+    protected boolean fall(Entity victim) {
         var event = new EntityDamageEvent(victim, EntityDamageEvent.DamageCause.FALL,
                 DamageSource.builder(DamageType.FALL).build(), 5);
         server.getPluginManager().callEvent(event);

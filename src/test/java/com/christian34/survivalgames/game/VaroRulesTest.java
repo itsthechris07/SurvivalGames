@@ -204,9 +204,7 @@ class VaroRulesTest extends PluginTestBase {
         assertFalse(npc.hasAI());
         assertTrue(attack(admin, npc), "enemies can hurt it");
 
-        var fall = new EntityDamageEvent(npc, EntityDamageEvent.DamageCause.FALL, DamageSource.builder(DamageType.FALL).build(), 5);
-        server.getPluginManager().callEvent(fall);
-        assertTrue(fall.isCancelled(), "only players");
+        assertFalse(fall(npc), "only players");
 
         seconds(61);
         assertTrue(npcs().isEmpty(), "gone after offline-npc-seconds");
@@ -348,7 +346,14 @@ class VaroRulesTest extends PluginTestBase {
      * runs the command and waits for the backup it writes
      */
     private void backup() {
+        long start = System.currentTimeMillis();
         execute(admin, "sg game varo1 backup");
+        // waitAsyncTasksFinished sometimes returns before the zip task has started (MockBukkit 4.118)
+        long timeout = start + 10_000;
+        while (VaroGame.getBackups(game.getArena()).stream().noneMatch(file -> file.lastModified() >= start)
+                && System.currentTimeMillis() < timeout) {
+            server.getScheduler().waitAsyncTasksFinished();
+        }
         server.getScheduler().waitAsyncTasksFinished();
         server.getScheduler().performOneTick();
     }

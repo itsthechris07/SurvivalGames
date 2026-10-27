@@ -35,7 +35,7 @@ repositories {
 
 // the oldest Paper version the plugin supports, so that it can't use newer API by accident;
 // -PpaperApi=<version> compiles against a newer one to find API changes early (the tests use MockBukkit and the API
-// of 26.2)
+// of 26.3)
 val paperApi = providers.gradleProperty("paperApi").getOrElse("1.21.11-R0.1-SNAPSHOT")
 
 dependencies {
@@ -75,8 +75,8 @@ dependencies {
     implementation("org.bstats:bstats-bukkit:3.2.1")
 
     // tests run the plugin against a mocked Paper server
-    testImplementation("io.papermc.paper:paper-api:26.2.build.129-stable")
-    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.2:4.116.1")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.206-stable")
+    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.3:4.118.0")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains:annotations:26.1.0")
@@ -84,7 +84,7 @@ dependencies {
     testImplementation("io.github.miniplaceholders:miniplaceholders-api:3.2.0")
     testImplementation("net.milkbowl.vault:VaultUnlockedAPI:2.20") { isTransitive = false }
     // the database of the statistics (MySQL on the servers, which ship its driver) - H2 speaks its dialect
-    testRuntimeOnly("com.h2database:h2:2.3.232")
+    testRuntimeOnly("com.h2database:h2:2.5.252")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

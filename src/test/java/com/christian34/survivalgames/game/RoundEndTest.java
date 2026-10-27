@@ -101,6 +101,7 @@ class RoundEndTest extends PluginTestBase {
     }
 
     @Test
+    @SuppressWarnings("removal")
     void theVictimLooksAtTheInventoryOfTheKiller() {
         begin();
         steve.getInventory().setItem(0, new ItemStack(Material.DIAMOND_SWORD));
