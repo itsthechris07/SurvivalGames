@@ -12,7 +12,7 @@ or a Varo they take part in while they are outside of it. Without a game they ar
 | `%sg_game_players_<arena>%` | players in the game of an arena, e.g. `%sg_game_players_castle%` (on a lobby server: of a game server) |
 | `%sg_game_max_players_<arena>%` | its maximum number of players |
 | `%sg_game_state_<arena>%` | its state, like on the join signs (a Varo outside of its play hours: `Opens Sat 18:00`) |
-| `%sg_game_opens_<arena>%` | when a running Varo can be played again, e.g. `Sat 18:00` (empty while it can be played) |
+| `%sg_game_opens_<arena>%` | when a Varo (in the lobby or running) can be played again, e.g. `Sat 18:00` (empty while it can be played) |
 
 ## Game
 

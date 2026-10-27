@@ -463,6 +463,9 @@ class VaroRulesTest extends PluginTestBase {
     void startingOutsideOfThePlayHoursShowsWhenTheVaroOpens() {
         config().set("varo.play-hours", List.of("18:00-20:00"));
         time(LocalDateTime.of(2026, 10, 12, 21, 0));
+        assertEquals("Tue 18:00", Placeholders.value(plugin, null, "game_opens_varo1"), "also in the lobby");
+        String lobby = Placeholders.value(plugin, null, "game_state_varo1");
+        assertTrue(lobby.contains("Lobby"), "players can still join: " + lobby);
         startGame();
         List<String> messages = messages(admin);
         assertContains(messages, "The Varo in varo1 is outside of its play hours");

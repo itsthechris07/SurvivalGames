@@ -108,7 +108,7 @@ and the games with their controls (start, deathmatch, backups, players, stop). I
 | Command | |
 |---|---|
 | `/sg admin` | the menu of the admins: arenas, games, settings, reload |
-| `/sg settings [type] [setting] [value]` | changes a switch or number of a game type in `config.yml` (without a value: a [menu](configuration.md#changing-settings-in-the-game)) |
+| `/sg settings [type] [setting] [value]` | changes a switch, number or list (`play-hours`, `strikes`) of a game type in `config.yml` (without a value: a [menu](configuration.md#changing-settings-in-the-game)) |
 | `/sg build` | build mode: change the world of your game (e.g. in the lobby) |
 | `/sg replay delete <id>` | deletes the recording of a [replay](replays.md) |
 | `/sg reload` | reloads `config.yml`, `loot.yml` and the messages |

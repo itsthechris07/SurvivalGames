@@ -179,10 +179,12 @@ public class SignManager implements Listener {
 
     /**
      * @return the state as on the signs ("Waiting", "Running", "Opens Sat 18:00" for a Varo outside of its play
-     * hours, ...)
+     * hours - in the lobby players can join it, so it stays "Lobby")
      */
     public static Component stateText(ServerStatus status) {
-        if (status.opens() != null) return i18n(LangText.SIGN_STATUS_OPENS, VaroGame.formatOpening(status.opens()));
+        if (status.opens() != null && status.isRunning()) {
+            return i18n(LangText.SIGN_STATUS_OPENS, VaroGame.formatOpening(status.opens()));
+        }
         return i18n(switch (status.state()) {
             case LOBBY -> LangText.SIGN_STATUS_LOBBY;
             case INGAME -> LangText.SIGN_STATUS_INGAME;

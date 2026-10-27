@@ -492,7 +492,7 @@ public class VaroGame extends Game {
         if (hours.isRestricted()) broadcast(LangText.VARO_PLAY_HOURS, String.join(", ", hours.getEntries()));
         Instant opening = getOpening();
         if (opening != null) {
-            // the players leave on the first tick, e.g. after the lobby countdown in the evening
+            // the players leave on the first tick
             broadcast(LangText.VARO_OPENS, formatOpening(opening));
             Debug.warn("The Varo in arena '" + arena.getName() + "' has begun outside of its play hours, nobody can "
                     + "play until " + formatOpening(opening));

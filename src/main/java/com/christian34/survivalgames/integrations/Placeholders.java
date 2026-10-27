@@ -124,7 +124,7 @@ public final class Placeholders {
     }
 
     /**
-     * @return when a running Varo can be played again ("Sat 18:00"), empty if it can be played now
+     * @return when a Varo (in the lobby or running) can be played again ("Sat 18:00"), empty if it can be played now
      */
     private static String opens(ServerStatus status) {
         return status.opens() == null ? "" : VaroGame.formatOpening(status.opens());

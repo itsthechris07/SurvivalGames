@@ -9,11 +9,12 @@ import java.time.Instant;
 
 /**
  * The state of the game on a game server. Game servers send it as their MOTD ("SG;LOBBY;3;24;castle;survival-games",
- * a running Varo outside of its play hours adds the epoch second they begin at: "...;varo;1793210400"), the lobby
- * server reads it with {@link ServerPinger}.
+ * a Varo outside of its play hours adds the epoch second they begin at: "...;varo;1793210400"), the lobby server
+ * reads it with {@link ServerPinger}.
  *
  * @param type  the key of the game type (survival-games, varo)
- * @param opens the time a running Varo can be played again (play hours), null if it can be played now
+ * @param opens the time a Varo (in the lobby or running) can be played again (play hours), null if it can be played
+ *              now
  * @author Christian34
  */
 public record ServerStatus(State state, int players, int maxPlayers, String arena, String type,
@@ -58,7 +59,7 @@ public record ServerStatus(State state, int players, int maxPlayers, String aren
             case ENDED -> State.ENDING;
         };
         int players = state == State.LOBBY ? game.getParticipants().size() : game.getPlayers().size();
-        Instant opens = state == State.INGAME && game instanceof VaroGame varo ? varo.getOpening() : null;
+        Instant opens = state != State.ENDING && game instanceof VaroGame varo ? varo.getOpening() : null;
         return new ServerStatus(state, players, game.getMaxPlayers(), game.getArena().getName(), game.getType().getKey(),
                 opens);
     }

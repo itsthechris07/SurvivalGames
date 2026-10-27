@@ -69,15 +69,18 @@ Arenas override `min-players`, `max-players`, `team-size` and `world-border.size
 
 `/sg settings` opens a menu with the switches and numbers of `survival-games` and `varo` in `config.yml`: a click
 turns a switch on or off, numbers are typed (`/sg settings <type> <setting> <value>`, Bedrock players get a form).
+The Varo lists `play-hours` and `strikes` are typed too: entries separated by `;`, `-` empties the list.
 The same as a command:
 
 ```
 /sg settings varo peaceful-days 2
 /sg settings survival-games map-voting.enabled off
 /sg settings varo world-border.damage 0.5
+/sg settings varo play-hours mon-fri 18:00-20:00; sat,sun 14:00-22:00
+/sg settings varo strikes warning; coordinates; out
 ```
 
-The change is saved in `config.yml` and works right away. Lists (`strikes`, `breakable-blocks`, ...) and everything
+The change is saved in `config.yml` and works right away. Other lists (`breakable-blocks`, ...) and everything
 outside of the two game types are changed in the file.
 
 ## Statistics

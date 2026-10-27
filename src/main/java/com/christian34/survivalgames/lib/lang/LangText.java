@@ -630,6 +630,7 @@ public enum LangText {
     SESSION_STARTED("session_started"),
     SETTINGS_CHANGED("settings_changed"),
     SETTINGS_INVALID_VALUE("settings_invalid_value"),
+    SETTINGS_LIST_HINT("settings_list_hint"),
     SETTINGS_TYPE_VALUE("settings_type_value"),
     SETTINGS_UNKNOWN("settings_unknown"),
     SETUP_FEW_SPAWNS("setup_few_spawns"),

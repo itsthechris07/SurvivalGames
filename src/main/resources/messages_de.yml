@@ -17,6 +17,7 @@ settings_changed: '<yellow>{0} <gray>ist jetzt <yellow>{1}<gray>. Alle Einstellu
 settings_type_value: '<gray>Gib den neuen Wert von <yellow>{1} <gray>ein: <yellow><suggest:"/sg settings {0} {1} ">/sg settings {0} {1} \<Wert></suggest>'
 settings_unknown: '<red>Die Einstellung <yellow>{0} <red>gibt es nicht. Alle Einstellungen: <yellow><run:"/sg settings">/sg settings</run>'
 settings_invalid_value: '<yellow>{0} <red>ist kein gültiger Wert für <yellow>{1}<red>.'
+settings_list_hint: '<gray>Mehrere Einträge werden mit <yellow>; <gray>getrennt - <yellow>- <gray>leert die Liste.'
 state_lobby: '<green>Lobby'
 state_starting: '<yellow>Startet'
 state_running: '<red>Läuft'
