@@ -13,7 +13,9 @@ a network.
   pushes everybody into the center.
 - **Duels:** one against one with the same kit – from the queue (`/sg duel`) or a challenge (`/sg duel <player>`).
 
-![Two games, one plugin](assets/how-it-works.png)
+![Rounds or days](assets/how-it-works.png)
+
+![UHC](assets/uhc.png)
 
 ## Where to start
 

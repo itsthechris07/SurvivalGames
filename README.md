@@ -15,7 +15,9 @@ one game per server in a network behind Velocity/BungeeCord.
 - **Duels**: one against one (or team against team) with the same kit – `/sg duel` waits for an opponent,
   `/sg duel <player> [kit]` challenges somebody, the winner gains rating.
 
-![Two games, one plugin](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/how-it-works.png)
+![Rounds or days](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/how-it-works.png)
+
+![UHC](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/uhc.png)
 
 ## Features
 
@@ -35,7 +37,9 @@ one game per server in a network behind Velocity/BungeeCord.
   shrinking world border, strikes, peaceful days, inactive players are out, daily coordinates, banned items, potions
   and enchantments, daily backups with a restore command, the players get their own inventory back when they leave the game
 - UHC: generated world per round (pregenerated in the lobby), scatter, grace period, golden heads, final heal, hearts
-  in the tab list, shrinking world border, no portals, scenarios cutclean and timber
+  in the tab list (from the start for everybody alive), the world grows with the number of teams, grace period above the
+  hotbar, no portals, scenarios cutclean and timber, never a start in the ocean or on a tree
+- Duels: a queue (`/sg duel`), challenges with a clickable accept/deny, kits, private arenas, rating
 - Statistics (games, wins, kills, deaths, Elo rating) per game type in a file or a MySQL database: `/sg stats`,
   `/sg top`, leaderboard holograms and `[sgtop]` signs
 - Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...): `/sg achievements`
@@ -51,7 +55,8 @@ one game per server in a network behind Velocity/BungeeCord.
 - Teams (menu or `/sg team create <name> [color]`), team chat (`@message`), separate chat per game, scoreboard
 - Extras (per game type): backpack, chest lock with a `[Lock]` sign, gravity grenade, toxic rain, tracker, supply drops,
   kits, bounties, sponsors, item restrictions
-- English and German messages (MiniMessage, clickable commands), PlaceholderAPI (`%sg_...%`) and MiniPlaceholders
+- English and German messages (MiniMessage, clickable commands, an own prefix per game type),
+  PlaceholderAPI (`%sg_...%`) and MiniPlaceholders
 - Integrations: Vault/VaultUnlocked, Parties, Party and Friends, Citizens and FancyNpcs (join NPCs), Floodgate
   (Bedrock forms), TAB, EssentialsX, vanish plugins, Multiverse
 

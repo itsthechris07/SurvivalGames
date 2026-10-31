@@ -5,6 +5,8 @@ Health doesn't come back by itself, the teams start at random places and the shr
 into the center. The last one standing wins, then the next round starts in a new world. The settings are in `uhc` in
 [`config.yml`](configuration.md).
 
+![UHC](assets/uhc.png)
+
 ## Setup
 
 ```

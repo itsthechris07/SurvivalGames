@@ -6,9 +6,10 @@ Images for the plugin pages on SpigotMC, Modrinth and Hangar.
 |---|---|---|
 | `icon.png` | 512×512 | Project icon (Modrinth, Hangar, SpigotMC) |
 | `banner.png` | 1600×500 | Header at the top of the description |
-| `how-it-works.png` | 1600×900 | Gallery / description: the two game types (Survival Games round, Varo days) |
+| `how-it-works.png` | 1600×900 | Gallery / description: Survival Games rounds and Varo days |
 | `features.png` | 1600×900 | Gallery / description: the server side (maps, menus, statistics, replays, integrations) |
 | `gameplay.png` | 1600×900 | Gallery / description: what happens in the games (voting, kits, loot, Varo rules, extras) |
+| `uhc.png` | 1600×900 | Gallery / description: UHC (new world, scatter, grace period, no regeneration, golden heads, scenarios) |
 
 Copies for the documentation are in `docs/assets/` – copy them again after a change.
 
@@ -25,4 +26,4 @@ After a change, render the PNGs again (needs Chrome or Edge):
 ```
 
 Colors: background `#121014`, panels `#1B1820`, borders `#332C38`, Survival Games amber `#F5B83D`,
-Varo red `#E5484D`, blue `#4B95FF`, green `#3FD08A`, violet `#9B6BFF`.
+Varo red `#E5484D`, UHC green `#3FD08A`, blue `#4B95FF`, green `#3FD08A`, violet `#9B6BFF`.
