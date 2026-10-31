@@ -5,10 +5,15 @@ import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRules;
+import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -31,6 +36,8 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.christian34.survivalgames.lib.lang.I.i18n;
 
 /**
  * A round of UHC (Ultra Hardcore) in a newly generated world: no loot in the chests, everything is mined and crafted.
@@ -164,26 +171,27 @@ public class UhcGame extends SurvivalGame {
 
     /**
      * every team starts at a random place inside the world border, at least uhc.scatter-distance blocks apart from the
-     * other teams (less if there is no room), its members on the same spot
+     * other teams (less if there is no room), its members next to each other
      */
     @Override
     protected List<Location> resolveSpawns(int count) {
         World world = getWorld();
         Location center = arena.getCenter(world);
-        int size = arena.getBorderSize();
+        int size = getStartBorderSize();
         double radius = Math.max(8, (size > 0 ? size / 2.0 : 500) - 16);
         double distance = Math.max(0, settings().getDouble("scatter-distance", 100));
         List<Location> places = new ArrayList<>();
         List<Location> spawns = new ArrayList<>();
         for (GameTeam team : teams.getTeams()) {
             Location place = null;
+            int index = 0;
             for (UUID member : team.getMembers()) {
                 if (participants.get(member) == null) continue;
                 if (place == null) {
                     place = scatter(world, center, radius, distance, places);
                     places.add(place);
                 }
-                spawns.add(place.clone());
+                spawns.add(beside(place, index++));
             }
         }
         while (spawns.size() < count) {
@@ -208,21 +216,58 @@ public class UhcGame extends SurvivalGame {
             if (others.stream().anyMatch(other -> other.distanceSquared(candidate) < minDistance * minDistance)) continue;
             if (isSafeGround(world, place)) break;
         }
-        Location spawn = safe(place);
+        Location spawn = ground(place);
         Vector direction = center.toVector().subtract(spawn.toVector()).setY(0);
         if (direction.lengthSquared() > 0.25) spawn.setDirection(direction);
         return spawn;
     }
 
+    /**
+     * @return the place of a member of a team: the first one on the place, the others in a circle around him (on the
+     * ground, looking the same way), so nobody stands inside somebody else
+     */
+    private static Location beside(Location place, int index) {
+        if (index == 0) return place.clone();
+        double angle = 2 * Math.PI * (index - 1) / 6 + (index - 1) / 6 * 0.5;
+        double radius = 2 + (index - 1) / 6 * 1.5;
+        Location location = place.clone().add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+        Location spawn = ground(location);
+        spawn.setYaw(place.getYaw());
+        spawn.setPitch(place.getPitch());
+        return spawn;
+    }
+
+    /**
+     * open ground: no water, lava or cactus and nothing above it (not on or under a tree)
+     */
     private static boolean isSafeGround(World world, Location location) {
         try {
-            Block ground = world.getHighestBlockAt(location.getBlockX(), location.getBlockZ());
+            int x = location.getBlockX();
+            int z = location.getBlockZ();
+            Block ground = world.getHighestBlockAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
             Material type = ground.getType();
+            if (ground.getY() != world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING)) return false;
             return !ground.isLiquid() && type != Material.MAGMA_BLOCK && type != Material.CACTUS
-                    && type != Material.POWDER_SNOW && !type.isAir();
+                    && type != Material.POWDER_SNOW && !type.isAir() && !Tag.LOGS.isTagged(type)
+                    && !Tag.LEAVES.isTagged(type);
         } catch (RuntimeException ex) {
             // MockBukkit
             return true;
+        }
+    }
+
+    /**
+     * @return the location on the highest block (leaves don't count: never on top of a tree)
+     */
+    private static Location ground(Location location) {
+        try {
+            World world = location.getWorld();
+            int y = world.getHighestBlockYAt(location.getBlockX(), location.getBlockZ(), HeightMap.MOTION_BLOCKING_NO_LEAVES);
+            return new Location(world, location.getBlockX() + 0.5, y + 1, location.getBlockZ() + 0.5,
+                    location.getYaw(), location.getPitch());
+        } catch (RuntimeException ex) {
+            // MockBukkit
+            return safe(location);
         }
     }
 
@@ -237,7 +282,7 @@ public class UhcGame extends SurvivalGame {
         double angle = 2 * Math.PI * Math.max(0, participant.getSpawn()) / Math.max(1, participants.size());
         Location location = center.clone().add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
         location.setY(world.getMinHeight());
-        Location spawn = safe(location);
+        Location spawn = ground(location);
         spawn.setDirection(center.toVector().subtract(spawn.toVector()).setY(0));
         return spawn;
     }
@@ -250,8 +295,10 @@ public class UhcGame extends SurvivalGame {
         stopPregeneration();
         int minutes = settings().getInt("final-heal");
         this.finalHealIn = minutes > 0 ? minutes * 60 : -1;
+        // a new world starts in the morning, but the lobby may have taken a while
+        if (settings().getLong("time", -1) < 0) getWorld().setTime(0);
         List<String> scenarios = getScenarios();
-        if (!scenarios.isEmpty()) broadcast(LangText.UHC_SCENARIOS, String.join(", ", scenarios));
+        if (!scenarios.isEmpty()) broadcast(LangText.UHC_SCENARIOS, describeScenarios(scenarios));
     }
 
     @Override
@@ -262,9 +309,27 @@ public class UhcGame extends SurvivalGame {
         if (finalHealIn == 0) {
             this.finalHealIn = -1;
             finalHeal();
-        } else if (finalHealIn <= 60 && COUNTDOWN_MESSAGES.contains(finalHealIn) && finalHealIn != 20) {
+        } else if ((finalHealIn == 60 || finalHealIn == 10) && finalHealIn != getGraceLeft()) {
+            // at the end of the grace period its reminders are enough
             broadcast(LangText.UHC_FINAL_HEAL_SOON, finalHealIn);
         }
+    }
+
+    /**
+     * @return the scenarios, explained when hovering over them
+     */
+    private static Component describeScenarios(List<String> scenarios) {
+        List<Component> names = new ArrayList<>();
+        for (String scenario : scenarios) {
+            LangText description = switch (scenario) {
+                case CUTCLEAN -> LangText.UHC_SCENARIO_CUTCLEAN;
+                case TIMBER -> LangText.UHC_SCENARIO_TIMBER;
+                default -> null;
+            };
+            Component name = Component.text(scenario);
+            names.add(description != null ? name.hoverEvent(HoverEvent.showText(i18n(description))) : name);
+        }
+        return Component.join(JoinConfiguration.commas(true), names);
     }
 
     /**

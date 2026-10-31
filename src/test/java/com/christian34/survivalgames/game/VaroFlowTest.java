@@ -115,7 +115,7 @@ class VaroFlowTest extends PluginTestBase {
         game.eliminate(participant(steve), null);
         assertEquals(GameState.RUNNING, game.getState());
         assertEquals(2, game.getAliveTeams().size());
-        assertContains(messages(alex), "Steve (Bears) is out of the game! 2 teams left.");
+        assertContains(messages(alex), "Steve is out of the game! Team Bears still has 1 alive.");
 
         game.eliminate(participant(alex), null);
         assertEquals(GameState.ENDED, game.getState());

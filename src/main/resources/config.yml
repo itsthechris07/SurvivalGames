@@ -238,8 +238,11 @@ uhc:
   # cutclean: ores and meat drop smelted, timber: the whole tree falls when a log is broken
   scenarios: [ cutclean, timber ]
   world-border:
-    # the size (blocks) of the world border around the center (0: none)
+    # the size (blocks) of the world border around the center (0: none) - with per-team the largest size
     size: 1000
+    # the world grows with the players: min-size plus per-team blocks for every team (per-team 0: always size)
+    per-team: 100
+    min-size: 300
     # the border starts shrinking ... minutes after the start and is final-size blocks wide after shrink-minutes -
     # everybody is warned a minute before
     shrink-after: 20

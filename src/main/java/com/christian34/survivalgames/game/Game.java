@@ -316,6 +316,17 @@ public abstract class Game {
         return String.format("%02d:%02d", seconds / 60, seconds % 60);
     }
 
+    /**
+     * e.g. 10 minutes, 1:30 minutes, 45 seconds
+     */
+    public static Component formatDuration(int seconds) {
+        seconds = Math.max(0, seconds);
+        if (seconds < 60) return i18n(LangText.DURATION_SECONDS, seconds);
+        if (seconds == 60) return i18n(LangText.DURATION_MINUTE);
+        if (seconds % 60 == 0) return i18n(LangText.DURATION_MINUTES, seconds / 60);
+        return i18n(LangText.DURATION_MINUTES_SECONDS, seconds / 60, String.format("%02d", seconds % 60));
+    }
+
     // ---------------------------------------------------------------- joining and leaving
 
     /**
@@ -963,9 +974,14 @@ public abstract class Game {
         countdown = -1;
         setState(GameState.RUNNING);
         closeLobby();
+        // the level showed the countdown
+        for (GamePlayer member : members) {
+            member.getPlayer().setLevel(0);
+            member.getPlayer().setExp(0);
+        }
         plugin.getReplays().begin(this);
         World world = getWorld();
-        int size = arena.getBorderSize();
+        int size = getStartBorderSize();
         if (size > 0) {
             WorldBorder border = world.getWorldBorder();
             border.setCenter(arena.getCenter(world));
@@ -994,6 +1010,18 @@ public abstract class Game {
         double size = world.getWorldBorder().getSize();
         // the default border of a world (none set)
         return size >= 1_000_000 ? 0 : (int) Math.round(size);
+    }
+
+    /**
+     * @return the size of the world border when the game begins: world-border.size, with world-border.per-team the
+     * min-size plus per-team blocks for every team (at most world-border.size)
+     */
+    public int getStartBorderSize() {
+        int size = arena.getBorderSize();
+        int perTeam = settings().getInt("world-border.per-team");
+        if (size <= 0 || perTeam <= 0) return size;
+        int teams = (int) Math.ceil(participants.size() / (double) Math.max(1, arena.getTeamSize()));
+        return Math.clamp(Math.max(0, settings().getInt("world-border.min-size")) + (long) perTeam * teams, 1, size);
     }
 
     /**
@@ -1131,8 +1159,12 @@ public abstract class Game {
         if (arena.getTeamSize() == 1 || team == null) {
             broadcast(LangText.PLAYER_ELIMINATED_SOLO, participant.getName(), getAlive().size());
         } else {
-            broadcast(LangText.PLAYER_ELIMINATED, participant.getName(), team.getDisplayName(), getAliveTeams().size());
-            if (!isAlive(team)) broadcast(LangText.TEAM_ELIMINATED, team.getDisplayName());
+            long teammates = getAlive().stream().filter(alive -> team.isMember(alive.getUuid())).count();
+            if (teammates > 0) {
+                broadcast(LangText.PLAYER_ELIMINATED, participant.getName(), team.getDisplayName(), teammates);
+            } else {
+                broadcast(LangText.TEAM_ELIMINATED, team.getDisplayName(), getAliveTeams().size());
+            }
         }
         onEliminated(participant);
         checkWinner();

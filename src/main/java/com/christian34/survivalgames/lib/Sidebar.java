@@ -9,6 +9,7 @@ import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.user.GamePlayer;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -25,8 +26,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
@@ -115,20 +118,33 @@ public class Sidebar {
     }
 
     /**
-     * UHC (uhc.health-in-tab): the hearts of every player in the tab list
+     * UHC (uhc.health-in-tab): the hearts of the players alive in the tab list, once the game has started - set every
+     * second (the health criteria only updates a player whose health changes, the others would have no hearts)
      */
     private void updateHealth(Scoreboard board, Game game) {
-        boolean show = game.getType() == GameType.UHC && game.getArena().settings().getBoolean("health-in-tab");
+        boolean show = game.getType() == GameType.UHC && game.getState() != GameState.LOBBY
+                && game.getArena().settings().getBoolean("health-in-tab");
         Objective health = board.getObjective(HEALTH_OBJECTIVE);
-        if (show && health == null) {
-            try {
-                health = board.registerNewObjective(HEALTH_OBJECTIVE, Criteria.HEALTH, Component.empty(), RenderType.HEARTS);
-                health.setDisplaySlot(DisplaySlot.PLAYER_LIST);
-            } catch (RuntimeException ex) {
-                // not implemented by MockBukkit
-            }
-        } else if (!show && health != null) {
-            health.unregister();
+        if (!show) {
+            if (health != null) health.unregister();
+            return;
+        }
+        if (health == null) {
+            health = board.registerNewObjective(HEALTH_OBJECTIVE, Criteria.DUMMY, Component.empty(), RenderType.HEARTS);
+            health.setDisplaySlot(DisplaySlot.PLAYER_LIST);
+        }
+        Set<String> shown = new HashSet<>();
+        for (GamePlayer member : game.getPlayers()) {
+            Player player = member.getPlayer();
+            Participant participant = game.getParticipant(player.getUniqueId());
+            if (participant == null || !participant.isAlive()) continue;
+            int hearts = (int) Math.ceil(player.getHealth());
+            Score score = health.getScore(player.getName());
+            if (!score.isScoreSet() || score.getScore() != hearts) score.setScore(hearts);
+            shown.add(player.getName());
+        }
+        for (String entry : board.getEntries()) {
+            if (!shown.contains(entry) && health.getScore(entry).isScoreSet()) health.getScore(entry).resetScore();
         }
     }
 

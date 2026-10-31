@@ -63,7 +63,7 @@ info_lobby: '<gray>Spieler: <yellow>{0}<gray>/<yellow>{1} <gray>(das Spiel start
 info_running: '<gray>Spieler im Spiel: <yellow>{0}<gray>/<yellow>{1}'
 info_running_teams: "<gray>Spieler im Spiel: <yellow>{0}<gray>/<yellow>{1}\n<gray>Teams im Spiel: <yellow>{2}<gray>/<yellow>{3}"
 info_day: '<gray>Tag: <yellow>{0}'
-info_rules_sg: "<gray>Spieler pro Team: <yellow>{0}\n<gray>Kein PvP in den ersten <yellow>{1} <gray>Sekunden. Ein Tod und du bist raus!"
+info_rules_sg: "<gray>Spieler pro Team: <yellow>{0}\n<gray>Kein PvP in den ersten <yellow>{1}<gray>. Ein Tod und du bist raus!"
 info_rules_varo: "<gray>Spielzeit pro Tag: <yellow>{0}\n<gray>Spieler pro Team: <yellow>{1}\n<gray>Ein Tod und du bist raus!"
 time_left: '<gray>Du kannst heute noch <yellow>{0} <gray>spielen. Kills: <yellow>{1}'
 ping: '<gray>Ping von <yellow>{0}<gray>: <yellow>{1} ms'
@@ -289,7 +289,7 @@ start_countdown: '<gray>Macht euch bereit! <yellow>{0} <gray>Sekunden'
 start_countdown_one: '<gray>Macht euch bereit! <yellow>eine <gray>Sekunde'
 game_started_title: '<gold><bold>Los!'
 sg_started: '<gold>Das Spiel hat begonnen! <gray>Wer als Letzter lebt, gewinnt.'
-sg_started_grace: '<gold>Das Spiel hat begonnen! <gray>Kein PvP für <yellow>{0} <gray>Sekunden.'
+sg_started_grace: '<gold>Das Spiel hat begonnen! <gray>Kein PvP für <yellow>{0}<gray>.'
 grace_ends: '<gray>Die Schutzzeit endet in <yellow>{0} <gray>Sekunden!'
 grace_over: '<red>Die Schutzzeit ist vorbei - kämpft!'
 grace_over_title: '<red><bold>PvP an'
@@ -308,6 +308,7 @@ kick_outside_hours: "<red>Das Varo kann gerade nicht gespielt werden.\n<gray>Du 
 time_warning: '<red>Deine Spielzeit endet in <yellow>{0}<red>!'
 actionbar_time_left: '<gray>Spielzeit übrig: <yellow>{0}'
 actionbar_enemy_nearby: '<red>Gegner in der Nähe - du kannst jetzt nicht gehen!'
+actionbar_grace: '<green>Schutzzeit <gray>- PvP in <yellow>{0}'
 player_time_over: '<yellow>{0} <gray>hat die Spielzeit für heute aufgebraucht.'
 new_day: '<gold>Tag <yellow>{0} <gold>hat begonnen - alle haben wieder ihre volle Spielzeit!'
 border_shrinks: '<red>Die Weltgrenze schrumpft auf <yellow>{0} <red>Blöcke!'
@@ -326,9 +327,9 @@ offline_npc_killed: '<yellow>{0} <gray>hat den Server verlassen und wurde von <y
 offline_npc_died: '<yellow>{0} <gray>hat den Server verlassen und ist gestorben.'
 border_shrink_warning: '<red>Die Weltgrenze beginnt in <yellow>{0} <red>Sekunden zu schrumpfen!'
 border_shrinking: '<red>Die Weltgrenze schrumpft innerhalb von <yellow>{1} <red>Minuten auf <yellow>{0} <red>Blöcke!'
-player_eliminated: '<yellow>{0} <gray>({1}<gray>) ist ausgeschieden! Noch <yellow>{2} <gray>Teams.'
+player_eliminated: '<yellow>{0} <gray>ist ausgeschieden! Team {1} <gray>hat noch <yellow>{2} <gray>im Spiel.'
 player_eliminated_solo: '<yellow>{0} <gray>ist ausgeschieden! Noch <yellow>{1} <gray>Spieler.'
-team_eliminated: '<red>Das Team {0} <red>ist ausgeschieden!'
+team_eliminated: '<red>Das Team {0} <red>ist ausgeschieden! Noch <yellow>{1} <gray>Teams.'
 game_won: '<gold>Das Team {0} <gold>hat in {2} <gold>gewonnen! <gray>({1})'
 game_won_solo: '<yellow>{0} <gold>hat in {1} <gold>gewonnen!'
 game_won_title: '{0} <gold>gewinnt!'
@@ -816,9 +817,17 @@ command_replay_follow: 'sieht das Replay durch die Augen eines Spielers an'
 command_replay_leave: 'verlässt das Replay'
 command_replay_delete: 'löscht ein Replay'
 
+# ---------------------------------------------------------------- durations (grace period, ...)
+duration_minute: '1 Minute'
+duration_minutes: '{0} Minuten'
+duration_minutes_seconds: '{0}:{1} Minuten'
+duration_seconds: '{0} Sekunden'
+
 # ---------------------------------------------------------------- uhc
 uhc_scattering: '<gray>Die Teams werden über die Welt verteilt...'
-uhc_scenarios: '<gray>Szenarien: <yellow>{0}'
+uhc_scenarios: '<gray>Szenarien: <yellow>{0} <dark_gray>(Maus drüber für Details)'
+uhc_scenario_cutclean: "<yellow>Cutclean\n<gray>Erze und Tiere droppen schon geschmolzen:\n<gray>Eisen- und Goldbarren, gebratenes Fleisch."
+uhc_scenario_timber: "<yellow>Timber\n<gray>Fällst du einen Stamm, fällt der ganze Baum."
 uhc_final_heal_soon: '<green>Final Heal in <yellow>{0} <green>Sekunden.'
 uhc_final_heal: '<green>Final Heal: <gray>alle Lebenden werden geheilt.'
 uhc_no_portals: '<red>Portale sind in UHC ausgeschaltet.'

@@ -259,7 +259,8 @@ public class SurvivalGame extends Game {
         plugin.getGameManager().setLastPlayed(arena);
         this.graceLeft = Math.max(0, settings().getInt("grace-period"));
         if (graceLeft > 0) {
-            broadcast(LangText.SG_STARTED_GRACE, graceLeft);
+            broadcast(LangText.SG_STARTED_GRACE, formatDuration(graceLeft));
+            showGrace();
         } else {
             broadcast(LangText.SG_STARTED);
             giveTrackers();
@@ -273,6 +274,23 @@ public class SurvivalGame extends Game {
      */
     public boolean isGracePeriod() {
         return getState() != GameState.RUNNING || graceLeft > 0;
+    }
+
+    /**
+     * the time until PvP above the hotbar (the sidebar is easily overlooked)
+     */
+    private void showGrace() {
+        Component bar = i18n(LangText.ACTIONBAR_GRACE, formatTime(graceLeft));
+        for (GamePlayer member : getMembers()) {
+            member.getPlayer().sendActionBar(bar);
+        }
+    }
+
+    /**
+     * @return the seconds until PvP, 0 if it is on
+     */
+    public int getGraceLeft() {
+        return graceLeft;
     }
 
     public boolean isDeathmatch() {
@@ -306,8 +324,10 @@ public class SurvivalGame extends Game {
                 showTitle(net.kyori.adventure.title.Title.title(Component.empty(), i18n(LangText.GRACE_OVER_TITLE)),
                         Sound.ENTITY_WITHER_SPAWN);
                 giveTrackers();
-            } else if (COUNTDOWN_MESSAGES.contains(graceLeft)) {
-                broadcast(LangText.GRACE_ENDS, graceLeft);
+            } else {
+                showGrace();
+                // the action bar shows the countdown, the chat only reminds
+                if (graceLeft == 60 || graceLeft == 10) broadcast(LangText.GRACE_ENDS, graceLeft);
             }
         }
         int refill = settings().getInt("refill-minutes");
@@ -325,7 +345,7 @@ public class SurvivalGame extends Game {
      * the world border starts shrinking world-border.shrink-after minutes after the start (warned a minute before)
      */
     private void tickBorder() {
-        int size = arena.getBorderSize();
+        int size = getStartBorderSize();
         int start = settings().getInt("world-border.shrink-after") * 60;
         if (deathmatch || size <= 0 || start <= 0) return;
         if (start > 60 && seconds == start - 60) {

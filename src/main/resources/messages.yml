@@ -63,7 +63,7 @@ info_lobby: '<gray>Players: <yellow>{0}<gray>/<yellow>{1} <gray>(the game starts
 info_running: '<gray>Players alive: <yellow>{0}<gray>/<yellow>{1}'
 info_running_teams: "<gray>Players alive: <yellow>{0}<gray>/<yellow>{1}\n<gray>Teams alive: <yellow>{2}<gray>/<yellow>{3}"
 info_day: '<gray>Day: <yellow>{0}'
-info_rules_sg: "<gray>Players per team: <yellow>{0}\n<gray>No PvP for the first <yellow>{1} <gray>seconds. One death and you are out!"
+info_rules_sg: "<gray>Players per team: <yellow>{0}\n<gray>No PvP for the first <yellow>{1}<gray>. One death and you are out!"
 info_rules_varo: "<gray>Play time per day: <yellow>{0}\n<gray>Players per team: <yellow>{1}\n<gray>One death and you are out!"
 time_left: '<gray>You can play <yellow>{0} <gray>more today. Kills: <yellow>{1}'
 ping: '<gray>Ping of <yellow>{0}<gray>: <yellow>{1} ms'
@@ -289,7 +289,7 @@ start_countdown: '<gray>Get ready! <yellow>{0} <gray>seconds'
 start_countdown_one: '<gray>Get ready! <yellow>one <gray>second'
 game_started_title: '<gold><bold>Go!'
 sg_started: '<gold>The game has begun! <gray>The last one alive wins.'
-sg_started_grace: '<gold>The game has begun! <gray>No PvP for <yellow>{0} <gray>seconds.'
+sg_started_grace: '<gold>The game has begun! <gray>No PvP for <yellow>{0}<gray>.'
 grace_ends: '<gray>The grace period ends in <yellow>{0} <gray>seconds!'
 grace_over: '<red>The grace period is over - fight!'
 grace_over_title: '<red><bold>PvP on'
@@ -308,6 +308,7 @@ kick_outside_hours: "<red>The Varo can't be played right now.\n<gray>You can pla
 time_warning: '<red>Your play time ends in <yellow>{0}<red>!'
 actionbar_time_left: '<gray>Play time left: <yellow>{0}'
 actionbar_enemy_nearby: '<red>Enemy nearby - you can''t leave now!'
+actionbar_grace: '<green>Grace period <gray>- PvP in <yellow>{0}'
 player_time_over: '<yellow>{0} <gray>has used up the play time for today.'
 new_day: '<gold>Day <yellow>{0} <gold>has begun - everybody has their full play time again!'
 border_shrinks: '<red>The world border shrinks to <yellow>{0} <red>blocks!'
@@ -326,9 +327,9 @@ offline_npc_killed: '<yellow>{0} <gray>has left the server and was killed by <ye
 offline_npc_died: '<yellow>{0} <gray>has left the server and died.'
 border_shrink_warning: '<red>The world border starts shrinking in <yellow>{0} <red>seconds!'
 border_shrinking: '<red>The world border shrinks to <yellow>{0} <red>blocks within <yellow>{1} <red>minutes!'
-player_eliminated: '<yellow>{0} <gray>({1}<gray>) is out of the game! <yellow>{2} <gray>teams left.'
+player_eliminated: '<yellow>{0} <gray>is out of the game! Team {1} <gray>still has <yellow>{2} <gray>alive.'
 player_eliminated_solo: '<yellow>{0} <gray>is out of the game! <yellow>{1} <gray>players left.'
-team_eliminated: '<red>Team {0} <red>is out of the game!'
+team_eliminated: '<red>Team {0} <red>is out of the game! <yellow>{1} <gray>teams left.'
 game_won: '<gold>Team {0} <gold>has won in {2}<gold>! <gray>({1})'
 game_won_solo: '<yellow>{0} <gold>has won in {1}<gold>!'
 game_won_title: '{0} <gold>wins!'
@@ -816,9 +817,17 @@ command_replay_follow: 'watches the replay through the eyes of a player'
 command_replay_leave: 'leaves the replay'
 command_replay_delete: 'deletes a replay'
 
+# ---------------------------------------------------------------- durations (grace period, ...)
+duration_minute: '1 minute'
+duration_minutes: '{0} minutes'
+duration_minutes_seconds: '{0}:{1} minutes'
+duration_seconds: '{0} seconds'
+
 # ---------------------------------------------------------------- uhc
 uhc_scattering: '<gray>The teams are scattered across the world...'
-uhc_scenarios: '<gray>Scenarios: <yellow>{0}'
+uhc_scenarios: '<gray>Scenarios: <yellow>{0} <dark_gray>(hover for details)'
+uhc_scenario_cutclean: "<yellow>Cutclean\n<gray>Ores and animals drop smelted items:\n<gray>iron and gold ingots, cooked meat."
+uhc_scenario_timber: "<yellow>Timber\n<gray>Chop one log and the whole tree falls."
 uhc_final_heal_soon: '<green>Final heal in <yellow>{0} <green>seconds.'
 uhc_final_heal: '<green>Final heal: <gray>everybody alive is healed.'
 uhc_no_portals: '<red>Portals are disabled in UHC.'

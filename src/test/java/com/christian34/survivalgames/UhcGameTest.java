@@ -23,6 +23,8 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -183,6 +185,26 @@ class UhcGameTest extends PluginTestBase {
         }
         assertEquals(Material.AIR, world.getBlockAt(11, 74, 11).getType());
         assertEquals(Material.OAK_LOG, world.getBlockAt(14, 70, 10).getType(), "not connected");
+    }
+
+    @Test
+    void theWorldGrowsWithTheTeams() {
+        config().set("uhc.world-border.size", 1000);
+        UhcGame game = startGame();
+        assertEquals(500, game.getStartBorderSize(), "300 + 2 teams * 100");
+        assertEquals(500, game.getBorderSize());
+        assertEquals(0, steve.getLevel(), "the countdown is gone");
+    }
+
+    @Test
+    void theHeartsOfEverybodyAreInTheTabList() {
+        startGame();
+        alex.setHealth(13);
+        seconds(1);
+        Objective health = steve.getScoreboard().getObjective(DisplaySlot.PLAYER_LIST);
+        assertNotNull(health);
+        assertEquals(20, health.getScore("Steve").getScore(), "also without a change of the health");
+        assertEquals(13, health.getScore("Alex").getScore());
     }
 
     @Test

@@ -264,7 +264,7 @@ public class CommandSurvivalGames {
                     game.getArena().getTeamSize()));
         } else {
             sender.sendMessage(i18n(LangText.INFO_RULES_SG, game.getArena().getTeamSize(),
-                    game.getArena().settings().getInt("grace-period")));
+                    Game.formatDuration(game.getArena().settings().getInt("grace-period"))));
         }
         if (sender instanceof Player player && game instanceof VaroGame && game.getParticipant(player.getUniqueId()) != null
                 && game.getState() == GameState.RUNNING) {

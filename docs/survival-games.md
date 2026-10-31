@@ -36,7 +36,7 @@ The players choose their kit in the lobby with the kit item or `/sg kit [kit]` a
 Everybody is put onto a spawn point (or into the spawn circle) with an empty inventory and stands still until the
 **start countdown** (`start-countdown`) is over. Then the round begins.
 
-- **Grace period:** for `grace-period` seconds nobody can hurt the others.
+- **Grace period:** for `grace-period` seconds nobody can hurt the others. The time left is shown above the hotbar.
 - **Loot:** chests, trapped chests and barrels are filled when they are opened for the first time and again every
   `refill-minutes`. Every kind of container has its own loot table, containers near the center get better loot and
   the loot gets better after some refills. See [loot.yml](configuration.md#loot).
