@@ -54,17 +54,17 @@ class TelemetryTest extends PluginTestBase {
             server.getScheduler().performOneTick();
         }
         assertEquals(GameState.RUNNING, game.getState());
-        assertTrue(plugin.getTelemetry().drain(Telemetry.Chart.GAME_TYPES).isEmpty(), "the game isn't over yet");
+        assertTrue(plugin.getTelemetry().counts(Telemetry.Chart.GAME_TYPES).isEmpty(), "the game isn't over yet");
 
         alex.setKiller(steve);
         alex.setHealth(0);
         assertEquals(GameState.ENDED, game.getState());
-        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().drain(Telemetry.Chart.GAME_TYPES));
-        assertEquals(Map.of("2", 1), plugin.getTelemetry().drain(Telemetry.Chart.GAME_SIZES));
-        assertTrue(plugin.getTelemetry().drain(Telemetry.Chart.GAME_TYPES).isEmpty(), "the counters start again after a submission");
-        assertEquals(Map.of("< 5 min", 1), plugin.getTelemetry().drain(Telemetry.Chart.DURATIONS));
-        assertEquals(Map.of("before the deathmatch", 1), plugin.getTelemetry().drain(Telemetry.Chart.ENDINGS));
-        assertEquals(Map.of("command or menu", 2), plugin.getTelemetry().drain(Telemetry.Chart.JOINS));
+        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().counts(Telemetry.Chart.GAME_TYPES));
+        assertEquals(Map.of("2", 1), plugin.getTelemetry().counts(Telemetry.Chart.GAME_SIZES));
+        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().counts(Telemetry.Chart.GAME_TYPES), "the counts stay after a submission");
+        assertEquals(Map.of("< 5 min", 1), plugin.getTelemetry().counts(Telemetry.Chart.DURATIONS));
+        assertEquals(Map.of("before the deathmatch", 1), plugin.getTelemetry().counts(Telemetry.Chart.ENDINGS));
+        assertEquals(Map.of("command or menu", 2), plugin.getTelemetry().counts(Telemetry.Chart.JOINS));
     }
 
     @Test
@@ -75,14 +75,14 @@ class TelemetryTest extends PluginTestBase {
         createArena("arena1", GameType.SURVIVAL_GAMES, 4);
         assertEquals("survival-games", telemetry.usedGameTypes());
         createArena("varo1", GameType.VARO, 4);
-        assertEquals("both", telemetry.usedGameTypes());
+        assertEquals("survival-games + varo", telemetry.usedGameTypes());
         assertEquals(Map.of("survival-games", Map.of("1", 1), "varo", Map.of("2", 1)), telemetry.teamSizes());
 
         // the defaults of config.yml
         Map<String, Map<String, Integer>> modules = telemetry.modules();
         assertEquals(Map.of("survival-games", 1), modules.get("kits"));
         assertEquals(Map.of("varo", 1), modules.get("backpack"));
-        assertEquals(Map.of("both", 1), modules.get("bounty"));
+        assertEquals(Map.of("survival-games + varo + uhc", 1), modules.get("bounty"));
         config().set("modules.bounty.enabled", false);
         assertEquals(Map.of("disabled", 1), telemetry.modules().get("bounty"));
 
@@ -98,7 +98,7 @@ class TelemetryTest extends PluginTestBase {
         telemetry.used(Telemetry.Feature.KIT);
         telemetry.used(Telemetry.Feature.KIT);
         telemetry.used(Telemetry.Feature.REPLAY);
-        assertEquals(Map.of("kit chosen", 2, "replay watched", 1), telemetry.drain(Telemetry.Chart.FEATURES));
+        assertEquals(Map.of("kit chosen", 2, "replay watched", 1), telemetry.counts(Telemetry.Chart.FEATURES));
         assertEquals("1-3 days", Telemetry.dayBucket(1));
         assertEquals("8-14 days", Telemetry.dayBucket(14));
         assertEquals("30+ min", Telemetry.minuteBucket(30));

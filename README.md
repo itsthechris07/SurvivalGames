@@ -2,7 +2,7 @@
 
 # SurvivalGames
 
-Survival Games and Varo for Paper 1.21.11 – 26.3 (and Purpur) – several games next to each other on one server, or
+Survival Games, Varo, UHC and Duels for Paper 1.21.11 – 26.3 (and Purpur) – several games next to each other on one server, or
 one game per server in a network behind Velocity/BungeeCord.
 
 - **Survival Games** (the default): everybody spawns on a spawn point, loots the chests and fights; after a grace
@@ -10,6 +10,10 @@ one game per server in a network behind Velocity/BungeeCord.
   copy of the map.
 - **Varo**: teams play in the same world for days, every player may only play a few minutes per day and is out after
   the first death – the last team wins. The world and the game are kept until an admin resets it.
+- **UHC**: a new world every round, no loot and no natural regeneration – the teams start at random places,
+  golden heads, final heal and scenarios (cutclean, timber), the world border pushes everybody into the center.
+- **Duels**: one against one (or team against team) with the same kit – `/sg duel` waits for an opponent,
+  `/sg duel <player> [kit]` challenges somebody, the winner gains rating.
 
 ![Two games, one plugin](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/how-it-works.png)
 
@@ -30,6 +34,8 @@ one game per server in a network behind Velocity/BungeeCord.
 - Varo: play time per day, no logout during a fight (a villager stands in for players who leave), join protection,
   shrinking world border, strikes, peaceful days, inactive players are out, daily coordinates, banned items, potions
   and enchantments, daily backups with a restore command, the players get their own inventory back when they leave the game
+- UHC: generated world per round (pregenerated in the lobby), scatter, grace period, golden heads, final heal, hearts
+  in the tab list, shrinking world border, no portals, scenarios cutclean and timber
 - Statistics (games, wins, kills, deaths, Elo rating) per game type in a file or a MySQL database: `/sg stats`,
   `/sg top`, leaderboard holograms and `[sgtop]` signs
 - Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...): `/sg achievements`

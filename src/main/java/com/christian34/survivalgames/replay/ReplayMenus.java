@@ -58,7 +58,7 @@ public final class ReplayMenus {
                     CommandSurvivalGames.formatDate(info.start()), Game.formatTime(info.seconds()), info.actors().size()));
             if (info.winner() != null) lore.addAll(I.itemLines(LangText.GUI_REPLAYS_WINNER, info.winner()));
             lore.addAll(I.itemLines(LangText.GUI_REPLAYS_CLICK));
-            ItemStack icon = ItemStack.of(info.type() == GameType.VARO ? Material.CLOCK : Material.IRON_SWORD);
+            ItemStack icon = ItemStack.of(info.type() == GameType.VARO ? Material.CLOCK : info.type().getIcon());
             menu.button(icon, Replays.describe(info).colorIfAbsent(NamedTextColor.AQUA), lore,
                     clicker -> replays().watch(clicker, info.id()));
         }

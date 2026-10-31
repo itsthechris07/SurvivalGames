@@ -3,6 +3,7 @@ package com.christian34.survivalgames.lib;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
+import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.game.SurvivalGame;
@@ -39,6 +40,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 public class Sidebar {
     private static final int MAX_LINES = 15;
     private static final String OBJECTIVE = "sg";
+    private static final String HEALTH_OBJECTIVE = "sg_health";
     private static final String TEAM_PREFIX = "sg_";
     private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
     private final SurvivalGames plugin;
@@ -109,6 +111,25 @@ public class Sidebar {
             setLines(objective, board, getLines(player, game));
         }
         updateTeams(board, game);
+        updateHealth(board, game);
+    }
+
+    /**
+     * UHC (uhc.health-in-tab): the hearts of every player in the tab list
+     */
+    private void updateHealth(Scoreboard board, Game game) {
+        boolean show = game.getType() == GameType.UHC && game.getArena().settings().getBoolean("health-in-tab");
+        Objective health = board.getObjective(HEALTH_OBJECTIVE);
+        if (show && health == null) {
+            try {
+                health = board.registerNewObjective(HEALTH_OBJECTIVE, Criteria.HEALTH, Component.empty(), RenderType.HEARTS);
+                health.setDisplaySlot(DisplaySlot.PLAYER_LIST);
+            } catch (RuntimeException ex) {
+                // not implemented by MockBukkit
+            }
+        } else if (!show && health != null) {
+            health.unregister();
+        }
     }
 
     private Scoreboard createBoard() {

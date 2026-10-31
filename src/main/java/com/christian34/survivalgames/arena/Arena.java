@@ -323,7 +323,8 @@ public class Arena {
      */
     public List<Component> getWarnings() {
         List<Component> warnings = new ArrayList<>();
-        if (getSpawnCount() == 0) warnings.add(I.i18n(LangText.SETUP_NO_SPAWNS, name));
+        // UHC: the teams are scattered across the world
+        if (getSpawnCount() == 0 && getType() != GameType.UHC) warnings.add(I.i18n(LangText.SETUP_NO_SPAWNS, name));
         if (!hasLobby() && !usesLobbyWorld()) warnings.add(I.i18n(LangText.SETUP_NO_LOBBY, name));
         int max = getInt("max-players", 1);
         if (getSpawnCount() > 0 && getSpawnCount() < max) {

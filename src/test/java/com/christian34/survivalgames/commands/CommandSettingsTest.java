@@ -118,7 +118,7 @@ class CommandSettingsTest extends PluginTestBase {
         FakeForms forms = new FakeForms();
         plugin.setBedrockForms(forms);
         execute(admin, "sg settings");
-        assertEquals(List.of("Survival Games", "Varo"), forms.buttons());
+        assertEquals(List.of("Survival Games", "Varo", "UHC", "Duels"), forms.buttons());
 
         forms.click(admin, "Varo");
         assertEquals("Settings: Varo", FakeForms.plain(forms.last().getTitle()));

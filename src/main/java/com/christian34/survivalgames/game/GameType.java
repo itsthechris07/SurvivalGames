@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.lib.lang.LangText;
+import org.bukkit.Material;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -20,7 +21,16 @@ public enum GameType {
     /**
      * runs for days in the same world: every player may only play a few minutes per day
      */
-    VARO("varo", LangText.TYPE_VARO);
+    VARO("varo", LangText.TYPE_VARO),
+    /**
+     * a round in a newly generated world: no loot, no natural regeneration, the world border pushes everybody into
+     * the center
+     */
+    UHC("uhc", LangText.TYPE_UHC),
+    /**
+     * two players (or teams) with the same kit on a small map - from the queue or a challenge
+     */
+    DUELS("duels", LangText.TYPE_DUELS);
 
     private final String key;
     private final LangText displayName;
@@ -42,7 +52,19 @@ public enum GameType {
     }
 
     /**
-     * @param name the key (survival-games, varo) or a short form (sg)
+     * the item of the game type in the menus
+     */
+    public Material getIcon() {
+        return switch (this) {
+            case SURVIVAL_GAMES -> Material.IRON_SWORD;
+            case VARO -> Material.GRASS_BLOCK;
+            case UHC -> Material.GOLDEN_APPLE;
+            case DUELS -> Material.DIAMOND_SWORD;
+        };
+    }
+
+    /**
+     * @param name the key (survival-games, varo, uhc, duels) or a short form (sg, duel)
      * @return null if there is no such type
      */
     @Nullable
@@ -50,6 +72,7 @@ public enum GameType {
         if (name == null) return null;
         String key = name.trim().toLowerCase(Locale.ROOT).replace('_', '-');
         if (key.equals("sg")) return SURVIVAL_GAMES;
+        if (key.equals("duel")) return DUELS;
         for (GameType type : values()) {
             if (type.key.equals(key)) return type;
         }

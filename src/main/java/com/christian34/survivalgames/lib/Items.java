@@ -26,6 +26,7 @@ public final class Items {
     public static final String TRACKER = "tracker";
     public static final String KITS = "kits";
     public static final String VOTE = "vote";
+    public static final String GOLDEN_HEAD = "golden_head";
 
     private Items() {
     }

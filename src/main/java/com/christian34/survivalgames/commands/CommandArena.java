@@ -95,6 +95,11 @@ public class CommandArena {
             return;
         }
         String map = mapName != null ? mapName : name;
+        // UHC is played in a new world every round (unless a map is given)
+        if (type == GameType.UHC && mapName == null && worldName == null && !arenas().isMap(map)
+                && ArenaManager.getImportableWorld(map) == null) {
+            generate = true;
+        }
         if (!generate) {
             if (worldName == null && !arenas().isMap(map)) {
                 // the name of a world of the server: imported

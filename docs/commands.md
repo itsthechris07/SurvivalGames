@@ -29,6 +29,8 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 | `/sg vote [arena]` | votes for the map in the lobby of Survival Games (without: the menu, see [map voting](survival-games.md#map-voting)) |
 | `/sg kit [kit]` | chooses a [kit](survival-games.md#kits) in the lobby (without: the menu) |
 | `/sg bounty [player] [amount]` | puts a [bounty](survival-games.md#bounties) on a player (without an amount: the bounty on them, without a player: all bounties) |
+| `/sg duel [player] [kit]` | waits for an opponent in a [duel](duels.md) (with a player: challenges them, optionally with a kit) |
+| `/sg duel accept <player>` / `deny <player>` | accepts / denies the challenge of a player |
 | `/sg sponsor [player]` | spectators send [items](survival-games.md#sponsors) to a player alive (without: the menu) |
 | `/sg inventory <id>` | opens the [inventory](survival-games.md#the-end) of a message after a kill or a game (click the message) |
 | `/sg replay` | the [replays](replays.md) of the games in a menu (while you watch one: its controls) |
@@ -64,7 +66,7 @@ and the games with their controls (start, deathmatch, backups, players, stop). I
 | `/sg arena <arena> players <min> <max>` | the number of players |
 | `/sg arena <arena> teamsize <size>` | players per team |
 | `/sg arena <arena> border <size>` | the world border (0: none) |
-| `/sg arena <arena> type <type>` | `survival-games` or `varo` |
+| `/sg arena <arena> type <type>` | `survival-games`, `varo`, `uhc` or `duels` |
 | `/sg arena <arena> displayname <name>` | the name shown to the players (`reset`: the arena name) |
 | `/sg arena <arena> creategame` | creates the game of the arena, also after every restart |
 | `/sg arena <arena> removegame` | stops the game and creates no new one |

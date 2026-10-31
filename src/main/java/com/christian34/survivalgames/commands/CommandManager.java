@@ -115,6 +115,7 @@ public class CommandManager {
         annotationParser.parse(new CommandKit());
         annotationParser.parse(new CommandLeaderboard());
         annotationParser.parse(new CommandBounty());
+        annotationParser.parse(new CommandDuel());
         annotationParser.parse(new CommandSettings());
         annotationParser.parse(new CommandReplay());
     }

@@ -73,6 +73,8 @@ public class GameManager {
         Game game = switch (arena.getType()) {
             case SURVIVAL_GAMES -> new SurvivalGame(plugin, arena);
             case VARO -> new VaroGame(plugin, arena);
+            case UHC -> new UhcGame(plugin, arena);
+            case DUELS -> new DuelsGame(plugin, arena);
         };
         games.put(key(arena), game);
         // the copy of the lobby world isn't loaded while the first player joins

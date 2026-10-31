@@ -34,7 +34,7 @@ stats:
   # ones (everybody starts with 1000, /sg top rating) - the change of a game is at most k-factor
   rating:
     enabled: true
-    games: [ survival-games ]
+    games: [ survival-games, uhc, duels ]
     k-factor: 32
   # achievements of the players (first win, 3 kills in a game, a win without armor, ...): /sg achievements - saved
   # with the statistics
@@ -197,13 +197,119 @@ varo:
     damage: 0.2
     buffer: 5
 
-# games: the game types the module is used in (survival-games, varo)
+# a round in a newly generated world (/sg arena create <name> --type uhc): no loot, health doesn't come back by itself,
+# the teams start at random places and the world border pushes everybody into the center
+uhc:
+  min-players: 2
+  max-players: 40
+  # players per team (1: everybody plays alone)
+  team-size: 1
+  # the lobby countdown starts once min-players are in the lobby (seconds)
+  lobby-countdown: 60
+  # the lobby countdown is shortened to this once the game is full
+  full-countdown: 10
+  # seconds the players stand frozen on their places before the game begins
+  start-countdown: 10
+  # seconds without PvP after the start
+  grace-period: 600
+  # members of the same team can hurt each other
+  friendly-fire: false
+  # players who are out of the game watch the rest (otherwise they leave) - others can watch with /sg spectate
+  spectators: true
+  monsters: true
+  # the time of day (-1: day and night change, 6000: always noon)
+  time: -1
+  # players make progress in their advancements while they are in the game
+  advancements: false
+  # players can break and place every block
+  building: true
+  # health comes back by itself (otherwise only with golden apples, golden heads, potions and the final heal)
+  natural-regeneration: false
+  # a player who dies drops his head - 8 gold ingots around it make a golden head (heals longer than a golden apple)
+  golden-heads: true
+  # everybody alive gets full health and food ... minutes after the start (0: never)
+  final-heal: 10
+  # the hearts of every player in the tab list
+  health-in-tab: true
+  # the teams start at random places inside the world border, at least ... blocks apart (less if there is no room)
+  scatter-distance: 100
+  # the world inside the border is generated while the players wait in the lobby (less lag in the game)
+  pregenerate: true
+  # cutclean: ores and meat drop smelted, timber: the whole tree falls when a log is broken
+  scenarios: [ cutclean, timber ]
+  world-border:
+    # the size (blocks) of the world border around the center (0: none)
+    size: 1000
+    # the border starts shrinking ... minutes after the start and is final-size blocks wide after shrink-minutes -
+    # everybody is warned a minute before
+    shrink-after: 20
+    shrink-minutes: 20
+    final-size: 100
+    # damage per second for every block outside of the border (2 = one heart), starting ... blocks outside of it
+    damage: 1.0
+    buffer: 0
+  deathmatch:
+    # the deathmatch starts after ... minutes or once only ... players are left (0: never) - everybody is teleported
+    # into a circle around the center
+    minutes: 0
+    players: 0
+    warning: 30
+    border-size: 100
+    final-border-size: 20
+    border-minutes: 5
+  # lightnings (without damage) show where every player alive is: every interval seconds after ... minutes or once
+  # only ... players are left (0: never)
+  reveal:
+    minutes: 0
+    players: 0
+    interval: 60
+  # fireworks for the winners
+  fireworks: true
+  # seconds after the end until the next round (everybody leaves the arena)
+  ending-seconds: 15
+
+# two players (or two teams) with the same kit on a small map with 2 spawn points (/sg arena create <name> --type
+# duels): /sg duel waits for an opponent, /sg duel <player> [kit] challenges somebody
+duels:
+  min-players: 2
+  max-players: 2
+  # players per team (2 with max-players 4: 2 vs 2)
+  team-size: 1
+  # the kit everybody gets (/sg kit create <name>) - a challenge can choose another one, empty: none
+  kit: ""
+  # seconds a challenge can be accepted
+  invite-seconds: 60
+  lobby-countdown: 5
+  full-countdown: 5
+  # seconds the players stand frozen on their spawn points before the duel begins
+  start-countdown: 3
+  grace-period: 0
+  friendly-fire: false
+  # players who are out watch the rest (otherwise they leave) - others can watch with /sg spectate
+  spectators: true
+  monsters: false
+  # the time of day (fixed, 6000: noon)
+  time: 6000
+  advancements: false
+  # players can break and place every block (otherwise only the blocks below and the ones placed in the game)
+  building: false
+  breakable-blocks: [ cobweb ]
+  placeable-blocks: [ cobweb ]
+  world-border:
+    # the size (blocks) of the world border around the center (0: none)
+    size: 0
+  # fireworks for the winner
+  fireworks: true
+  # seconds after the end until the arena is free again (everybody leaves it)
+  ending-seconds: 5
+
+# games: the game types the module is used in (survival-games, varo, uhc, duels)
 modules:
   inventory-view:
     # who was killed can look at the inventory, armor, health and effects of the killer (a clickable message), the
     # killer at those of the victim and at the end everybody at those of the winners
     enabled: true
-    games: [ survival-games, varo ]
+    games: [ survival-games, varo, uhc, duels ]
   kits:
     # the players choose a kit in the lobby and get it when the game begins - admins save their inventory as kit
     # (/sg kit create <name> [--permission]), kits with a permission need sg.kit.<name>
@@ -215,7 +321,7 @@ modules:
     # players put money (economy plugin via Vault) on a player alive: /sg bounty <player> <amount> - whoever kills him
     # gets all of it, otherwise (he dies otherwise or wins, the round is stopped) it is paid back
     enabled: true
-    games: [ survival-games, varo ]
+    games: [ survival-games, varo, uhc ]
     min: 10
     # the highest bounty a player can put on somebody at once (0: no limit)
     max: 0
@@ -325,6 +431,8 @@ replays:
   games:
     - survival-games
     - varo
+    - uhc
+    - duels
   # the newest recordings that are kept per arena (plugins/SurvivalGames/replays), 0: all of them
   keep: 10
   # the replays that can be watched at the same time - every one has its own world

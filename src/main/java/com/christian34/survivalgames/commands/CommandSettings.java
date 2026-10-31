@@ -112,7 +112,7 @@ public class CommandSettings {
     private static void openTypes(Player player) {
         Menu menu = new Menu(i18n(LangText.GUI_SETTINGS));
         for (GameType type : GameType.values()) {
-            Material icon = type == GameType.VARO ? Material.GRASS_BLOCK : Material.IRON_SWORD;
+            Material icon = type.getIcon();
             menu.button(ItemStack.of(icon), i18n(type.getDisplayName()), List.of(i18n(LangText.GUI_SETTINGS_OPEN)),
                     clicker -> open(clicker, type));
         }

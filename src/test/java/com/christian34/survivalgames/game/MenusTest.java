@@ -126,7 +126,7 @@ class MenusTest extends PluginTestBase {
         execute(steve, "sg");
         click(steve, "Statistics");
         assertEquals("Statistics of Steve", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("Survival Games", "Varo", "Total", "Top players"), forms.buttons());
+        assertEquals(List.of("Survival Games", "Varo", "UHC", "Duels", "Total", "Top players"), forms.buttons());
         assertEquals(List.of("Games: 4", "Wins: 1", "Kills: 6", "Deaths: 3", "K/D: 2.00", "Rating: 1000"),
                 forms.lore("Survival Games"));
         assertEquals(List.of("Games: 1", "Wins: 0", "Kills: 0", "Deaths: 0", "K/D: 0.00"), forms.lore("Varo"));

@@ -6,6 +6,7 @@ import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.SurvivalGame;
+import com.christian34.survivalgames.game.UhcGame;
 import com.christian34.survivalgames.game.VaroGame;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.AdvancedPie;
@@ -16,6 +17,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -43,15 +45,19 @@ public class Telemetry {
             "Multiverse-Inventories");
     private final SurvivalGames plugin;
     /**
-     * since the last bStats submission (every 30 minutes): the finished games (per game type, player count, length and
-     * ending), the features used and the ways the players joined
+     * the finished games since the last bStats submission (every 30 minutes, the line chart adds them up)
      */
     private final AtomicInteger games = new AtomicInteger();
+    /**
+     * since the server started (a pie chart only shows the last submission, it would mostly be empty): the finished
+     * games per game type, player count, length and ending, the features used and the ways the players joined
+     */
     private final Map<String, AtomicInteger> gameTypes = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> gameSizes = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> durations = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> endings = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> varoLengths = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> uhcDurations = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> features = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> joins = new ConcurrentHashMap<>();
 
@@ -128,20 +134,25 @@ public class Telemetry {
         metrics.addCustomChart(new SimplePie("varo_play_time", () ->
                 hasArena(GameType.VARO) ? Integer.toString(config().getInt("varo.play-time")) : null));
         metrics.addCustomChart(new AdvancedPie("varo_rules", this::varoRules));
+        metrics.addCustomChart(new AdvancedPie("uhc_scenarios", this::uhcScenarios));
         // what is going on right now
         metrics.addCustomChart(new SingleLineChart("players_survival_games", () -> players(GameType.SURVIVAL_GAMES)));
         metrics.addCustomChart(new SingleLineChart("players_varo", () -> players(GameType.VARO)));
+        metrics.addCustomChart(new SingleLineChart("players_uhc", () -> players(GameType.UHC)));
+        metrics.addCustomChart(new SingleLineChart("players_duels", () -> players(GameType.DUELS)));
         metrics.addCustomChart(new SingleLineChart("varo_running", () -> varoDays().values().stream().mapToInt(i -> i).sum()));
         metrics.addCustomChart(new AdvancedPie("varo_days", this::varoDays));
         // what happened since the last submission
         metrics.addCustomChart(new SingleLineChart("games_played", () -> games.getAndSet(0)));
-        metrics.addCustomChart(new AdvancedPie("game_types_played", () -> drain(gameTypes)));
-        metrics.addCustomChart(new AdvancedPie("players_per_game", () -> drain(gameSizes)));
-        metrics.addCustomChart(new AdvancedPie("survival_games_duration", () -> drain(durations)));
-        metrics.addCustomChart(new AdvancedPie("survival_games_endings", () -> drain(endings)));
-        metrics.addCustomChart(new AdvancedPie("varo_length", () -> drain(varoLengths)));
-        metrics.addCustomChart(new AdvancedPie("feature_usage", () -> drain(features)));
-        metrics.addCustomChart(new AdvancedPie("join_methods", () -> drain(joins)));
+        // what happened since the server started
+        metrics.addCustomChart(new AdvancedPie("game_types_played", () -> counts(gameTypes)));
+        metrics.addCustomChart(new AdvancedPie("players_per_game", () -> counts(gameSizes)));
+        metrics.addCustomChart(new AdvancedPie("survival_games_duration", () -> counts(durations)));
+        metrics.addCustomChart(new AdvancedPie("survival_games_endings", () -> counts(endings)));
+        metrics.addCustomChart(new AdvancedPie("varo_length", () -> counts(varoLengths)));
+        metrics.addCustomChart(new AdvancedPie("uhc_duration", () -> counts(uhcDurations)));
+        metrics.addCustomChart(new AdvancedPie("feature_usage", () -> counts(features)));
+        metrics.addCustomChart(new AdvancedPie("join_methods", () -> counts(joins)));
     }
 
     // ---------------------------------------------------------------- events
@@ -153,7 +164,9 @@ public class Telemetry {
         games.incrementAndGet();
         count(gameTypes, game.getType().getKey());
         count(gameSizes, playerBucket(game.getParticipants().size()));
-        if (game instanceof SurvivalGame survivalGame) {
+        if (game instanceof UhcGame uhc) {
+            count(uhcDurations, minuteBucket(uhc.getSeconds() / 60));
+        } else if (game.getType() == GameType.SURVIVAL_GAMES && game instanceof SurvivalGame survivalGame) {
             count(durations, minuteBucket(survivalGame.getSeconds() / 60));
             count(endings, draw ? "draw" : survivalGame.isDeathmatch() ? "in the deathmatch" : "before the deathmatch");
         } else if (game instanceof VaroGame varo) {
@@ -184,12 +197,11 @@ public class Telemetry {
     }
 
     /**
-     * @return the game types the server has arenas for: one of them, both or none
+     * @return the game types the server has arenas for (e.g. survival-games + uhc), none if there are no arenas
      */
     String usedGameTypes() {
-        boolean survivalGames = hasArena(GameType.SURVIVAL_GAMES), varo = hasArena(GameType.VARO);
-        if (survivalGames && varo) return "both";
-        return survivalGames ? GameType.SURVIVAL_GAMES.getKey() : varo ? GameType.VARO.getKey() : "none";
+        List<String> types = Arrays.stream(GameType.values()).filter(this::hasArena).map(GameType::getKey).toList();
+        return types.isEmpty() ? "none" : String.join(" + ", types);
     }
 
     /**
@@ -216,8 +228,8 @@ public class Telemetry {
     }
 
     /**
-     * @return the game types every module is used in (modules.&lt;module&gt; in config.yml): one of them, both or
-     * disabled
+     * @return the game types every module is used in (modules.&lt;module&gt; in config.yml, e.g. survival-games +
+     * varo) or disabled
      */
     Map<String, Map<String, Integer>> modules() {
         Map<String, Map<String, Integer>> values = new HashMap<>();
@@ -228,7 +240,7 @@ public class Telemetry {
                     .filter(type -> section.getStringList(module + ".games").stream().anyMatch(type::equalsIgnoreCase))
                     .toList();
             String use = !section.getBoolean(module + ".enabled", true) || types.isEmpty() ? "disabled"
-                    : types.size() > 1 ? "both" : types.getFirst();
+                    : String.join(" + ", types);
             values.put(module, Map.of(use, 1));
         }
         return values;
@@ -254,6 +266,19 @@ public class Telemetry {
         put(values, "join npcs", plugin.getNpcSupport().getLinks().size());
         put(values, "leaderboard holograms", plugin.getLeaderboards().getHolograms().size());
         put(values, "leaderboard signs", plugin.getLeaderboards().getSigns().size());
+        return values;
+    }
+
+    /**
+     * @return the scenarios of UHC that are turned on (only servers with a UHC arena)
+     */
+    Map<String, Integer> uhcScenarios() {
+        Map<String, Integer> values = new HashMap<>();
+        if (!hasArena(GameType.UHC)) return values;
+        for (String scenario : config().getData().getStringList("uhc.scenarios")) {
+            values.put(scenario.trim().toLowerCase(Locale.ROOT), 1);
+        }
+        if (values.isEmpty()) values.put("none", 1);
         return values;
     }
 
@@ -302,15 +327,16 @@ public class Telemetry {
     }
 
     /**
-     * @return the counts since the last submission, the counters start again at 0
+     * @return the counts since the server started
      */
-    Map<String, Integer> drain(Chart chart) {
-        return drain(switch (chart) {
+    Map<String, Integer> counts(Chart chart) {
+        return counts(switch (chart) {
             case GAME_TYPES -> gameTypes;
             case GAME_SIZES -> gameSizes;
             case DURATIONS -> durations;
             case ENDINGS -> endings;
             case VARO_LENGTHS -> varoLengths;
+            case UHC_DURATIONS -> uhcDurations;
             case FEATURES -> features;
             case JOINS -> joins;
         });
@@ -320,15 +346,12 @@ public class Telemetry {
      * the charts with counters (for the tests)
      */
     enum Chart {
-        GAME_TYPES, GAME_SIZES, DURATIONS, ENDINGS, VARO_LENGTHS, FEATURES, JOINS
+        GAME_TYPES, GAME_SIZES, DURATIONS, ENDINGS, VARO_LENGTHS, UHC_DURATIONS, FEATURES, JOINS
     }
 
-    static Map<String, Integer> drain(Map<String, AtomicInteger> counters) {
+    static Map<String, Integer> counts(Map<String, AtomicInteger> counters) {
         Map<String, Integer> values = new HashMap<>();
-        counters.forEach((key, count) -> {
-            int value = count.getAndSet(0);
-            if (value > 0) values.put(key, value);
-        });
+        counters.forEach((key, count) -> values.put(key, count.get()));
         return values;
     }
 

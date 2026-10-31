@@ -401,7 +401,7 @@ public class SurvivalGame extends Game {
         for (GamePlayer member : getPlayers()) {
             Participant participant = getParticipant(member.getPlayer().getUniqueId());
             if (participant != null && participant.isAlive()) {
-                member.getPlayer().teleport(getSpawn(participant));
+                member.getPlayer().teleport(getDeathmatchSpawn(participant));
                 member.getPlayer().setFallDistance(0);
             }
         }
@@ -416,6 +416,13 @@ public class SurvivalGame extends Game {
         broadcast(LangText.DEATHMATCH_STARTED, size);
         showTitle(net.kyori.adventure.title.Title.title(i18n(LangText.DEATHMATCH_TITLE), Component.empty()),
                 Sound.ENTITY_ENDER_DRAGON_GROWL);
+    }
+
+    /**
+     * @return where the participant starts the deathmatch: his spawn point
+     */
+    protected Location getDeathmatchSpawn(Participant participant) {
+        return getSpawn(participant);
     }
 
     @Override

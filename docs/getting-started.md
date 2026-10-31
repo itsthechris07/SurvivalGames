@@ -28,7 +28,8 @@ Every arena plays on a map – a world folder that stays untouched; each game pl
 - **A generated world:** `/sg arena create <name> --generate [--seed <seed>]` – a new random world for every game
   (good for Varo).
 
-The game type is Survival Games unless you add `--type varo`. You can change it later with `/sg arena <name> type`.
+The game type is Survival Games unless you add `--type varo`, `--type uhc` or `--type duels` (a [UHC](uhc.md) arena gets a generated
+world). You can change it later with `/sg arena <name> type`.
 
 ## 2. Setting up the arena
 

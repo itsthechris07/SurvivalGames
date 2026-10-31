@@ -5,6 +5,7 @@ import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.commands.CommandManager;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.Game;
+import com.christian34.survivalgames.game.Duels;
 import com.christian34.survivalgames.game.GameManager;
 import com.christian34.survivalgames.game.Loot;
 import com.christian34.survivalgames.game.SignManager;
@@ -23,6 +24,7 @@ import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.listeners.PlayerListener;
 import com.christian34.survivalgames.listeners.ProtectionListener;
 import com.christian34.survivalgames.listeners.TeleportListener;
+import com.christian34.survivalgames.listeners.UhcListener;
 import com.christian34.survivalgames.modules.Backpack;
 import com.christian34.survivalgames.modules.Bounty;
 import com.christian34.survivalgames.modules.BuildMode;
@@ -79,12 +81,14 @@ public class SurvivalGames extends JavaPlugin {
     private BuildMode buildMode;
     private Backpack backpack;
     private GravityGrenade gravityGrenade;
+    private UhcListener uhcListener;
     private Sidebar sidebar;
     private StatsManager stats;
     private Tracker tracker;
     private SupplyDrop supplyDrop;
     private InventoryView inventoryView;
     private Kits kits;
+    private Duels duels;
     private Bounty bounty;
     private Sponsor sponsor;
     private OfflineNpc offlineNpc;
@@ -120,6 +124,7 @@ public class SurvivalGames extends JavaPlugin {
         this.leaderboards = new Leaderboards(this);
         this.inventoryView = new InventoryView(this);
         this.kits = new Kits(this);
+        this.duels = new Duels(this);
         this.bounty = new Bounty(this);
         this.sponsor = new Sponsor(this);
         this.offlineNpc = new OfflineNpc(this);
@@ -133,6 +138,7 @@ public class SurvivalGames extends JavaPlugin {
         this.buildMode = new BuildMode();
         this.backpack = new Backpack(this);
         this.gravityGrenade = new GravityGrenade(this);
+        this.uhcListener = new UhcListener(this);
         this.sidebar = new Sidebar(this);
         this.tracker = new Tracker(this);
         this.supplyDrop = new SupplyDrop(this);
@@ -152,7 +158,7 @@ public class SurvivalGames extends JavaPlugin {
         }
         register(new PlayerListener(this), new ProtectionListener(this), new TeleportListener(this),
                 new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this),
-                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays);
+                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays, uhcListener);
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new SgExpansion(this).register();
         }
@@ -184,6 +190,7 @@ public class SurvivalGames extends JavaPlugin {
         if (buildMode != null) buildMode.restoreAll();
         if (backpack != null) backpack.removeRecipe();
         if (gravityGrenade != null) gravityGrenade.removeRecipe();
+        if (uhcListener != null) uhcListener.removeRecipe();
         if (offlineNpc != null) offlineNpc.removeAll();
         // after the games: their last statistics are saved
         if (stats != null) stats.stop();
@@ -329,6 +336,10 @@ public class SurvivalGames extends JavaPlugin {
 
     public InventoryView getInventoryView() {
         return inventoryView;
+    }
+
+    public Duels getDuels() {
+        return duels;
     }
 
     public Kits getKits() {

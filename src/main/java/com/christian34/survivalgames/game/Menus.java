@@ -144,7 +144,7 @@ public final class Menus {
                 PlayerStats typeStats = stats.getOrDefault(type.getKey(), PlayerStats.empty(uuid, player.getName()));
                 List<Component> lore = statsLore(typeStats);
                 if (manager.isRated(type)) lore.add(i18n(LangText.GUI_STATS_RATING, typeStats.get(Stat.RATING)));
-                menu.button(ItemStack.of(type == GameType.VARO ? Material.GRASS_BLOCK : Material.IRON_SWORD),
+                menu.button(ItemStack.of(type.getIcon()),
                         i18n(type.getDisplayName()), lore, Menus::openStats);
             }
             menu.button(ItemStack.of(Material.BOOK), i18n(LangText.STATS_TOTAL),
