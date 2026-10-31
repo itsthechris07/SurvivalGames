@@ -41,7 +41,7 @@ public class Tracker {
         if (!plugin.isModuleEnabled(MODULE, game) || hasTracker(player.getInventory())) return;
         player.getInventory().addItem(Items.create(Material.COMPASS, i18n(LangText.ITEM_TRACKER),
                 I.itemLines(LangText.ITEM_TRACKER_LORE), Items.TRACKER));
-        player.sendMessage(I.prefixed(LangText.TRACKER_GIVEN));
+        player.sendMessage(I.prefixed(player, LangText.TRACKER_GIVEN));
     }
 
     private static boolean hasTracker(PlayerInventory inventory) {

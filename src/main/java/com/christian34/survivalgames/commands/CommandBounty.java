@@ -37,7 +37,7 @@ public class CommandBounty {
         Game game = plugin().getGameManager().findGame(player.getUniqueId());
         Bounty bounty = plugin().getBounty();
         if (game == null || !bounty.isUsed(game)) {
-            player.sendMessage(I.prefixed(game == null ? LangText.NOT_IN_GAME : LangText.BOUNTY_DISABLED));
+            player.sendMessage(I.prefixed(player, game == null ? LangText.NOT_IN_GAME : LangText.BOUNTY_DISABLED));
             return;
         }
         if (name == null) {
@@ -46,11 +46,11 @@ public class CommandBounty {
         }
         Participant target = game.findParticipant(name);
         if (target == null) {
-            player.sendMessage(I.prefixed(LangText.BOUNTY_INVALID_TARGET, name));
+            player.sendMessage(I.prefixed(player, LangText.BOUNTY_INVALID_TARGET, name));
             return;
         }
         if (amount == null) {
-            player.sendMessage(I.prefixed(LangText.BOUNTY_OF, target.getName(),
+            player.sendMessage(I.prefixed(player, LangText.BOUNTY_OF, target.getName(),
                     plugin().getEconomySupport().format(bounty.getTotal(game, target.getUuid()))));
             return;
         }
@@ -63,7 +63,7 @@ public class CommandBounty {
     private static void list(CommandSender sender, Game game) {
         Map<UUID, Map<UUID, Double>> bounties = game.getBounties();
         if (bounties.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.BOUNTY_NONE));
+            sender.sendMessage(I.prefixed(sender, LangText.BOUNTY_NONE));
             return;
         }
         Bounty bounty = plugin().getBounty();

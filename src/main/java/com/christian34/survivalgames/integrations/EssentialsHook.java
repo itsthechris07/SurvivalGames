@@ -100,7 +100,7 @@ class EssentialsHook implements EssentialsSupport, Listener {
         e.setCancelled(true);
         IUser controller = e.getController();
         Player receiver = controller != null && controller.getBase() != null ? controller.getBase() : player;
-        receiver.sendMessage(I.prefixed(LangText.ESSENTIALS_BLOCKED_IN_GAME));
+        receiver.sendMessage(I.prefixed(receiver, LangText.ESSENTIALS_BLOCKED_IN_GAME));
     }
 
     /**
@@ -112,7 +112,7 @@ class EssentialsHook implements EssentialsSupport, Listener {
         if (player == null || e.getTarget() == null) return;
         if (EssentialsSupport.blocksTeleport(player, e.getTarget().getLocation())) {
             e.setCancelled(true);
-            player.sendMessage(I.prefixed(LangText.TELEPORT_INTO_GAME_DENIED));
+            player.sendMessage(I.prefixed(player, LangText.TELEPORT_INTO_GAME_DENIED));
         }
     }
 

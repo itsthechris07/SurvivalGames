@@ -115,7 +115,7 @@ public class EconomySupport {
         try {
             economy.deposit(player, amount);
             if (online != null) {
-                online.sendMessage(I.prefixed(LangText.REWARD, economy.format(amount), I.i18n(reward.reason)));
+                online.sendMessage(I.prefixed(online, LangText.REWARD, economy.format(amount), I.i18n(reward.reason)));
             }
         } catch (Exception | LinkageError ex) {
             // a broken economy plugin mustn't break the game

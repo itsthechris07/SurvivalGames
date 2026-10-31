@@ -151,17 +151,17 @@ public class Restrictions implements Listener {
                 ItemStack item = contents[slot];
                 if (isBanned(item)) {
                     inventory.setItem(slot, null);
-                    player.sendMessage(I.prefixed(LangText.RESTRICTION_REMOVED, Items.name(item)));
+                    player.sendMessage(I.prefixed(player, LangText.RESTRICTION_REMOVED, Items.name(item)));
                 } else if (limitEnchantments(item)) {
                     inventory.setItem(slot, item);
-                    player.sendMessage(I.prefixed(LangText.RESTRICTION_ENCHANTMENTS, Items.name(item)));
+                    player.sendMessage(I.prefixed(player, LangText.RESTRICTION_ENCHANTMENTS, Items.name(item)));
                 }
             }
         }
     }
 
     private void deny(Player player, ItemStack item) {
-        player.sendMessage(I.prefixed(LangText.RESTRICTION_BANNED, Items.name(item)));
+        player.sendMessage(I.prefixed(player, LangText.RESTRICTION_BANNED, Items.name(item)));
     }
 
     @EventHandler

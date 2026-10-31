@@ -108,7 +108,7 @@ public final class AdminMenus {
         // the name has to be typed
         menu.button(icon(Material.WRITABLE_BOOK), i18n(LangText.GUI_ARENA_CREATE),
                 I.itemLines(LangText.GUI_ARENA_CREATE_LORE),
-                clicker -> clicker.sendMessage(I.prefixed(LangText.ARENA_CREATE_HINT)));
+                clicker -> clicker.sendMessage(I.prefixed(clicker, LangText.ARENA_CREATE_HINT)));
         back(menu, AdminMenus::open);
         menu.show(player);
     }
@@ -376,7 +376,7 @@ public final class AdminMenus {
                 lore.add(i18n(LangText.SCOREBOARD_STRIKES, participant.getStrikes().size()));
                 lore.add(i18n(LangText.GUI_CONTROL_STRIKE));
                 // the reason has to be typed
-                action = clicker -> clicker.sendMessage(I.prefixed(LangText.STRIKE_HINT, arena.getName(), name));
+                action = clicker -> clicker.sendMessage(I.prefixed(clicker, LangText.STRIKE_HINT, arena.getName(), name));
             }
             menu.button(Menus.head(participant.getPlayer()), Component.text(name,
                     participant.isAlive() ? NamedTextColor.GREEN : NamedTextColor.RED), lore, action);

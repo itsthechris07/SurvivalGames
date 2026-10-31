@@ -69,15 +69,15 @@ public class Bounty {
      */
     public void set(Player setter, Game game, Participant target, double amount) {
         if (!isUsed(game)) {
-            setter.sendMessage(I.prefixed(LangText.BOUNTY_DISABLED));
+            setter.sendMessage(I.prefixed(setter, LangText.BOUNTY_DISABLED));
             return;
         }
         if (game.getState() != GameState.RUNNING) {
-            setter.sendMessage(I.prefixed(LangText.BOUNTY_NOT_NOW));
+            setter.sendMessage(I.prefixed(setter, LangText.BOUNTY_NOT_NOW));
             return;
         }
         if (economy().getProvider() == null) {
-            setter.sendMessage(I.prefixed(LangText.BOUNTY_NO_ECONOMY));
+            setter.sendMessage(I.prefixed(setter, LangText.BOUNTY_NO_ECONOMY));
             return;
         }
         GameTeam team = game.getTeam(setter.getUniqueId());
@@ -85,18 +85,18 @@ public class Bounty {
         // no bounty on himself or his team mates (he would get it back by killing them)
         boolean mate = self != null && self.isAlive() && team != null && team.isMember(target.getUuid());
         if (!target.isAlive() || target.getUuid().equals(setter.getUniqueId()) || mate) {
-            setter.sendMessage(I.prefixed(LangText.BOUNTY_INVALID_TARGET, target.getName()));
+            setter.sendMessage(I.prefixed(setter, LangText.BOUNTY_INVALID_TARGET, target.getName()));
             return;
         }
         double min = Math.max(0.01, config().getDouble("min", 10));
         double max = config().getDouble("max", 0);
         if (!Double.isFinite(amount) || amount < min || max > 0 && amount > max) {
-            setter.sendMessage(I.prefixed(LangText.BOUNTY_AMOUNT, economy().format(min),
+            setter.sendMessage(I.prefixed(setter, LangText.BOUNTY_AMOUNT, economy().format(min),
                     max > 0 ? economy().format(max) : "-"));
             return;
         }
         if (!economy().withdraw(setter, amount)) {
-            setter.sendMessage(I.prefixed(LangText.BOUNTY_NOT_ENOUGH_MONEY, economy().format(amount)));
+            setter.sendMessage(I.prefixed(setter, LangText.BOUNTY_NOT_ENOUGH_MONEY, economy().format(amount)));
             return;
         }
         game.getBounties().computeIfAbsent(target.getUuid(), key -> new ConcurrentHashMap<>())
@@ -143,7 +143,7 @@ public class Bounty {
         bounties.forEach((setter, amount) -> {
             if (!economy().pay(setter, amount)) return;
             Player player = Bukkit.getPlayer(setter);
-            if (player != null) player.sendMessage(I.prefixed(LangText.BOUNTY_REFUNDED, economy().format(amount), target));
+            if (player != null) player.sendMessage(I.prefixed(player, LangText.BOUNTY_REFUNDED, economy().format(amount), target));
         });
     }
 

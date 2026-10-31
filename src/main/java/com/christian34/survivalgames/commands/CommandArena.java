@@ -53,7 +53,7 @@ public class CommandArena {
     }
 
     private static void send(CommandSender sender, LangText message, Object... arguments) {
-        sender.sendMessage(I.prefixed(message, arguments));
+        sender.sendMessage(I.prefixed(sender, message, arguments));
     }
 
     @Suggestions("importable-worlds")
@@ -202,7 +202,7 @@ public class CommandArena {
     public void editCmd(Player player, @Argument("arena") Arena arena) {
         if (!checkFree(player)) return;
         if (!arena.isPlayable()) {
-            arena.getMissingSetup().forEach(missing -> player.sendMessage(I.prefixed(missing)));
+            arena.getMissingSetup().forEach(missing -> player.sendMessage(I.prefixed(player, missing)));
             return;
         }
         try {
@@ -495,7 +495,7 @@ public class CommandArena {
             return;
         }
         if (!arena.isPlayable()) {
-            arena.getMissingSetup().forEach(missing -> sender.sendMessage(I.prefixed(missing)));
+            arena.getMissingSetup().forEach(missing -> sender.sendMessage(I.prefixed(sender, missing)));
             return;
         }
         try {

@@ -39,29 +39,29 @@ public class CommandLeaderboard {
                           @Argument(value = "type", suggestions = "game-types") @Nullable String typeName) {
         Stat stat = Stat.parse(statName);
         if (stat == null) {
-            player.sendMessage(I.prefixed(LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
+            player.sendMessage(I.prefixed(player, LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
             return;
         }
         GameType type = typeName == null ? null : GameType.parse(typeName);
         if (typeName != null && type == null) {
-            player.sendMessage(I.prefixed(LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
+            player.sendMessage(I.prefixed(player, LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
             return;
         }
         if (!SurvivalGames.getInstance().getStats().isEnabled()) {
-            player.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+            player.sendMessage(I.prefixed(player, LangText.STATS_DISABLED));
             return;
         }
         // the top line at the height of the head
         Location location = player.getLocation().toBlockLocation().add(0.5, 1, 0.5);
         Leaderboards.Hologram hologram = leaderboards().create(location, new Leaderboards.Board(stat, type));
-        player.sendMessage(I.prefixed(LangText.LEADERBOARD_CREATED, hologram.board().getDisplayName()));
+        player.sendMessage(I.prefixed(player, LangText.LEADERBOARD_CREATED, hologram.board().getDisplayName()));
     }
 
     @Command(LEADERBOARD + " remove")
     @CommandDescription("command_leaderboard_remove")
     public void removeCmd(Player player) {
         Leaderboards.Hologram removed = leaderboards().removeNearest(player.getLocation());
-        player.sendMessage(I.prefixed(removed == null ? LangText.LEADERBOARD_NONE_NEARBY : LangText.LEADERBOARD_REMOVED));
+        player.sendMessage(I.prefixed(player, removed == null ? LangText.LEADERBOARD_NONE_NEARBY : LangText.LEADERBOARD_REMOVED));
     }
 
     @Command(LEADERBOARD + " list")
@@ -70,7 +70,7 @@ public class CommandLeaderboard {
         List<Leaderboards.Hologram> holograms = leaderboards().getHolograms();
         List<Leaderboards.TopSign> signs = leaderboards().getSigns();
         if (holograms.isEmpty() && signs.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.LEADERBOARD_LIST_EMPTY));
+            sender.sendMessage(I.prefixed(sender, LangText.LEADERBOARD_LIST_EMPTY));
             return;
         }
         sender.sendMessage(I.i18n(LangText.LEADERBOARD_LIST_TITLE));

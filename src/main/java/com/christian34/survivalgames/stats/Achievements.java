@@ -49,7 +49,7 @@ public class Achievements {
         plugin.getStats().unlock(uuid, name, achievement.getKey(), () -> {
             Player player = Bukkit.getPlayer(uuid);
             if (player == null) return;
-            player.sendMessage(I.prefixed(LangText.ACHIEVEMENT_UNLOCKED, I.i18n(achievement.getDisplayName()),
+            player.sendMessage(I.prefixed(player, LangText.ACHIEVEMENT_UNLOCKED, I.i18n(achievement.getDisplayName()),
                     I.i18n(achievement.getDescription())));
             player.playSound(player, Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.6f, 1f);
         });

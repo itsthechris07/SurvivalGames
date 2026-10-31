@@ -70,7 +70,7 @@ public class Duels {
     public void queue(Player player) {
         GamePlayer gamePlayer = plugin.getUser(player);
         if (gamePlayer.getGame() != null) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
+            player.sendMessage(I.prefixed(GameType.DUELS, LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
             return;
         }
         DuelsGame game = plugin.getGameManager().getGames().stream()
@@ -78,7 +78,7 @@ public class Duels {
                 .map(DuelsGame.class::cast)
                 .max(Comparator.comparingInt(other -> other.getParticipants().size())).orElse(null);
         if (game == null) {
-            player.sendMessage(I.prefixed(LangText.DUEL_NO_ARENA));
+            player.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_ARENA));
             return;
         }
         plugin.getTelemetry().joined(Telemetry.Join.COMMAND);
@@ -92,26 +92,26 @@ public class Duels {
      */
     public void challenge(Player player, Player target, @Nullable String kitName) {
         if (player.equals(target)) {
-            player.sendMessage(I.prefixed(LangText.DUEL_SELF));
+            player.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_SELF));
             return;
         }
         if (plugin.getUser(player).getGame() != null) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, plugin.getUser(player).getGame().getArena().getName()));
+            player.sendMessage(I.prefixed(GameType.DUELS, LangText.ALREADY_IN_GAME, plugin.getUser(player).getGame().getArena().getName()));
             return;
         }
         if (plugin.getUser(target).getGame() != null) {
-            player.sendMessage(I.prefixed(LangText.DUEL_BUSY, target.getName()));
+            player.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_BUSY, target.getName()));
             return;
         }
         if (!hasDuels()) {
-            player.sendMessage(I.prefixed(LangText.DUEL_NO_ARENA));
+            player.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_ARENA));
             return;
         }
         String kit = null;
         if (kitName != null) {
             Kits.Kit found = plugin.getKits().get(kitName);
             if (found == null) {
-                player.sendMessage(I.prefixed(LangText.KIT_NOT_FOUND, kitName));
+                player.sendMessage(I.prefixed(GameType.DUELS, LangText.KIT_NOT_FOUND, kitName));
                 return;
             }
             kit = found.name();
@@ -119,9 +119,9 @@ public class Duels {
         long seconds = Math.max(10, plugin.getFileManager().getConfigFile().getInt("duels.invite-seconds"));
         challenges.computeIfAbsent(target.getUniqueId(), uuid -> new HashMap<>()).put(player.getUniqueId(),
                 new Challenge(player.getUniqueId(), player.getName(), kit, clock.millis() + seconds * 1000));
-        player.sendMessage(I.prefixed(LangText.DUEL_SENT, target.getName(), seconds));
-        target.sendMessage(kit == null ? I.prefixed(LangText.DUEL_RECEIVED, player.getName(), seconds)
-                : I.prefixed(LangText.DUEL_RECEIVED_KIT, player.getName(), seconds, kit));
+        player.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_SENT, target.getName(), seconds));
+        target.sendMessage(kit == null ? I.prefixed(GameType.DUELS, LangText.DUEL_RECEIVED, player.getName(), seconds)
+                : I.prefixed(GameType.DUELS, LangText.DUEL_RECEIVED_KIT, player.getName(), seconds, kit));
     }
 
     /**
@@ -146,24 +146,24 @@ public class Duels {
         Challenge challenge = take(target, fromName);
         Player challenger = challenge == null ? null : Bukkit.getPlayer(challenge.from());
         if (challenge == null || challenger == null) {
-            target.sendMessage(I.prefixed(LangText.DUEL_NO_CHALLENGE, fromName));
+            target.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_CHALLENGE, fromName));
             return;
         }
         for (Player player : new Player[]{target, challenger}) {
             Game game = plugin.getUser(player).getGame();
             if (game != null) {
-                target.sendMessage(I.prefixed(LangText.DUEL_BUSY, player.getName()));
+                target.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_BUSY, player.getName()));
                 return;
             }
         }
         DuelsGame game = findFreeGame();
         if (game == null) {
-            target.sendMessage(I.prefixed(LangText.DUEL_NO_ARENA));
-            challenger.sendMessage(I.prefixed(LangText.DUEL_NO_ARENA));
+            target.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_ARENA));
+            challenger.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_ARENA));
             return;
         }
         game.reserve(Set.of(target.getUniqueId(), challenger.getUniqueId()), challenge.kit());
-        challenger.sendMessage(I.prefixed(LangText.DUEL_ACCEPTED, target.getName()));
+        challenger.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_ACCEPTED, target.getName()));
         plugin.getGameManager().join(plugin.getUser(challenger), game.getArena());
         plugin.getGameManager().join(plugin.getUser(target), game.getArena());
     }
@@ -171,12 +171,12 @@ public class Duels {
     public void deny(Player target, String fromName) {
         Challenge challenge = take(target, fromName);
         if (challenge == null) {
-            target.sendMessage(I.prefixed(LangText.DUEL_NO_CHALLENGE, fromName));
+            target.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_CHALLENGE, fromName));
             return;
         }
-        target.sendMessage(I.prefixed(LangText.DUEL_DENIED_SELF, challenge.fromName()));
+        target.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_DENIED_SELF, challenge.fromName()));
         Player challenger = Bukkit.getPlayer(challenge.from());
-        if (challenger != null) challenger.sendMessage(I.prefixed(LangText.DUEL_DENIED, target.getName()));
+        if (challenger != null) challenger.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_DENIED, target.getName()));
     }
 
     /**

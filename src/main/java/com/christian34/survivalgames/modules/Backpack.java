@@ -185,7 +185,7 @@ public class Backpack implements Listener {
         Game game = plugin.getUser(e.getPlayer()).getGame();
         if (!plugin.isModuleEnabled(MODULE, game) || game.getState() != GameState.RUNNING
                 || plugin.getUser(e.getPlayer()).isSpectator()) {
-            e.getPlayer().sendMessage(I.prefixed(LangText.BACKPACK_ONLY_INGAME));
+            e.getPlayer().sendMessage(I.prefixed(e.getPlayer(), LangText.BACKPACK_ONLY_INGAME));
             return;
         }
         open(game, e.getPlayer());

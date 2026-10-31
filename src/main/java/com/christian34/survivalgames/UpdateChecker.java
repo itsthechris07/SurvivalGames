@@ -206,10 +206,10 @@ public class UpdateChecker implements Listener {
         if (found == null || !player.isOnline() || !player.hasPermission(SurvivalGames.ADMIN_PERMISSION)) return;
         Component download = I.button(LangText.UPDATE_DOWNLOAD, ClickEvent.openUrl(found.url()))
                 .hoverEvent(HoverEvent.showText(I.i18n(LangText.UPDATE_DOWNLOAD_HOVER, found.url())));
-        player.sendMessage(I.prefixed(LangText.UPDATE_AVAILABLE, currentVersion, found.version())
+        player.sendMessage(I.prefixed(player, LangText.UPDATE_AVAILABLE, currentVersion, found.version())
                 .appendSpace().append(download));
         if (found.isOutdated()) {
-            player.sendMessage(I.prefixed(LangText.UPDATE_OUTDATED, found.behind(), found.daysSinceFirst()));
+            player.sendMessage(I.prefixed(player, LangText.UPDATE_OUTDATED, found.behind(), found.daysSinceFirst()));
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.5f);
         }
     }

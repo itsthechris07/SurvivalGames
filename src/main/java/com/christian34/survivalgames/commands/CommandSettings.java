@@ -88,12 +88,12 @@ public class CommandSettings {
                             @Argument("value") @Greedy @Nullable String value) {
         GameType type = typeName == null ? null : GameType.parse(typeName);
         if (typeName != null && type == null) {
-            sender.sendMessage(I.prefixed(LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
+            sender.sendMessage(I.prefixed(sender, LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
             return;
         }
         if (setting == null || value == null) {
             if (!(sender instanceof Player player)) {
-                sender.sendMessage(I.prefixed(LangText.ONLY_PLAYERS));
+                sender.sendMessage(I.prefixed(sender, LangText.ONLY_PLAYERS));
             } else if (type == null) {
                 openTypes(player);
             } else if (setting == null) {
@@ -157,8 +157,8 @@ public class CommandSettings {
                     open(clicker, type);
                 });
         if (!SurvivalGames.getInstance().getBedrockForms().ask(player, question)) {
-            player.sendMessage(I.prefixed(LangText.SETTINGS_TYPE_VALUE, type.getKey(), setting));
-            if (list) player.sendMessage(I.prefixed(LangText.SETTINGS_LIST_HINT));
+            player.sendMessage(I.prefixed(player, LangText.SETTINGS_TYPE_VALUE, type.getKey(), setting));
+            if (list) player.sendMessage(I.prefixed(player, LangText.SETTINGS_LIST_HINT));
         }
     }
 
@@ -170,17 +170,17 @@ public class CommandSettings {
         ConfigurationSection section = type == null ? null : config().getSection(type.getKey());
         Object old = section == null ? null : section.get(setting);
         if (!isSetting(setting, old)) {
-            sender.sendMessage(I.prefixed(LangText.SETTINGS_UNKNOWN, setting));
+            sender.sendMessage(I.prefixed(sender, LangText.SETTINGS_UNKNOWN, setting));
             return;
         }
         Object value = parse(setting, old, text.trim());
         if (value == null) {
-            sender.sendMessage(I.prefixed(LangText.SETTINGS_INVALID_VALUE, text, setting));
+            sender.sendMessage(I.prefixed(sender, LangText.SETTINGS_INVALID_VALUE, text, setting));
             return;
         }
         section.set(setting, value);
         config().save();
-        sender.sendMessage(I.prefixed(LangText.SETTINGS_CHANGED, setting, format(value), type.getKey()));
+        sender.sendMessage(I.prefixed(sender, LangText.SETTINGS_CHANGED, setting, format(value), type.getKey()));
     }
 
     /**

@@ -7,7 +7,7 @@ main: com.christian34.survivalgames.SurvivalGames
 api-version: "1.21.11"
 # commands are registered by cloud (commands/CommandManager)
 
-softdepend: [Vault, PlaceholderAPI, MiniPlaceholders, Parties, Spigot-Party-API-PAF, Citizens, FancyNpcs, floodgate, TAB, Essentials, Multiverse-Core, Multiverse-Inventories]
+softdepend: [Vault, PlaceholderAPI, MiniPlaceholders, Parties, Spigot-Party-API-PAF, Citizens, FancyNpcs, floodgate, TAB, Essentials, Multiverse-Core, Multiverse-Inventories, EasyPrefix]
 
 permissions:
   sg.admin:

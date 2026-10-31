@@ -25,7 +25,8 @@ The lobby, countdowns, join signs, NPCs, teams, spectators, statistics and repla
   (`pregenerate`). A round can start before it is done – the rest is generated when somebody gets there.
 - **Scatter:** every team starts at a random place inside the world border, at least `scatter-distance` blocks away
   from the other teams (less if there is no room), on open ground: never in water or lava and never on or under a
-  tree. The members of a team start next to each other (in a small circle around the place of the team, looking the
+  tree. Up to 200 random places are tried per team; if the world has no dry land there (an ocean), the team starts
+  on a small stone platform at the center. The members of a team start next to each other (in a small circle around the place of the team, looking the
   same way), not inside each other. Until the start countdown is over everybody stands still.
 - **Time of day:** with `time: -1` (the default) day and night change – the round starts in the morning, however long
   the lobby took. A time like `6000` keeps it at noon.

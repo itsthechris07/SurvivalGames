@@ -53,7 +53,7 @@ public class CommandGame {
     }
 
     private static void send(CommandSender sender, LangText message, Object... arguments) {
-        sender.sendMessage(I.prefixed(message, arguments));
+        sender.sendMessage(I.prefixed(sender, message, arguments));
     }
 
     /**

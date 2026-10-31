@@ -161,16 +161,16 @@ public class Kits {
         Participant participant = game.getParticipant(player.getUniqueId());
         if (participant == null || !isUsed(game)
                 || game.getState() != GameState.LOBBY && game.getState() != GameState.STARTING) {
-            player.sendMessage(I.prefixed(LangText.KIT_NOT_NOW));
+            player.sendMessage(I.prefixed(player, LangText.KIT_NOT_NOW));
             return;
         }
         if (kit != null && !kit.mayUse(player)) {
-            player.sendMessage(I.prefixed(LangText.KIT_NO_PERMISSION, kit.name()));
+            player.sendMessage(I.prefixed(player, LangText.KIT_NO_PERMISSION, kit.name()));
             return;
         }
         participant.setKit(kit == null ? null : kit.name());
         if (kit != null) plugin.getTelemetry().used(Telemetry.Feature.KIT);
-        player.sendMessage(kit == null ? I.prefixed(LangText.KIT_NONE_CHOSEN) : I.prefixed(LangText.KIT_CHOSEN, kit.name()));
+        player.sendMessage(kit == null ? I.prefixed(player, LangText.KIT_NONE_CHOSEN) : I.prefixed(player, LangText.KIT_CHOSEN, kit.name()));
     }
 
     /**

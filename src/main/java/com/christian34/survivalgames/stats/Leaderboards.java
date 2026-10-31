@@ -349,7 +349,7 @@ public class Leaderboards implements Listener {
         String statName = line(e, 1);
         Stat stat = statName.isEmpty() ? Stat.WINS : Stat.parse(statName);
         if (stat == null) {
-            player.sendMessage(I.prefixed(LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
+            player.sendMessage(I.prefixed(player, LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
             return;
         }
         int rank;
@@ -359,13 +359,13 @@ public class Leaderboards implements Listener {
             rank = 0;
         }
         if (rank < 1 || rank > StatsManager.TOP_SIZE) {
-            player.sendMessage(I.prefixed(LangText.TOP_SIGN_INVALID_RANK, line(e, 2), StatsManager.TOP_SIZE));
+            player.sendMessage(I.prefixed(player, LangText.TOP_SIGN_INVALID_RANK, line(e, 2), StatsManager.TOP_SIZE));
             return;
         }
         String typeName = line(e, 3);
         GameType type = typeName.isEmpty() ? null : GameType.parse(typeName);
         if (!typeName.isEmpty() && type == null) {
-            player.sendMessage(I.prefixed(LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
+            player.sendMessage(I.prefixed(player, LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
             return;
         }
         Block block = e.getBlock();
@@ -379,7 +379,7 @@ public class Leaderboards implements Listener {
         for (int i = 0; i < lines.size(); i++) {
             e.line(i, lines.get(i));
         }
-        player.sendMessage(I.prefixed(LangText.TOP_SIGN_CREATED, rank, sign.board().getDisplayName()));
+        player.sendMessage(I.prefixed(player, LangText.TOP_SIGN_CREATED, rank, sign.board().getDisplayName()));
         // after the sign has been changed
         Bukkit.getScheduler().runTask(plugin, () -> update(sign.board()));
     }
@@ -397,7 +397,7 @@ public class Leaderboards implements Listener {
         if (e.getPlayer().hasPermission(SurvivalGames.ADMIN_PERMISSION) && e.getPlayer().isSneaking()) {
             signs.remove(sign);
             save();
-            e.getPlayer().sendMessage(I.prefixed(LangText.SIGN_REMOVED));
+            e.getPlayer().sendMessage(I.prefixed(e.getPlayer(), LangText.SIGN_REMOVED));
         } else {
             e.setCancelled(true);
         }

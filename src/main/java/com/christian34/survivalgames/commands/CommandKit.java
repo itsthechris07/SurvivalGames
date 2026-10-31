@@ -37,7 +37,7 @@ public class CommandKit {
     @Nullable
     private static Kits.Kit kit(CommandSender sender, String name) {
         Kits.Kit kit = kits().get(name);
-        if (kit == null) sender.sendMessage(I.prefixed(LangText.KIT_NOT_FOUND, name));
+        if (kit == null) sender.sendMessage(I.prefixed(sender, LangText.KIT_NOT_FOUND, name));
         return kit;
     }
 
@@ -46,7 +46,7 @@ public class CommandKit {
     public void kitCmd(Player player, @Argument(value = "kit", suggestions = "kits") @Nullable String name) {
         Game game = SurvivalGames.getInstance().getUser(player).getGame();
         if (game == null) {
-            player.sendMessage(I.prefixed(LangText.NOT_IN_GAME));
+            player.sendMessage(I.prefixed(player, LangText.NOT_IN_GAME));
             return;
         }
         if (name == null) {
@@ -62,12 +62,12 @@ public class CommandKit {
     @CommandDescription("command_kit_create")
     public void createCmd(Player player, @Argument("name") String name, @Flag("permission") boolean permission) {
         if (!Kits.NAME.matcher(name).matches()) {
-            player.sendMessage(I.prefixed(LangText.KIT_NAME_INVALID));
+            player.sendMessage(I.prefixed(player, LangText.KIT_NAME_INVALID));
             return;
         }
         Kits.Kit kit = kits().create(name, player, permission);
-        player.sendMessage(I.prefixed(LangText.KIT_CREATED, kit.name()));
-        if (permission) player.sendMessage(I.prefixed(LangText.KIT_PERMISSION, kit.getPermission()));
+        player.sendMessage(I.prefixed(player, LangText.KIT_CREATED, kit.name()));
+        if (permission) player.sendMessage(I.prefixed(player, LangText.KIT_PERMISSION, kit.getPermission()));
     }
 
     @Permission(ADMIN)
@@ -75,7 +75,7 @@ public class CommandKit {
     @CommandDescription("command_kit_delete")
     public void deleteCmd(CommandSender sender, @Argument(value = "kit", suggestions = "kits") String name) {
         Kits.Kit kit = kit(sender, name);
-        if (kit != null && kits().delete(kit.name())) sender.sendMessage(I.prefixed(LangText.KIT_DELETED, kit.name()));
+        if (kit != null && kits().delete(kit.name())) sender.sendMessage(I.prefixed(sender, LangText.KIT_DELETED, kit.name()));
     }
 
     @Permission(ADMIN)
@@ -86,16 +86,16 @@ public class CommandKit {
         if (kit == null) return;
         Game game = SurvivalGames.getInstance().getUser(player).getGame();
         if (game != null) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, game.getArena().getName()));
+            player.sendMessage(I.prefixed(player, LangText.ALREADY_IN_GAME, game.getArena().getName()));
             return;
         }
         // nothing of the admin is lost or mixed into the kit
         if (!player.getInventory().isEmpty()) {
-            player.sendMessage(I.prefixed(LangText.KIT_EDIT_NOT_EMPTY));
+            player.sendMessage(I.prefixed(player, LangText.KIT_EDIT_NOT_EMPTY));
             return;
         }
         Kits.apply(player, kit);
-        player.sendMessage(I.prefixed(LangText.KIT_EDIT, kit.name()));
+        player.sendMessage(I.prefixed(player, LangText.KIT_EDIT, kit.name()));
     }
 
     @Permission(ADMIN)
@@ -104,7 +104,7 @@ public class CommandKit {
     public void listCmd(CommandSender sender) {
         List<Kits.Kit> all = kits().getKits();
         if (all.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.KIT_LIST_EMPTY));
+            sender.sendMessage(I.prefixed(sender, LangText.KIT_LIST_EMPTY));
             return;
         }
         sender.sendMessage(I.i18n(LangText.KIT_LIST_TITLE));

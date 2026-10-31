@@ -22,7 +22,10 @@ game_won_solo: '<yellow>{0} <gold>has won in {1}<gold>!'
 - `{0}`, `{1}`, ... are replaced by names, numbers, ... Names of players are inserted as plain text.
 - Write `\<` for a normal `<`.
 - Several lines of item texts are separated by `\n`.
-- The prefix of all messages is `prefix` in `config.yml` (empty: none).
+- The prefix of all messages is `prefix` in `config.yml` (empty: none). Every game type can have its own: `prefix` in its
+  section (`survival-games`, `varo`, `uhc`, `duels`), e.g. `uhc.prefix: "<dark_gray>[<red>UHC<dark_gray>]"`. It is used for
+  the messages of the game and for everything a player in that game gets (commands, kits, bounties, ...); empty
+  uses `prefix`. `/sg reload` applies a change.
 
 ## Clickable commands
 

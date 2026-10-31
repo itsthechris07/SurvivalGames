@@ -67,10 +67,15 @@ chat:
   separate-games: true
   # messages starting with this only go to the own team (empty: no team chat)
   team-prefix: "@"
+  # the chat in a game shows the team of the player - runs after chat plugins like EasyPrefix (false: the chat
+  # plugin formats the chat, team and spectator chat stay)
+  format: true
 
 # the settings of the game types - arenas override min-players, max-players, team-size and world-border.size
 # (/sg arena <arena> players|teamsize|border)
 survival-games:
+  # the prefix of the messages of this game type, e.g. "<dark_gray>[<gold>SG<dark_gray>]" (empty: the prefix above)
+  prefix: ""
   min-players: 2
   max-players: 24
   # players per team (1: everybody plays alone)
@@ -145,6 +150,8 @@ survival-games:
   ending-seconds: 15
 
 varo:
+  # the prefix of the messages of this game type, e.g. "<dark_gray>[<green>Varo<dark_gray>]" (empty: the prefix above)
+  prefix: ""
   min-players: 2
   max-players: 100
   team-size: 2
@@ -200,6 +207,8 @@ varo:
 # a round in a newly generated world (/sg arena create <name> --type uhc): no loot, health doesn't come back by itself,
 # the teams start at random places and the world border pushes everybody into the center
 uhc:
+  # the prefix of the messages of this game type, e.g. "<dark_gray>[<red>UHC<dark_gray>]" (empty: the prefix above)
+  prefix: ""
   min-players: 2
   max-players: 40
   # players per team (1: everybody plays alone)
@@ -274,6 +283,8 @@ uhc:
 # two players (or two teams) with the same kit on a small map with 2 spawn points (/sg arena create <name> --type
 # duels): /sg duel waits for an opponent, /sg duel <player> [kit] challenges somebody
 duels:
+  # the prefix of the messages of this game type, e.g. "<dark_gray>[<aqua>Duels<dark_gray>]" (empty: the prefix above)
+  prefix: ""
   min-players: 2
   max-players: 2
   # players per team (2 with max-players 4: 2 vs 2)

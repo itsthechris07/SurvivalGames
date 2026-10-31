@@ -205,8 +205,9 @@ public class PlayerListener implements Listener {
     /**
      * [Team] Name: message - only the players of the same game see it (chat.separate-games), messages starting with
      * chat.team-prefix only go to the own team
+     * - HIGHEST and loaded after EasyPrefix: the game format wins over chat plugins (chat.format)
      */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChat(AsyncChatEvent e) {
         Player player = e.getPlayer();
         GamePlayer gamePlayer = plugin.getUser(player);
@@ -235,6 +236,7 @@ public class PlayerListener implements Listener {
                     i18n(LangText.CHAT_SPECTATOR, source.getName(), message)));
             return;
         }
+        if (!plugin.getFileManager().getConfigFile().getBoolean("chat.format")) return;
         e.renderer(ChatRenderer.viewerUnaware((source, name, message) -> team == null
                 ? i18n(LangText.CHAT_NO_TEAM, source.getName(), message)
                 : i18n(LangText.CHAT, team.getDisplayName(), source.getName(), message)));

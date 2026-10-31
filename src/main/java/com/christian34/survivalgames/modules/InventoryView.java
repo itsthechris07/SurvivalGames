@@ -84,9 +84,9 @@ public class InventoryView implements Listener {
     public void onKill(Game game, Player victim, Player killer) {
         if (!plugin.isModuleEnabled(MODULE, game)) return;
         Snapshot killerSnapshot = Snapshot.of(killer);
-        victim.sendMessage(I.prefixed(LangText.INVENTORY_VIEW_KILLER, killer.getName(),
+        victim.sendMessage(I.prefixed(victim, LangText.INVENTORY_VIEW_KILLER, killer.getName(),
                 formatHearts(killer.getHealth()), save(killerSnapshot)));
-        killer.sendMessage(I.prefixed(LangText.INVENTORY_VIEW_VICTIM, victim.getName(), save(Snapshot.of(victim))));
+        killer.sendMessage(I.prefixed(killer, LangText.INVENTORY_VIEW_VICTIM, victim.getName(), save(Snapshot.of(victim))));
     }
 
     /**
@@ -95,7 +95,7 @@ public class InventoryView implements Listener {
     public void onEnd(Game game, Collection<Player> winners) {
         if (!plugin.isModuleEnabled(MODULE, game)) return;
         for (Player winner : winners) {
-            Component message = I.prefixed(LangText.INVENTORY_VIEW_WINNER, winner.getName(), save(Snapshot.of(winner)));
+            Component message = game.prefixed(LangText.INVENTORY_VIEW_WINNER, winner.getName(), save(Snapshot.of(winner)));
             game.getMembers().forEach(member -> member.getPlayer().sendMessage(message));
         }
     }

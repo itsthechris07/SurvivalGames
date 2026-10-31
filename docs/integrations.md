@@ -14,6 +14,7 @@ turned on.
 | [EssentialsX](https://essentialsx.net/) | no god mode, flying, vanish or teleports into games |
 | SuperVanish, PremiumVanish, CMI, ... | vanished players aren't put into games |
 | [Multiverse-Core](https://modrinth.com/plugin/multiverse-core), Multiverse-Inventories | the worlds of games are left alone |
+| [EasyPrefix](https://modrinth.com/plugin/easyprefix-christian34) and other chat plugins | outside of games they format the chat; in a game the chat shows the team (`chat.format: false` leaves it to them) |
 
 ## Economy
 

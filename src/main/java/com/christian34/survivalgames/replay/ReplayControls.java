@@ -58,9 +58,9 @@ public final class ReplayControls {
      */
     public static void follow(Player player, Playback playback, String name) {
         if (playback.follow(player, name)) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_FOLLOWING, name));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_FOLLOWING, name));
         } else {
-            player.sendMessage(I.prefixed(LangText.REPLAY_PLAYER_NOT_FOUND, name));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_PLAYER_NOT_FOUND, name));
         }
     }
 

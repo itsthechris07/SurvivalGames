@@ -7,6 +7,7 @@ import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.Duels;
 import com.christian34.survivalgames.game.GameManager;
+import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Loot;
 import com.christian34.survivalgames.game.SignManager;
 import com.christian34.survivalgames.integrations.BedrockForms;
@@ -46,11 +47,13 @@ import com.christian34.survivalgames.stats.StatsManager;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,6 +71,10 @@ public class SurvivalGames extends JavaPlugin {
      * the prefix of all messages, from `prefix` in config.yml (set when the plugin is enabled)
      */
     public static Component PREFIX = Component.empty();
+    /**
+     * the prefixes of the game types (`<type>.prefix` in config.yml), the ones without use {@link #PREFIX}
+     */
+    private static final Map<GameType, Component> TYPE_PREFIXES = new EnumMap<>(GameType.class);
     public static final String ADMIN_PERMISSION = "sg.admin";
     private static SurvivalGames instance;
     private final Map<UUID, GamePlayer> users = new ConcurrentHashMap<>();
@@ -215,7 +222,31 @@ public class SurvivalGames extends JavaPlugin {
     private void loadTexts() {
         String prefix = fileManager.getConfigFile().getString("prefix");
         PREFIX = prefix == null || prefix.isBlank() ? Component.empty() : I.text(prefix + " ");
+        TYPE_PREFIXES.clear();
+        for (GameType type : GameType.values()) {
+            String typePrefix = fileManager.getConfigFile().getString(type.getKey() + ".prefix");
+            if (typePrefix != null && !typePrefix.isBlank()) TYPE_PREFIXES.put(type, I.text(typePrefix + " "));
+        }
         I.load();
+    }
+
+    /**
+     * @return the prefix of the messages of the game type (`<type>.prefix`, otherwise `prefix`)
+     */
+    public static Component prefix(@Nullable GameType type) {
+        return type == null ? PREFIX : TYPE_PREFIXES.getOrDefault(type, PREFIX);
+    }
+
+    /**
+     * @return the prefix of a message to the recipient: the one of the game type the player is in
+     */
+    public static Component prefixFor(@Nullable CommandSender recipient) {
+        if (recipient instanceof Player player && instance != null) {
+            GamePlayer user = instance.users.get(player.getUniqueId());
+            Game game = user == null ? null : user.getGame();
+            if (game != null) return prefix(game.getType());
+        }
+        return PREFIX;
     }
 
     // ---------------------------------------------------------------- players

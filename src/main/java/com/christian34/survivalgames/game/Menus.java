@@ -120,7 +120,7 @@ public final class Menus {
             }
         }
         if (menu.getButtons().isEmpty()) {
-            player.sendMessage(I.prefixed(LangText.NO_GAMES));
+            player.sendMessage(I.prefixed(player, LangText.NO_GAMES));
             return;
         }
         menu.show(player);
@@ -132,7 +132,7 @@ public final class Menus {
     public static void openStats(Player player) {
         StatsManager manager = SurvivalGames.getInstance().getStats();
         if (!manager.isEnabled()) {
-            player.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+            player.sendMessage(I.prefixed(player, LangText.STATS_DISABLED));
             return;
         }
         UUID uuid = player.getUniqueId();
@@ -152,7 +152,7 @@ public final class Menus {
             menu.corner(ItemStack.of(Material.GOLD_INGOT), i18n(LangText.GUI_MAIN_TOP),
                     I.itemLines(LangText.GUI_MAIN_TOP_LORE), clicker -> openTop(clicker, Stat.WINS));
             menu.show(player);
-        }, () -> player.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+        }, () -> player.sendMessage(I.prefixed(player, LangText.STATS_ERROR)));
     }
 
     private static List<Component> statsLore(PlayerStats stats) {
@@ -166,7 +166,7 @@ public final class Menus {
     public static void openTop(Player player, Stat stat) {
         StatsManager manager = SurvivalGames.getInstance().getStats();
         if (!manager.isEnabled()) {
-            player.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+            player.sendMessage(I.prefixed(player, LangText.STATS_DISABLED));
             return;
         }
         manager.then(manager.top(stat, null), top -> {
@@ -187,7 +187,7 @@ public final class Menus {
             }
             menu.corner(ItemStack.of(Material.ARROW), i18n(LangText.GUI_BACK), List.of(), Menus::openStats);
             menu.show(player);
-        }, () -> player.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+        }, () -> player.sendMessage(I.prefixed(player, LangText.STATS_ERROR)));
     }
 
     /**
@@ -254,7 +254,7 @@ public final class Menus {
                 (clicker, answer) -> game.createTeam(clicker, answer.text(),
                         answer.choice() <= 0 ? null : Teams.COLORS.get(answer.choice() - 1)));
         if (!SurvivalGames.getInstance().getBedrockForms().ask(player, question)) {
-            player.sendMessage(I.prefixed(LangText.TEAM_CREATE_HINT));
+            player.sendMessage(I.prefixed(player, LangText.TEAM_CREATE_HINT));
         }
     }
 
@@ -264,7 +264,7 @@ public final class Menus {
     public static void openKits(Player player, Game game) {
         Kits kits = SurvivalGames.getInstance().getKits();
         if (!kits.isUsed(game)) {
-            player.sendMessage(I.prefixed(LangText.KIT_NOT_NOW));
+            player.sendMessage(I.prefixed(player, LangText.KIT_NOT_NOW));
             return;
         }
         Participant participant = game.getParticipant(player.getUniqueId());
@@ -295,7 +295,7 @@ public final class Menus {
     public static void openVoting(Player player, SurvivalGame game) {
         MapVoting voting = game.getMapVoting();
         if (voting == null) {
-            player.sendMessage(I.prefixed(LangText.MAP_VOTE_NONE));
+            player.sendMessage(I.prefixed(player, LangText.MAP_VOTE_NONE));
             return;
         }
         String vote = voting.getVote(player.getUniqueId());
@@ -320,7 +320,7 @@ public final class Menus {
         Sponsor sponsor = SurvivalGames.getInstance().getSponsor();
         LangText denial = sponsor.getDenial(player, game);
         if (denial != null) {
-            player.sendMessage(I.prefixed(denial));
+            player.sendMessage(I.prefixed(player, denial));
             return;
         }
         Menu menu = new Menu(i18n(LangText.GUI_SPONSOR));

@@ -164,19 +164,19 @@ public class NpcSupport {
         if (action != null && action.until() >= System.currentTimeMillis()) {
             if (action.target() == null) {
                 if (!links.containsKey(key)) {
-                    player.sendMessage(I.prefixed(LangText.NPC_NOT_LINKED, name));
+                    player.sendMessage(I.prefixed(player, LangText.NPC_NOT_LINKED, name));
                 } else {
                     showStatus(key, null);
                     links.remove(key);
                     save();
-                    player.sendMessage(I.prefixed(LangText.NPC_UNLINKED, name));
+                    player.sendMessage(I.prefixed(player, LangText.NPC_UNLINKED, name));
                 }
             } else {
                 links.put(key, new Link(key, name, action.target()));
                 // the new target is shown with the next update
                 statuses.remove(key);
                 save();
-                player.sendMessage(I.prefixed(LangText.NPC_LINKED, name, action.target()));
+                player.sendMessage(I.prefixed(player, LangText.NPC_LINKED, name, action.target()));
             }
             return true;
         }

@@ -110,7 +110,7 @@ public class NetworkManager implements Listener {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("Connect");
         out.writeUTF(server);
-        player.sendMessage(I.prefixed(LangText.NETWORK_CONNECTING, server));
+        player.sendMessage(I.prefixed(player, LangText.NETWORK_CONNECTING, server));
         player.sendPluginMessage(plugin, CHANNEL, out.toByteArray());
     }
 
@@ -319,7 +319,7 @@ public class NetworkManager implements Listener {
                     .orElse(null);
         }
         if (server == null) {
-            player.sendMessage(I.prefixed(spectate ? LangText.NO_GAME_TO_SPECTATE : LangText.NO_GAME_TO_JOIN));
+            player.sendMessage(I.prefixed(player, spectate ? LangText.NO_GAME_TO_SPECTATE : LangText.NO_GAME_TO_JOIN));
             return;
         }
         connect(player, server.name());
@@ -333,7 +333,7 @@ public class NetworkManager implements Listener {
         Server server = getServer(name);
         ServerStatus status = getStatus(name);
         if (server == null || !(status.isJoinable() || status.isRunning())) {
-            player.sendMessage(I.prefixed(LangText.SERVER_NOT_AVAILABLE, name));
+            player.sendMessage(I.prefixed(player, LangText.SERVER_NOT_AVAILABLE, name));
             return;
         }
         connect(player, server.name());

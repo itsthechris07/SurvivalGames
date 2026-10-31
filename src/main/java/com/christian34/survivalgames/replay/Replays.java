@@ -356,7 +356,7 @@ public final class Replays implements Listener {
         save(goesOn ? recording.copy() : recording, () -> {
             prune(arena);
             for (Player player : audience) {
-                if (player.isOnline()) player.sendMessage(I.prefixed(LangText.REPLAY_SAVED, id));
+                if (player.isOnline()) player.sendMessage(I.prefixed(player, LangText.REPLAY_SAVED, id));
             }
         });
     }
@@ -567,33 +567,33 @@ public final class Replays implements Listener {
         if (current != null && (current.getState() == GameState.ENDED || gamePlayer.isSpectator())) {
             // nothing to lose anymore: the game is over (he waits to be sent back) or he only watches it
             if (find(id) == null) {
-                player.sendMessage(I.prefixed(LangText.REPLAY_NOT_FOUND, id));
+                player.sendMessage(I.prefixed(player, LangText.REPLAY_NOT_FOUND, id));
                 return;
             }
             current.leave(gamePlayer, Game.LeaveReason.KICKED);
         }
         if (gamePlayer.getGame() != null) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
+            player.sendMessage(I.prefixed(player, LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
             return;
         }
         if (plugin.getArenaManager().isEditing(player)) {
-            player.sendMessage(I.prefixed(LangText.EDITING_ARENA));
+            player.sendMessage(I.prefixed(player, LangText.EDITING_ARENA));
             return;
         }
         Recording.Info info = find(id);
         if (info == null) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_NOT_FOUND, id));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_NOT_FOUND, id));
             return;
         }
         if (!canWatch(player, info)) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_RUNNING_VARO));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_RUNNING_VARO));
             return;
         }
         String key = key(info.id());
         Playback watched = getPlayback(player);
         if (watched != null) {
             if (key(watched.getId()).equals(key)) {
-                player.sendMessage(I.prefixed(LangText.REPLAY_CONTROLS));
+                player.sendMessage(I.prefixed(player, LangText.REPLAY_CONTROLS));
                 return;
             }
             leave(player);
@@ -608,10 +608,10 @@ public final class Replays implements Listener {
         }
         List<UUID> waiting = loading.get(key);
         if (waiting == null && playbacks.size() + loading.size() >= Math.max(1, config().getInt("replays.max-playbacks", 2))) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_BUSY));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_BUSY));
             return;
         }
-        player.sendMessage(I.prefixed(LangText.REPLAY_LOADING, info.id()));
+        player.sendMessage(I.prefixed(player, LangText.REPLAY_LOADING, info.id()));
         if (waiting != null) {
             waiting.add(player.getUniqueId());
             return;
@@ -693,7 +693,7 @@ public final class Replays implements Listener {
         if (waiting == null) return;
         for (UUID uuid : waiting) {
             Player player = Bukkit.getPlayer(uuid);
-            if (player != null) player.sendMessage(I.prefixed(LangText.REPLAY_LOAD_FAILED, reason));
+            if (player != null) player.sendMessage(I.prefixed(player, LangText.REPLAY_LOAD_FAILED, reason));
         }
     }
 
@@ -729,7 +729,7 @@ public final class Replays implements Listener {
             if (player == null || plugin.getUser(player).getGame() != null || getPlayback(player) != null
                     || plugin.getArenaManager().isEditing(player)) continue;
             enter(player, playback);
-            if (varo && !fromBackup) player.sendMessage(I.prefixed(LangText.REPLAY_NO_BACKUP));
+            if (varo && !fromBackup) player.sendMessage(I.prefixed(player, LangText.REPLAY_NO_BACKUP));
         }
         if (playback.getViewers().isEmpty()) close(playback);
     }
@@ -760,8 +760,8 @@ public final class Replays implements Listener {
         plugin.getTelemetry().used(Telemetry.Feature.REPLAY);
         playback.add(player);
         Recording.Info info = playback.getInfo();
-        player.sendMessage(I.prefixed(LangText.REPLAY_STARTED, describe(info), Game.formatTime(info.seconds())));
-        player.sendMessage(I.prefixed(LangText.REPLAY_CONTROLS));
+        player.sendMessage(I.prefixed(player, LangText.REPLAY_STARTED, describe(info), Game.formatTime(info.seconds())));
+        player.sendMessage(I.prefixed(player, LangText.REPLAY_CONTROLS));
     }
 
     /**

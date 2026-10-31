@@ -14,6 +14,7 @@ import com.christian34.survivalgames.stats.Rating;
 import com.christian34.survivalgames.stats.Stat;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -286,14 +287,25 @@ public abstract class Game {
     }
 
     public void broadcast(LangText text, Object... arguments) {
-        broadcast(I.prefixed(text, arguments));
+        broadcast(prefixed(text, arguments));
+    }
+
+    /**
+     * @return the message with the prefix of the game type (`<type>.prefix` in config.yml)
+     */
+    public Component prefixed(LangText text, Object... arguments) {
+        return I.prefixed(getType(), text, arguments);
+    }
+
+    public Component prefixed(ComponentLike message) {
+        return I.prefixed(getType(), message);
     }
 
     /**
      * the message goes to the players in the game and the participants online outside of it (Varo)
      */
     public void announce(LangText text, Object... arguments) {
-        Component message = I.prefixed(text, arguments);
+        Component message = prefixed(text, arguments);
         broadcast(message);
         for (Participant participant : participants.values()) {
             Player player = participant.getPlayer();
@@ -367,7 +379,7 @@ public abstract class Game {
         if (gamePlayer.getGame() != null) return false;
         Component denial = stopped ? i18n(LangText.GAME_NOT_JOINABLE) : getJoinDenial(player.getUniqueId());
         if (denial != null) {
-            player.sendMessage(I.prefixed(denial));
+            player.sendMessage(prefixed(denial));
             return false;
         }
         enter(gamePlayer, false);
@@ -391,7 +403,7 @@ public abstract class Game {
     public boolean spectate(GamePlayer gamePlayer) {
         if (gamePlayer.getGame() != null) return false;
         if (!maySpectate(gamePlayer.getPlayer().getUniqueId())) {
-            gamePlayer.getPlayer().sendMessage(I.prefixed(LangText.GAME_NOT_SPECTATABLE));
+            gamePlayer.getPlayer().sendMessage(prefixed(LangText.GAME_NOT_SPECTATABLE));
             return false;
         }
         enter(gamePlayer, true);
@@ -424,8 +436,8 @@ public abstract class Game {
         gamePlayer.getStorage().cleanPlayer();
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(location != null ? location : safe(arena.getCenter(getWorld())));
-        player.sendMessage(I.prefixed(LangText.SPECTATING));
-        if (plugin.getSponsor().isUsed(this)) player.sendMessage(I.prefixed(LangText.SPONSOR_HINT));
+        player.sendMessage(prefixed(LangText.SPECTATING));
+        if (plugin.getSponsor().isUsed(this)) player.sendMessage(prefixed(LangText.SPONSOR_HINT));
         plugin.updateVisibility();
     }
 
@@ -450,7 +462,7 @@ public abstract class Game {
             player.teleport(Bukkit.getWorlds().getFirst().getSpawnLocation());
         }
         plugin.updateVisibility();
-        if (reason == LeaveReason.COMMAND) player.sendMessage(I.prefixed(LangText.GAME_LEFT_SELF, arena.getDisplayName()));
+        if (reason == LeaveReason.COMMAND) player.sendMessage(prefixed(LangText.GAME_LEFT_SELF, arena.getDisplayName()));
         if (reason == LeaveReason.COMMAND || reason == LeaveReason.STOP) plugin.getNetworkManager().sendToLobby(player);
         if (!stopped && state == GameState.LOBBY) onLobbyChange();
     }
@@ -646,7 +658,7 @@ public abstract class Game {
         if (team.getMembers().isEmpty()) plugin.getBackpack().delete(this, team);
         for (UUID member : team.getMembers()) {
             Player online = Bukkit.getPlayer(member);
-            if (online != null) online.sendMessage(I.prefixed(LangText.TEAM_MEMBER_LEFT, getName(player)));
+            if (online != null) online.sendMessage(prefixed(LangText.TEAM_MEMBER_LEFT, getName(player)));
         }
         teamsChanged();
         return team;
@@ -663,11 +675,11 @@ public abstract class Game {
      */
     private boolean checkTeamChoice(Player player) {
         if (!canChooseTeams()) {
-            player.sendMessage(I.prefixed(arena.getTeamSize() > 1 ? LangText.TEAMS_LOCKED : LangText.TEAMS_SOLO));
+            player.sendMessage(prefixed(arena.getTeamSize() > 1 ? LangText.TEAMS_LOCKED : LangText.TEAMS_SOLO));
             return false;
         }
         if (!participants.containsKey(player.getUniqueId())) {
-            player.sendMessage(I.prefixed(LangText.NOT_PLAYING));
+            player.sendMessage(prefixed(LangText.NOT_PLAYING));
             return false;
         }
         return true;
@@ -679,9 +691,9 @@ public abstract class Game {
     public void chooseTeam(Player player, GameTeam team) {
         if (!checkTeamChoice(player)) return;
         if (team.isMember(player.getUniqueId())) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_TEAM));
+            player.sendMessage(prefixed(LangText.ALREADY_IN_TEAM));
         } else if (!hasRoom(team)) {
-            player.sendMessage(I.prefixed(LangText.TEAM_FULL));
+            player.sendMessage(prefixed(LangText.TEAM_FULL));
         } else {
             joinTeam(player.getUniqueId(), team);
         }
@@ -696,16 +708,16 @@ public abstract class Game {
         if (!checkTeamChoice(player)) return;
         if (!player.hasPermission(SurvivalGames.ADMIN_PERMISSION)
                 && !plugin.getFileManager().getConfigFile().getBoolean("teams.players-can-create")) {
-            player.sendMessage(I.prefixed(LangText.TEAM_CREATE_DISABLED));
+            player.sendMessage(prefixed(LangText.TEAM_CREATE_DISABLED));
             return;
         }
         if (!Teams.NAME.matcher(name).matches()) {
-            player.sendMessage(I.prefixed(LangText.TEAM_NAME_INVALID));
+            player.sendMessage(prefixed(LangText.TEAM_NAME_INVALID));
             return;
         }
         GameTeam team = teams.create(name, color);
         if (team == null) {
-            player.sendMessage(I.prefixed(LangText.TEAM_EXISTS, name));
+            player.sendMessage(prefixed(LangText.TEAM_EXISTS, name));
             return;
         }
         broadcast(LangText.TEAM_CREATED, player.getName(), team.getDisplayName(), team.getName());
@@ -720,9 +732,9 @@ public abstract class Game {
         if (!checkTeamChoice(player)) return;
         GameTeam team = leaveTeam(player.getUniqueId());
         if (team == null) {
-            player.sendMessage(I.prefixed(LangText.NOT_IN_TEAM));
+            player.sendMessage(prefixed(LangText.NOT_IN_TEAM));
         } else {
-            player.sendMessage(I.prefixed(LangText.TEAM_LEFT, team.getDisplayName()));
+            player.sendMessage(prefixed(LangText.TEAM_LEFT, team.getDisplayName()));
         }
     }
 
@@ -1134,7 +1146,7 @@ public abstract class Game {
         if (settings().getBoolean("spectators") && !stopped) {
             makeSpectator(gamePlayer, location);
         } else {
-            kick(gamePlayer, I.prefixed(LangText.KICK_ELIMINATED));
+            kick(gamePlayer, prefixed(LangText.KICK_ELIMINATED));
         }
     }
 
@@ -1264,7 +1276,7 @@ public abstract class Game {
             plugin.getStats().add(uuid, participant.getName(), getType(), Stat.RATING, change);
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
-                player.sendMessage(I.prefixed(LangText.RATING_CHANGED, ratings.get(uuid) + change,
+                player.sendMessage(prefixed(LangText.RATING_CHANGED, ratings.get(uuid) + change,
                         Component.text((change >= 0 ? "+" : "") + change, change >= 0 ? NamedTextColor.GREEN : NamedTextColor.RED)));
             }
         });

@@ -78,7 +78,7 @@ public class CommandSurvivalGames {
         if (sender instanceof Player player) {
             Menus.openMain(player);
         } else {
-            sender.sendMessage(I.prefixed(LangText.PLUGIN_INFO, plugin().getPluginMeta().getVersion()));
+            sender.sendMessage(I.prefixed(sender, LangText.PLUGIN_INFO, plugin().getPluginMeta().getVersion()));
         }
     }
 
@@ -130,7 +130,7 @@ public class CommandSurvivalGames {
         } else if (target != null) {
             arena = plugin().getArenaManager().get(target);
             if (arena == null) {
-                player.sendMessage(I.prefixed(LangText.ARENA_NOT_FOUND, target));
+                player.sendMessage(I.prefixed(player, LangText.ARENA_NOT_FOUND, target));
                 return;
             }
         }
@@ -156,14 +156,14 @@ public class CommandSurvivalGames {
             return;
         }
         if (gamePlayer.getGame() != null) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
+            player.sendMessage(I.prefixed(player, LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
             return;
         }
         Game game;
         if (target != null && !network().isGameServer()) {
             Arena arena = plugin().getArenaManager().get(target);
             if (arena == null) {
-                player.sendMessage(I.prefixed(LangText.ARENA_NOT_FOUND, target));
+                player.sendMessage(I.prefixed(player, LangText.ARENA_NOT_FOUND, target));
                 return;
             }
             game = plugin().getGameManager().getGame(arena);
@@ -172,7 +172,7 @@ public class CommandSurvivalGames {
                     .filter(other -> other.maySpectate(player.getUniqueId())).findFirst().orElse(null);
         }
         if (game == null) {
-            player.sendMessage(I.prefixed(LangText.NO_GAME_TO_SPECTATE));
+            player.sendMessage(I.prefixed(player, LangText.NO_GAME_TO_SPECTATE));
             return;
         }
         game.spectate(gamePlayer);
@@ -185,7 +185,7 @@ public class CommandSurvivalGames {
         Game game = gamePlayer.getGame();
         if (game != null) {
             if (game instanceof VaroGame varo && !gamePlayer.isSpectator() && varo.isInCombat(player)) {
-                player.sendMessage(I.prefixed(LangText.LEAVE_IN_COMBAT));
+                player.sendMessage(I.prefixed(player, LangText.LEAVE_IN_COMBAT));
                 return;
             }
             game.leave(gamePlayer, Game.LeaveReason.COMMAND);
@@ -193,14 +193,14 @@ public class CommandSurvivalGames {
         }
         if (plugin().getArenaManager().isEditing(player)) {
             plugin().getArenaManager().stopEditing(gamePlayer);
-            player.sendMessage(I.prefixed(LangText.EDIT_STOPPED));
+            player.sendMessage(I.prefixed(player, LangText.EDIT_STOPPED));
             return;
         }
         if (plugin().getReplays().leave(player)) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_LEFT));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_LEFT));
             return;
         }
-        player.sendMessage(I.prefixed(LangText.NOT_IN_GAME));
+        player.sendMessage(I.prefixed(player, LangText.NOT_IN_GAME));
     }
 
     @Command(ROOT + " list")
@@ -209,7 +209,7 @@ public class CommandSurvivalGames {
         if (network().isLobby()) {
             List<NetworkManager.Server> servers = network().getServers();
             if (servers.isEmpty()) {
-                sender.sendMessage(I.prefixed(LangText.NO_GAMES));
+                sender.sendMessage(I.prefixed(sender, LangText.NO_GAMES));
                 return;
             }
             sender.sendMessage(i18n(LangText.GAME_LIST_TITLE, servers.size()));
@@ -222,7 +222,7 @@ public class CommandSurvivalGames {
         }
         List<Game> games = plugin().getGameManager().getGames();
         if (games.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.NO_GAMES));
+            sender.sendMessage(I.prefixed(sender, LangText.NO_GAMES));
             return;
         }
         sender.sendMessage(i18n(LangText.GAME_LIST_TITLE, games.size()));
@@ -242,9 +242,9 @@ public class CommandSurvivalGames {
                 : sender instanceof Player player ? plugin().getUser(player).getGame() : null;
         if (game == null) {
             if (arena == null) {
-                sender.sendMessage(I.prefixed(LangText.NOT_IN_GAME));
+                sender.sendMessage(I.prefixed(sender, LangText.NOT_IN_GAME));
             } else {
-                sender.sendMessage(I.prefixed(LangText.NO_GAME_IN_ARENA, arena.getName()));
+                sender.sendMessage(I.prefixed(sender, LangText.NO_GAME_IN_ARENA, arena.getName()));
             }
             return;
         }
@@ -279,14 +279,14 @@ public class CommandSurvivalGames {
         VaroGame varo = plugin().getGameManager().findGame(player.getUniqueId()) instanceof VaroGame v ? v : null;
         Participant participant = varo == null ? null : varo.getParticipant(player.getUniqueId());
         if (participant == null || varo.getState() != GameState.RUNNING) {
-            player.sendMessage(I.prefixed(LangText.NOT_PLAYING));
+            player.sendMessage(I.prefixed(player, LangText.NOT_PLAYING));
             return;
         }
-        player.sendMessage(I.prefixed(LangText.TIME_LEFT, Game.formatTime(varo.getRemaining(participant)),
+        player.sendMessage(I.prefixed(player, LangText.TIME_LEFT, Game.formatTime(varo.getRemaining(participant)),
                 participant.getKills()));
         PlayHours hours = varo.getPlayHours();
         if (hours.isRestricted()) {
-            player.sendMessage(I.prefixed(LangText.VARO_PLAY_HOURS, String.join(", ", hours.getEntries())));
+            player.sendMessage(I.prefixed(player, LangText.VARO_PLAY_HOURS, String.join(", ", hours.getEntries())));
         }
     }
 
@@ -295,25 +295,25 @@ public class CommandSurvivalGames {
     public void pingCmd(CommandSender sender, @Argument("player") @Nullable Player target) {
         Player player = target != null ? target : sender instanceof Player self ? self : null;
         if (player == null) {
-            sender.sendMessage(I.prefixed(LangText.ONLY_PLAYERS));
+            sender.sendMessage(I.prefixed(sender, LangText.ONLY_PLAYERS));
             return;
         }
-        sender.sendMessage(I.prefixed(LangText.PING, player.getName(), player.getPing()));
+        sender.sendMessage(I.prefixed(sender, LangText.PING, player.getName(), player.getPing()));
     }
 
     @Command(ROOT + " lastseen <player>")
     @CommandDescription("command_lastseen")
     public void lastSeenCmd(CommandSender sender, @Argument("player") String name) {
         if (Bukkit.getPlayerExact(name) != null) {
-            sender.sendMessage(I.prefixed(LangText.LAST_SEEN_ONLINE, name));
+            sender.sendMessage(I.prefixed(sender, LangText.LAST_SEEN_ONLINE, name));
             return;
         }
         OfflinePlayer player = Bukkit.getOfflinePlayerIfCached(name);
         if (player == null || player.getLastSeen() <= 0) {
-            sender.sendMessage(I.prefixed(LangText.PLAYER_NOT_FOUND));
+            sender.sendMessage(I.prefixed(sender, LangText.PLAYER_NOT_FOUND));
             return;
         }
-        sender.sendMessage(I.prefixed(LangText.LAST_SEEN, player.getName(), formatDate(player.getLastSeen())));
+        sender.sendMessage(I.prefixed(sender, LangText.LAST_SEEN, player.getName(), formatDate(player.getLastSeen())));
     }
 
     /**
@@ -340,7 +340,7 @@ public class CommandSurvivalGames {
      */
     private static boolean checkStats(CommandSender sender) {
         if (stats().isEnabled()) return true;
-        sender.sendMessage(I.prefixed(LangText.STATS_DISABLED));
+        sender.sendMessage(I.prefixed(sender, LangText.STATS_DISABLED));
         return false;
     }
 
@@ -364,14 +364,14 @@ public class CommandSurvivalGames {
     @CommandDescription("command_stats")
     public void statsCmd(CommandSender sender, @Argument(value = "player", suggestions = "online-players") @Nullable String name) {
         if (name == null && !(sender instanceof Player)) {
-            sender.sendMessage(I.prefixed(LangText.ONLY_PLAYERS));
+            sender.sendMessage(I.prefixed(sender, LangText.ONLY_PLAYERS));
             return;
         }
         if (!checkStats(sender)) return;
         String player = name != null ? name : sender.getName();
         stats().then(stats().load(player), stats -> {
             if (stats.isEmpty()) {
-                sender.sendMessage(I.prefixed(LangText.STATS_NONE, player));
+                sender.sendMessage(I.prefixed(sender, LangText.STATS_NONE, player));
                 return;
             }
             PlayerStats any = stats.values().iterator().next();
@@ -386,19 +386,19 @@ public class CommandSurvivalGames {
                 sender.sendMessage(statsLine(i18n(LangText.STATS_TOTAL),
                         PlayerStats.total(any.uuid(), any.name(), stats.values())));
             }
-        }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+        }, () -> sender.sendMessage(I.prefixed(sender, LangText.STATS_ERROR)));
     }
 
     @Command(ROOT + " achievements [player]")
     @CommandDescription("command_achievements")
     public void achievementsCmd(CommandSender sender, @Argument(value = "player", suggestions = "online-players") @Nullable String name) {
         if (name == null && !(sender instanceof Player)) {
-            sender.sendMessage(I.prefixed(LangText.ONLY_PLAYERS));
+            sender.sendMessage(I.prefixed(sender, LangText.ONLY_PLAYERS));
             return;
         }
         if (!checkStats(sender)) return;
         if (!plugin().getAchievements().isEnabled()) {
-            sender.sendMessage(I.prefixed(LangText.ACHIEVEMENTS_DISABLED));
+            sender.sendMessage(I.prefixed(sender, LangText.ACHIEVEMENTS_DISABLED));
             return;
         }
         String player = name != null ? name : sender.getName();
@@ -408,7 +408,7 @@ public class CommandSurvivalGames {
             } else {
                 plugin().getAchievements().sendList(sender, player, unlocked);
             }
-        }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+        }, () -> sender.sendMessage(I.prefixed(sender, LangText.STATS_ERROR)));
     }
 
     private static Component statsLine(Component type, PlayerStats stats) {
@@ -435,33 +435,33 @@ public class CommandSurvivalGames {
                        @Argument(value = "type", suggestions = "game-types") @Nullable String typeName) {
         Stat stat = statName == null ? Stat.WINS : Stat.parse(statName);
         if (stat == null) {
-            sender.sendMessage(I.prefixed(LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
+            sender.sendMessage(I.prefixed(sender, LangText.UNKNOWN_STAT, statName, String.join(", ", Stat.keys())));
             return;
         }
         GameType type = typeName == null ? null : GameType.parse(typeName);
         if (typeName != null && type == null) {
-            sender.sendMessage(I.prefixed(LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
+            sender.sendMessage(I.prefixed(sender, LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys())));
             return;
         }
         if (!checkStats(sender)) return;
         Component typeText = i18n(type == null ? LangText.TOP_ALL_TYPES : type.getDisplayName());
         stats().then(stats().top(stat, type), top -> {
             if (top.isEmpty()) {
-                sender.sendMessage(I.prefixed(LangText.TOP_EMPTY, i18n(stat.getDisplayName())));
+                sender.sendMessage(I.prefixed(sender, LangText.TOP_EMPTY, i18n(stat.getDisplayName())));
                 return;
             }
             sender.sendMessage(i18n(LangText.TOP_TITLE, i18n(stat.getDisplayName()), typeText));
             for (int i = 0; i < top.size(); i++) {
                 sender.sendMessage(i18n(LangText.TOP_ENTRY, i + 1, top.get(i).name(), top.get(i).get(stat)));
             }
-        }, () -> sender.sendMessage(I.prefixed(LangText.STATS_ERROR)));
+        }, () -> sender.sendMessage(I.prefixed(sender, LangText.STATS_ERROR)));
     }
 
     @Command(ROOT + " inventory <id>")
     @CommandDescription("command_inventory")
     public void inventoryCmd(Player player, @Argument("id") String id) {
         if (!plugin().getInventoryView().open(player, id)) {
-            player.sendMessage(I.prefixed(LangText.INVENTORY_VIEW_EXPIRED));
+            player.sendMessage(I.prefixed(player, LangText.INVENTORY_VIEW_EXPIRED));
         }
     }
 
@@ -469,7 +469,7 @@ public class CommandSurvivalGames {
     @CommandDescription("command_vote")
     public void voteCmd(Player player, @Argument("arena") @Nullable Arena arena) {
         if (!(plugin().getUser(player).getGame() instanceof SurvivalGame game) || game.getMapVoting() == null) {
-            player.sendMessage(I.prefixed(LangText.MAP_VOTE_NONE));
+            player.sendMessage(I.prefixed(player, LangText.MAP_VOTE_NONE));
         } else if (arena == null) {
             Menus.openVoting(player, game);
         } else {
@@ -483,7 +483,7 @@ public class CommandSurvivalGames {
         Game game = plugin().getUser(player).getGame();
         LangText denial = plugin().getSponsor().getDenial(player, game);
         if (denial != null) {
-            player.sendMessage(I.prefixed(denial));
+            player.sendMessage(I.prefixed(player, denial));
             return;
         }
         if (name == null) {
@@ -492,7 +492,7 @@ public class CommandSurvivalGames {
         }
         Participant target = game.findParticipant(name);
         if (target == null || !target.isAlive()) {
-            player.sendMessage(I.prefixed(LangText.SPONSOR_INVALID_TARGET, name));
+            player.sendMessage(I.prefixed(player, LangText.SPONSOR_INVALID_TARGET, name));
         } else {
             Menus.openSponsorItems(player, game, target);
         }
@@ -504,7 +504,7 @@ public class CommandSurvivalGames {
         Game game = plugin().getGameManager().findGame(player.getUniqueId());
         Participant participant = game instanceof VaroGame ? game.getParticipant(player.getUniqueId()) : null;
         if (participant == null) {
-            player.sendMessage(I.prefixed(LangText.NOT_PLAYING));
+            player.sendMessage(I.prefixed(player, LangText.NOT_PLAYING));
             return;
         }
         showStrikes(player, participant);
@@ -516,7 +516,7 @@ public class CommandSurvivalGames {
     static void showStrikes(CommandSender sender, Participant participant) {
         List<Participant.Strike> strikes = participant.getStrikes();
         if (strikes.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.STRIKES_NONE, participant.getName()));
+            sender.sendMessage(I.prefixed(sender, LangText.STRIKES_NONE, participant.getName()));
             return;
         }
         sender.sendMessage(i18n(LangText.STRIKES_TITLE, participant.getName(), strikes.size()));
@@ -535,7 +535,7 @@ public class CommandSurvivalGames {
     public void startCmd(Player player, @Flag("force") boolean force) {
         Game game = plugin().getUser(player).getGame();
         if (game == null) {
-            player.sendMessage(I.prefixed(LangText.NOT_IN_GAME));
+            player.sendMessage(I.prefixed(player, LangText.NOT_IN_GAME));
             return;
         }
         CommandGame.start(player, game, force);
@@ -546,7 +546,7 @@ public class CommandSurvivalGames {
     @Permission(ADMIN)
     public void buildCmd(Player player) {
         boolean building = plugin().getBuildMode().toggle(player);
-        player.sendMessage(I.prefixed(building ? LangText.BUILD_ON : LangText.BUILD_OFF));
+        player.sendMessage(I.prefixed(player, building ? LangText.BUILD_ON : LangText.BUILD_OFF));
     }
 
     @Command(ROOT + " reload")
@@ -554,7 +554,7 @@ public class CommandSurvivalGames {
     @Permission(ADMIN)
     public void reloadCmd(CommandSender sender) {
         plugin().reload();
-        sender.sendMessage(I.prefixed(LangText.RELOADED));
+        sender.sendMessage(I.prefixed(sender, LangText.RELOADED));
     }
 
     @Command(ROOT + " debug")

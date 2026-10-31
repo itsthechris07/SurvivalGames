@@ -408,7 +408,7 @@ public class VaroGame extends Game {
     private void startSession(Player player, Participant participant) {
         int protection = Math.max(0, settings().getInt("join-protection"));
         participant.protect(protection);
-        player.sendMessage(I.prefixed(LangText.SESSION_STARTED, formatTime(getSessionTime(participant)), protection));
+        player.sendMessage(prefixed(LangText.SESSION_STARTED, formatTime(getSessionTime(participant)), protection));
     }
 
     @Override
@@ -526,7 +526,7 @@ public class VaroGame extends Game {
             int remaining = Math.min(playTime - played, hours);
             if (remaining > 0) {
                 if (TIME_WARNINGS.contains(remaining)) {
-                    player.sendMessage(I.prefixed(LangText.TIME_WARNING, formatTime(remaining)));
+                    player.sendMessage(prefixed(LangText.TIME_WARNING, formatTime(remaining)));
                     if (remaining <= 10) player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, 1f, 1f);
                 }
                 player.sendActionBar(i18n(LangText.ACTIONBAR_TIME_LEFT, formatTime(remaining)));
@@ -535,11 +535,11 @@ public class VaroGame extends Game {
                 player.sendActionBar(i18n(LangText.ACTIONBAR_ENEMY_NEARBY));
             } else if (played < playTime) {
                 Duration wait = getWait(participant);
-                kick(member, I.prefixed(LangText.KICK_OUTSIDE_HOURS, wait.toHours(), wait.toMinutesPart()));
+                kick(member, prefixed(LangText.KICK_OUTSIDE_HOURS, wait.toHours(), wait.toMinutesPart()));
             } else {
                 broadcast(LangText.PLAYER_TIME_OVER, player.getName());
                 Duration wait = getWait(participant);
-                kick(member, I.prefixed(LangText.KICK_TIME_OVER, wait.toHours(), wait.toMinutesPart()));
+                kick(member, prefixed(LangText.KICK_TIME_OVER, wait.toHours(), wait.toMinutesPart()));
             }
         }
     }

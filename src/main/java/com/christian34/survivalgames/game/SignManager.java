@@ -212,7 +212,7 @@ public class SignManager implements Listener {
         for (int i = 0; i < lines.size(); i++) {
             e.line(i, lines.get(i));
         }
-        e.getPlayer().sendMessage(I.prefixed(plugin.getNetworkManager().isLobby() ? LangText.SIGN_CREATED_SERVER
+        e.getPlayer().sendMessage(I.prefixed(e.getPlayer(), plugin.getNetworkManager().isLobby() ? LangText.SIGN_CREATED_SERVER
                 : LangText.SIGN_CREATED, target));
     }
 
@@ -227,14 +227,14 @@ public class SignManager implements Listener {
         if (plugin.getNetworkManager().isLobby()) {
             NetworkManager.Server server = plugin.getNetworkManager().getServer(name);
             if (server == null) {
-                sender.sendMessage(I.prefixed(LangText.SERVER_NOT_FOUND, name));
+                sender.sendMessage(I.prefixed(sender, LangText.SERVER_NOT_FOUND, name));
                 return null;
             }
             return server.name();
         }
         Arena arena = plugin.getArenaManager().get(name);
         if (arena == null) {
-            sender.sendMessage(I.prefixed(LangText.ARENA_NOT_FOUND, name));
+            sender.sendMessage(I.prefixed(sender, LangText.ARENA_NOT_FOUND, name));
             return null;
         }
         ensureGame(arena);
@@ -265,7 +265,7 @@ public class SignManager implements Listener {
         }
         Arena arena = plugin.getArenaManager().get(target);
         if (arena == null) {
-            player.sendMessage(I.prefixed(LangText.ARENA_NOT_FOUND, target));
+            player.sendMessage(I.prefixed(player, LangText.ARENA_NOT_FOUND, target));
             return;
         }
         plugin.getGameManager().join(plugin.getUser(player), arena);
@@ -279,7 +279,7 @@ public class SignManager implements Listener {
         if (e.getPlayer().hasPermission(SurvivalGames.ADMIN_PERMISSION) && e.getPlayer().isSneaking()) {
             signs.remove(sign);
             save();
-            e.getPlayer().sendMessage(I.prefixed(LangText.SIGN_REMOVED));
+            e.getPlayer().sendMessage(I.prefixed(e.getPlayer(), LangText.SIGN_REMOVED));
         } else {
             e.setCancelled(true);
         }

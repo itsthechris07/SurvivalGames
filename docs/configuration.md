@@ -33,6 +33,8 @@ files automatically – your values and comments stay.
 | `language` | `en` | `en` or `de` (or your own, see [messages](customization.md)) |
 | `network.mode` | `standalone` | `standalone`, `game` or `lobby` (see [Network](network.md)) |
 | `chat.separate-games` | `true` | players only see the chat of their own game |
+| `chat.format` | `true` | the chat in a game shows the team (false: a chat plugin like EasyPrefix formats it) |
+| `<type>.prefix` | `""` | the [prefix](customization.md) of the messages of a game type (empty: `prefix`) |
 | `survival-games.min-players` | `2` | players needed for the lobby countdown |
 | `survival-games.grace-period` | `60` | seconds without PvP after the start |
 | `survival-games.deathmatch.minutes` | `20` | when the deathmatch starts |

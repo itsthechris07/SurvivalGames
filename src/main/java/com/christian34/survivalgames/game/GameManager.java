@@ -167,7 +167,7 @@ public class GameManager {
         for (GamePlayer member : members) {
             Player player = member.getPlayer();
             if (player.isOnline() && member.getGame() == null && next.isJoinable()) {
-                player.sendMessage(I.prefixed(LangText.PLAY_AGAIN, arena.getName()));
+                player.sendMessage(I.prefixed(player, LangText.PLAY_AGAIN, arena.getName()));
             }
         }
     }
@@ -264,11 +264,11 @@ public class GameManager {
     public void join(GamePlayer gamePlayer, @Nullable Arena arena) {
         Player player = gamePlayer.getPlayer();
         if (gamePlayer.getGame() != null) {
-            player.sendMessage(I.prefixed(LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
+            player.sendMessage(I.prefixed(player, LangText.ALREADY_IN_GAME, gamePlayer.getGame().getArena().getName()));
             return;
         }
         if (plugin.getArenaManager().isEditing(player)) {
-            player.sendMessage(I.prefixed(LangText.EDITING_ARENA));
+            player.sendMessage(I.prefixed(player, LangText.EDITING_ARENA));
             return;
         }
         List<GamePlayer> followers = new ArrayList<>();
@@ -281,14 +281,14 @@ public class GameManager {
         }
         Game game = arena == null ? findJoinableGame(player, 1 + followers.size()) : getGame(arena);
         if (game == null) {
-            player.sendMessage(I.prefixed(arena == null ? LangText.NO_GAME_TO_JOIN : LangText.NO_GAME_IN_ARENA,
+            player.sendMessage(I.prefixed(player, arena == null ? LangText.NO_GAME_TO_JOIN : LangText.NO_GAME_IN_ARENA,
                     arena == null ? "" : arena.getName()));
             return;
         }
         if (game.getJoinDenial(player.getUniqueId()) == null) {
             // vanish plugins would hide him from the other players (EssentialsX makes him visible) - he can still watch
             if (!VanishSupport.canPlay(player)) {
-                player.sendMessage(I.prefixed(LangText.JOIN_VANISHED));
+                player.sendMessage(I.prefixed(player, LangText.JOIN_VANISHED));
                 return;
             }
             if (!game.join(gamePlayer)) return;
@@ -298,7 +298,7 @@ public class GameManager {
                 if (game.getJoinDenial(follower.getPlayer().getUniqueId()) != null) continue;
                 if (game.join(follower)) {
                     plugin.getTelemetry().joined(Telemetry.Join.PARTY);
-                    follower.getPlayer().sendMessage(I.prefixed(LangText.JOINED_WITH_PARTY, player.getName()));
+                    follower.getPlayer().sendMessage(I.prefixed(follower.getPlayer(), LangText.JOINED_WITH_PARTY, player.getName()));
                 }
             }
         } else if (game.maySpectate(player.getUniqueId())) {

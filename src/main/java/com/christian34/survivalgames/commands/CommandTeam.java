@@ -43,7 +43,7 @@ public class CommandTeam {
     @Nullable
     private static Game game(Player player) {
         Game game = SurvivalGames.getInstance().getUser(player).getGame();
-        if (game == null) player.sendMessage(I.prefixed(LangText.NOT_IN_GAME));
+        if (game == null) player.sendMessage(I.prefixed(player, LangText.NOT_IN_GAME));
         return game;
     }
 
@@ -67,7 +67,7 @@ public class CommandTeam {
     static void list(CommandSender sender, Game game) {
         List<GameTeam> all = game.getTeams().getTeams();
         if (all.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.NO_TEAMS));
+            sender.sendMessage(I.prefixed(sender, LangText.NO_TEAMS));
             return;
         }
         boolean running = game.getState() != GameState.LOBBY;
@@ -93,7 +93,7 @@ public class CommandTeam {
                           @Argument(value = "color", suggestions = "team-colors") @Nullable String colorName) {
         NamedTextColor color = Teams.parseColor(colorName);
         if (colorName != null && color == null) {
-            player.sendMessage(I.prefixed(LangText.INVALID_COLOR, colorName));
+            player.sendMessage(I.prefixed(player, LangText.INVALID_COLOR, colorName));
             return;
         }
         Game game = game(player);

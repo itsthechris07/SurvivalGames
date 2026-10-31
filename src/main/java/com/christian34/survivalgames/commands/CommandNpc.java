@@ -42,7 +42,7 @@ public class CommandNpc {
      */
     private static boolean available(CommandSender sender) {
         if (!npcs().getPlugins().isEmpty()) return true;
-        sender.sendMessage(I.prefixed(LangText.NPC_NO_PLUGIN));
+        sender.sendMessage(I.prefixed(sender, LangText.NPC_NO_PLUGIN));
         return false;
     }
 
@@ -53,7 +53,7 @@ public class CommandNpc {
         String target = plugin().getSignManager().resolveTarget(player, name);
         if (target == null) return;
         npcs().startLinking(player, target);
-        player.sendMessage(I.prefixed(LangText.NPC_CLICK_TO_LINK, target));
+        player.sendMessage(I.prefixed(player, LangText.NPC_CLICK_TO_LINK, target));
     }
 
     @Command(NPC + " unlink")
@@ -61,7 +61,7 @@ public class CommandNpc {
     public void unlinkCmd(Player player) {
         if (!available(player)) return;
         npcs().startLinking(player, null);
-        player.sendMessage(I.prefixed(LangText.NPC_CLICK_TO_UNLINK));
+        player.sendMessage(I.prefixed(player, LangText.NPC_CLICK_TO_UNLINK));
     }
 
     @Command(NPC + " list")
@@ -69,7 +69,7 @@ public class CommandNpc {
     public void listCmd(CommandSender sender) {
         List<NpcSupport.Link> links = npcs().getLinks();
         if (links.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.NPC_LIST_EMPTY));
+            sender.sendMessage(I.prefixed(sender, LangText.NPC_LIST_EMPTY));
             return;
         }
         sender.sendMessage(I.i18n(LangText.NPC_LIST_TITLE));

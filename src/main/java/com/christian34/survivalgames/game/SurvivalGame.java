@@ -174,7 +174,7 @@ public class SurvivalGame extends Game {
     @Override
     protected void onLobbyJoin(GamePlayer gamePlayer) {
         super.onLobbyJoin(gamePlayer);
-        if (getMapVoting() != null) gamePlayer.getPlayer().sendMessage(I.prefixed(LangText.MAP_VOTE_HINT));
+        if (getMapVoting() != null) gamePlayer.getPlayer().sendMessage(prefixed(LangText.MAP_VOTE_HINT));
     }
 
     @Override
@@ -209,13 +209,13 @@ public class SurvivalGame extends Game {
     public void voteMap(Player player, Arena map) {
         MapVoting voting = getMapVoting();
         if (voting == null) {
-            player.sendMessage(I.prefixed(LangText.MAP_VOTE_NONE));
+            player.sendMessage(prefixed(LangText.MAP_VOTE_NONE));
         } else if (getParticipant(player.getUniqueId()) == null) {
-            player.sendMessage(I.prefixed(LangText.NOT_PLAYING));
+            player.sendMessage(prefixed(LangText.NOT_PLAYING));
         } else if (!voting.vote(player, map)) {
-            player.sendMessage(I.prefixed(LangText.MAP_VOTE_UNKNOWN, map.getName()));
+            player.sendMessage(prefixed(LangText.MAP_VOTE_UNKNOWN, map.getName()));
         } else {
-            player.sendMessage(I.prefixed(LangText.MAP_VOTED, map.getDisplayName()));
+            player.sendMessage(prefixed(LangText.MAP_VOTED, map.getDisplayName()));
         }
     }
 

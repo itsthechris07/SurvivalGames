@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.lib.lang;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.game.GameType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -14,6 +15,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -62,6 +64,28 @@ public class I {
 
     public static Component prefixed(ComponentLike message) {
         return Component.textOfChildren(SurvivalGames.PREFIX, message);
+    }
+
+    /**
+     * the message with the prefix of the game the recipient is in (`<type>.prefix`), otherwise the one of config.yml
+     */
+    public static Component prefixed(@Nullable CommandSender recipient, LangText langText, Object... arguments) {
+        return prefixed(recipient, i18n(langText, arguments));
+    }
+
+    public static Component prefixed(@Nullable CommandSender recipient, ComponentLike message) {
+        return Component.textOfChildren(SurvivalGames.prefixFor(recipient), message);
+    }
+
+    /**
+     * the message with the prefix of the game type
+     */
+    public static Component prefixed(@Nullable GameType type, LangText langText, Object... arguments) {
+        return Component.textOfChildren(SurvivalGames.prefix(type), i18n(langText, arguments));
+    }
+
+    public static Component prefixed(@Nullable GameType type, ComponentLike message) {
+        return Component.textOfChildren(SurvivalGames.prefix(type), message);
     }
 
     /**

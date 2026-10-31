@@ -55,7 +55,7 @@ public class ToxicRain implements Listener {
         if (toxic ? !this.toxic.add(world) : !this.toxic.remove(world)) return;
         if (toxic) plugin.getTelemetry().used(Telemetry.Feature.TOXIC_RAIN);
         for (Player player : world.getPlayers()) {
-            player.sendMessage(I.prefixed(toxic ? LangText.TOXIC_RAIN_STARTED : LangText.TOXIC_RAIN_STOPPED));
+            player.sendMessage(I.prefixed(player, toxic ? LangText.TOXIC_RAIN_STARTED : LangText.TOXIC_RAIN_STOPPED));
         }
     }
 

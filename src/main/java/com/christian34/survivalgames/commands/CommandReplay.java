@@ -46,7 +46,7 @@ public class CommandReplay {
     @Nullable
     private static Playback watching(Player player) {
         Playback playback = replays().getPlayback(player);
-        if (playback == null) player.sendMessage(I.prefixed(LangText.REPLAY_NOT_WATCHING));
+        if (playback == null) player.sendMessage(I.prefixed(player, LangText.REPLAY_NOT_WATCHING));
         return playback;
     }
 
@@ -88,7 +88,7 @@ public class CommandReplay {
                 .filter(info -> arena == null || info.arena().equalsIgnoreCase(arena))
                 .filter(info -> replays().canWatch(sender, info)).limit(LIST_SIZE).toList();
         if (list.isEmpty()) {
-            sender.sendMessage(I.prefixed(LangText.REPLAY_LIST_EMPTY));
+            sender.sendMessage(I.prefixed(sender, LangText.REPLAY_LIST_EMPTY));
             return;
         }
         sender.sendMessage(I.i18n(LangText.REPLAY_LIST_TITLE));
@@ -127,7 +127,7 @@ public class CommandReplay {
             // told below
         }
         if (speed == null) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_INVALID_SPEED, text,
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_INVALID_SPEED, text,
                     String.join(", ", Playback.SPEEDS.stream().map(Playback::formatSpeed).toList())));
             return;
         }
@@ -150,7 +150,7 @@ public class CommandReplay {
         if (playback == null) return;
         int second = parseTime(time);
         if (second < 0) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_INVALID_TIME, time));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_INVALID_TIME, time));
             return;
         }
         ReplayControls.jump(player, playback, second);
@@ -197,9 +197,9 @@ public class CommandReplay {
     @Permission(Replays.PERMISSION)
     public void leaveCmd(Player player) {
         if (replays().leave(player)) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_LEFT));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_LEFT));
         } else {
-            player.sendMessage(I.prefixed(LangText.REPLAY_NOT_WATCHING));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_NOT_WATCHING));
         }
     }
 
@@ -208,11 +208,11 @@ public class CommandReplay {
     @Permission(ADMIN)
     public void deleteCmd(CommandSender sender, @Argument(value = "id", suggestions = "replays") String id) {
         if (replays().find(id) == null) {
-            sender.sendMessage(I.prefixed(LangText.REPLAY_NOT_FOUND, id));
+            sender.sendMessage(I.prefixed(sender, LangText.REPLAY_NOT_FOUND, id));
         } else if (replays().delete(id)) {
-            sender.sendMessage(I.prefixed(LangText.REPLAY_DELETED, id));
+            sender.sendMessage(I.prefixed(sender, LangText.REPLAY_DELETED, id));
         } else {
-            sender.sendMessage(I.prefixed(LangText.REPLAY_IN_USE, id));
+            sender.sendMessage(I.prefixed(sender, LangText.REPLAY_IN_USE, id));
         }
     }
 

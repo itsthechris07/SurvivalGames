@@ -35,7 +35,7 @@ public class CommandDuel {
         }
         Player target = Bukkit.getPlayerExact(name);
         if (target == null) {
-            player.sendMessage(I.prefixed(LangText.PLAYER_NOT_FOUND));
+            player.sendMessage(I.prefixed(player, LangText.PLAYER_NOT_FOUND));
             return;
         }
         duels().challenge(player, target, kit);

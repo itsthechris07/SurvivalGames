@@ -55,6 +55,10 @@ public class UhcGame extends SurvivalGame {
      */
     private static final int PREGENERATION_CHUNKS = 4;
     /**
+     * random places tried per team until one is on dry land
+     */
+    private static final int SCATTER_ATTEMPTS = 200;
+    /**
      * seconds until everybody alive is healed, -1: no final heal (anymore)
      */
     private int finalHealIn = -1;
@@ -203,18 +207,22 @@ public class UhcGame extends SurvivalGame {
     }
 
     /**
-     * @return a random place on the ground (not in water or lava) away from the others
+     * @return a random place on the ground (not in water or lava) away from the others - if there is no dry land (an
+     * ocean), the center on a small platform
      */
     private static Location scatter(World world, Location center, double radius, double distance, List<Location> others) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        Location place = center.clone();
-        for (int attempt = 0; attempt < 50; attempt++) {
+        Location place = null;
+        for (int attempt = 0; attempt < SCATTER_ATTEMPTS && place == null; attempt++) {
             // the distance is halved every 10 attempts: a small world doesn't have room for everybody
-            double minDistance = distance / (1 << attempt / 10);
-            place = center.clone().add(random.nextDouble(-radius, radius), 0, random.nextDouble(-radius, radius));
-            Location candidate = place;
+            double minDistance = attempt < 60 ? distance / (1 << attempt / 10) : 0;
+            Location candidate = center.clone().add(random.nextDouble(-radius, radius), 0, random.nextDouble(-radius, radius));
             if (others.stream().anyMatch(other -> other.distanceSquared(candidate) < minDistance * minDistance)) continue;
-            if (isSafeGround(world, place)) break;
+            if (isSafeGround(world, candidate)) place = candidate;
+        }
+        if (place == null) {
+            place = center.clone();
+            buildPlatform(world, place);
         }
         Location spawn = ground(place);
         Vector direction = center.toVector().subtract(spawn.toVector()).setY(0);
@@ -253,6 +261,24 @@ public class UhcGame extends SurvivalGame {
         } catch (RuntimeException ex) {
             // MockBukkit
             return true;
+        }
+    }
+
+    /**
+     * a 3x3 platform on water or lava (nobody spawns in the ocean)
+     */
+    private static void buildPlatform(World world, Location location) {
+        try {
+            Block ground = world.getHighestBlockAt(location.getBlockX(), location.getBlockZ(), HeightMap.MOTION_BLOCKING_NO_LEAVES);
+            if (!ground.isLiquid()) return;
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    Block block = ground.getRelative(x, 0, z);
+                    if (block.isLiquid() || block.getType().isAir()) block.setType(Material.STONE);
+                }
+            }
+        } catch (RuntimeException ex) {
+            // MockBukkit
         }
     }
 

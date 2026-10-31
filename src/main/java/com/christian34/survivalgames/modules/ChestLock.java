@@ -145,16 +145,16 @@ public class ChestLock implements Listener {
         Player player = e.getPlayer();
         GameTeam team = game.getTeam(player.getUniqueId());
         if (game.getState() != GameState.RUNNING || team == null || plugin.getUser(player).getGame() != game) {
-            player.sendMessage(I.prefixed(LangText.LOCK_ONLY_INGAME));
+            player.sendMessage(I.prefixed(player, LangText.LOCK_ONLY_INGAME));
             return;
         }
         Block container = getAttachedBlock(e.getBlock());
         if (container == null || !(container.getState(false) instanceof Container)) {
-            player.sendMessage(I.prefixed(LangText.LOCK_NO_CONTAINER));
+            player.sendMessage(I.prefixed(player, LangText.LOCK_NO_CONTAINER));
             return;
         }
         if (getLock(container) != null) {
-            player.sendMessage(I.prefixed(LangText.LOCK_ALREADY_LOCKED));
+            player.sendMessage(I.prefixed(player, LangText.LOCK_ALREADY_LOCKED));
             e.setCancelled(true);
             return;
         }
@@ -168,7 +168,7 @@ public class ChestLock implements Listener {
             sign.setWaxed(true);
             sign.update();
         });
-        player.sendMessage(I.prefixed(LangText.LOCK_CREATED, team.getDisplayName()));
+        player.sendMessage(I.prefixed(player, LangText.LOCK_CREATED, team.getDisplayName()));
         plugin.getTelemetry().used(Telemetry.Feature.CHEST_LOCK);
     }
 
@@ -178,7 +178,7 @@ public class ChestLock implements Listener {
         Block block = getBlock(e.getInventory().getHolder());
         if (block == null || hasAccess(player, getLock(block))) return;
         e.setCancelled(true);
-        player.sendMessage(I.prefixed(LangText.LOCK_NO_ACCESS));
+        player.sendMessage(I.prefixed(player, LangText.LOCK_NO_ACCESS));
     }
 
     @Nullable
@@ -194,7 +194,7 @@ public class ChestLock implements Listener {
     public void onBreak(BlockBreakEvent e) {
         if (hasAccess(e.getPlayer(), getLockOfBlock(e.getBlock()))) return;
         e.setCancelled(true);
-        e.getPlayer().sendMessage(I.prefixed(LangText.LOCK_NO_ACCESS));
+        e.getPlayer().sendMessage(I.prefixed(e.getPlayer(), LangText.LOCK_NO_ACCESS));
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

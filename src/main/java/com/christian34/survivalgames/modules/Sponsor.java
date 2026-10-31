@@ -92,27 +92,27 @@ public class Sponsor {
     public void send(Player sponsor, Game game, Participant target, Offer offer) {
         LangText denial = getDenial(sponsor, game);
         if (denial != null) {
-            sponsor.sendMessage(I.prefixed(denial));
+            sponsor.sendMessage(I.prefixed(sponsor, denial));
             return;
         }
         Player player = target.getPlayer();
         if (!target.isAlive() || player == null || plugin.getUser(player).getGame() != game) {
-            sponsor.sendMessage(I.prefixed(LangText.SPONSOR_INVALID_TARGET, target.getName()));
+            sponsor.sendMessage(I.prefixed(sponsor, LangText.SPONSOR_INVALID_TARGET, target.getName()));
             return;
         }
         long now = System.currentTimeMillis();
         long next = cooldowns.getOrDefault(sponsor.getUniqueId(), 0L);
         if (next > now) {
-            sponsor.sendMessage(I.prefixed(LangText.SPONSOR_COOLDOWN, (next - now + 999) / 1000));
+            sponsor.sendMessage(I.prefixed(sponsor, LangText.SPONSOR_COOLDOWN, (next - now + 999) / 1000));
             return;
         }
         if (offer.price() > 0) {
             if (plugin.getEconomySupport().getProvider() == null) {
-                sponsor.sendMessage(I.prefixed(LangText.SPONSOR_NO_ECONOMY));
+                sponsor.sendMessage(I.prefixed(sponsor, LangText.SPONSOR_NO_ECONOMY));
                 return;
             }
             if (!plugin.getEconomySupport().withdraw(sponsor, offer.price())) {
-                sponsor.sendMessage(I.prefixed(LangText.SPONSOR_NOT_ENOUGH_MONEY,
+                sponsor.sendMessage(I.prefixed(sponsor, LangText.SPONSOR_NOT_ENOUGH_MONEY,
                         plugin.getEconomySupport().format(offer.price())));
                 return;
             }
@@ -123,8 +123,8 @@ public class Sponsor {
         player.getInventory().addItem(item).values()
                 .forEach(rest -> player.getWorld().dropItemNaturally(player.getLocation(), rest));
         player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
-        player.sendMessage(I.prefixed(LangText.SPONSOR_RECEIVED, sponsor.getName(), item.getAmount(), Items.name(item)));
-        sponsor.sendMessage(I.prefixed(LangText.SPONSOR_SENT, item.getAmount(), Items.name(item), target.getName()));
+        player.sendMessage(I.prefixed(player, LangText.SPONSOR_RECEIVED, sponsor.getName(), item.getAmount(), Items.name(item)));
+        sponsor.sendMessage(I.prefixed(sponsor, LangText.SPONSOR_SENT, item.getAmount(), Items.name(item), target.getName()));
         plugin.getAchievements().unlock(sponsor.getUniqueId(), sponsor.getName(), Achievement.SPONSOR);
         plugin.getTelemetry().used(Telemetry.Feature.SPONSOR);
     }

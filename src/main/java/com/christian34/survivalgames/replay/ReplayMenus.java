@@ -63,7 +63,7 @@ public final class ReplayMenus {
                     clicker -> replays().watch(clicker, info.id()));
         }
         if (entries == 0) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_LIST_EMPTY));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_LIST_EMPTY));
             return;
         }
         menu.show(player);
@@ -92,7 +92,7 @@ public final class ReplayMenus {
         });
         menu.button(ItemStack.of(Material.BARRIER), i18n(LangText.GUI_REPLAY_LEAVE), List.of(), clicker -> {
             if (replays().getPlayback(clicker) == playback && replays().leave(clicker)) {
-                clicker.sendMessage(I.prefixed(LangText.REPLAY_LEFT));
+                clicker.sendMessage(I.prefixed(clicker, LangText.REPLAY_LEFT));
             }
         });
         menu.show(player);
@@ -116,7 +116,7 @@ public final class ReplayMenus {
     public static void openPlayers(Player player, Playback playback) {
         List<Recording.Actor> present = playback.getPresent();
         if (present.isEmpty()) {
-            player.sendMessage(I.prefixed(LangText.REPLAY_NO_PLAYERS));
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_NO_PLAYERS));
             return;
         }
         Menu menu = new Menu(i18n(LangText.GUI_REPLAY_PLAYERS));
