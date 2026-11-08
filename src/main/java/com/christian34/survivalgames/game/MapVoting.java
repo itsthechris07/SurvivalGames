@@ -67,12 +67,14 @@ public class MapVoting {
 
     /**
      * @return true if the players of the game can move into the arena: Survival Games with the same team size, room
-     * for them and nobody waiting in its lobby
+     * for them, nobody waiting in its lobby and its map isn't being edited
      */
     private boolean isPossible(Arena arena) {
         if (arena.getType() != GameType.SURVIVAL_GAMES || !arena.isPlayable()
                 || arena.getTeamSize() != game.getArena().getTeamSize()
-                || arena.getMaxPlayers() < game.getParticipants().size()) {
+                || arena.getMaxPlayers() < game.getParticipants().size()
+                // an admin edits its map (its game was taken out for it)
+                || plugin.getArenaManager().getEditWorld(arena) != null) {
             return false;
         }
         Game other = plugin.getGameManager().getGame(arena);

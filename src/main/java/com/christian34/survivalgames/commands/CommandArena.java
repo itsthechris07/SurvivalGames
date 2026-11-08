@@ -4,6 +4,7 @@ import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.ArenaManager;
 import com.christian34.survivalgames.game.Game;
+import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -81,18 +82,33 @@ public class CommandArena {
                           @Flag(value = "world", suggestions = "importable-worlds") @Nullable String worldName,
                           @Flag("generate") boolean generate,
                           @Flag("seed") @Nullable Long seed) {
-        if (!Arena.NAME.matcher(name).matches()) {
-            send(sender, LangText.ARENA_INVALID_NAME);
-            return;
-        }
-        if (arenas().get(name) != null) {
-            send(sender, LangText.ARENA_EXISTS, name);
-            return;
-        }
         GameType type = typeName == null ? GameType.SURVIVAL_GAMES : GameType.parse(typeName);
         if (type == null) {
             send(sender, LangText.UNKNOWN_GAME_TYPE, typeName, String.join(", ", GameType.keys()));
             return;
+        }
+        Arena arena = create(sender, name, type, mapName, worldName, generate, seed);
+        if (arena != null) send(sender, LangText.ARENA_CREATED, arena.getName(), i18n(type.getDisplayName()));
+    }
+
+    /**
+     * creates an arena (also used by the menu of a new game), the sender gets told what went wrong
+     *
+     * @param mapName   the map in maps/ (null: the one with the name of the arena)
+     * @param worldName a world of the server that is copied into maps/
+     * @param generate  a new world for every game instead of a map
+     * @return the new arena, null if it couldn't be created
+     */
+    @Nullable
+    public static Arena create(CommandSender sender, String name, GameType type, @Nullable String mapName,
+                               @Nullable String worldName, boolean generate, @Nullable Long seed) {
+        if (!Arena.NAME.matcher(name).matches()) {
+            send(sender, LangText.ARENA_INVALID_NAME);
+            return null;
+        }
+        if (arenas().get(name) != null) {
+            send(sender, LangText.ARENA_EXISTS, name);
+            return null;
         }
         String map = mapName != null ? mapName : name;
         // UHC is played in a new world every round (unless a map is given)
@@ -110,24 +126,24 @@ public class CommandArena {
                 World world = ArenaManager.getImportableWorld(worldName);
                 if (world == null) {
                     send(sender, LangText.WORLD_NOT_FOUND, worldName);
-                    return;
+                    return null;
                 }
                 if (arenas().isMap(map)) {
                     send(sender, LangText.MAP_EXISTS, map);
-                    return;
+                    return null;
                 }
                 if (!arenas().importWorld(world, map)) {
                     send(sender, LangText.WORLD_COPY_FAILED, world.getName());
-                    return;
+                    return null;
                 }
             } else if (!arenas().isMap(map)) {
                 send(sender, LangText.MAP_MISSING, map);
-                return;
+                return null;
             }
         }
         Arena arena = arenas().create(name, type, generate, seed);
         if (!generate && !map.equals(name)) plugin().getFileManager().getArenasFile().set(name + ".map", map);
-        send(sender, LangText.ARENA_CREATED, arena.getName(), i18n(type.getDisplayName()));
+        return arena;
     }
 
     @Command(ARENA + " list")
@@ -199,19 +215,36 @@ public class CommandArena {
 
     @Command(ONE_ARENA + " edit")
     @CommandDescription("command_arena_edit")
-    public void editCmd(Player player, @Argument("arena") Arena arena) {
+    public void editCmd(Player player, @Argument("arena") Arena arena, @Flag("prepare") boolean prepare) {
         if (!checkFree(player)) return;
         if (!arena.isPlayable()) {
             arena.getMissingSetup().forEach(missing -> player.sendMessage(I.prefixed(player, missing)));
             return;
         }
+        Game game = plugin().getGameManager().getGame(arena);
+        if (game != null && arenas().getEditWorld(arena) == null) {
+            // the setup of an arena with a game can't be changed: a game nobody is in is removed until it is saved
+            if (!game.isUnused()) {
+                // stopping a Varo ends it, so it isn't offered
+                send(player, game instanceof VaroGame ? LangText.EDIT_VARO_IN_USE : LangText.EDIT_GAME_IN_USE,
+                        arena.getName());
+                return;
+            }
+            if (!prepare) {
+                send(player, LangText.EDIT_HAS_GAME, arena.getName());
+                return;
+            }
+            plugin().getGameManager().stopGame(game, false);
+        }
         try {
             arenas().startEditing(plugin().getUser(player), arena);
         } catch (RuntimeException ex) {
             send(player, LangText.WORLD_LOAD_FAILED, arena.getName());
+            if (game != null) createGame(player, arena);
             return;
         }
         send(player, LangText.EDIT_STARTED, arena.getName());
+        if (game != null) send(player, LangText.EDIT_GAME_REMOVED, arena.getName());
     }
 
     @Command(ARENA + " save")
@@ -229,6 +262,11 @@ public class CommandArena {
         }
         arenas().stopEditing(plugin().getUser(player));
         send(player, LangText.EDIT_SAVED, arena.getName());
+        // the game that was removed for editing (or after a restart) comes back once nobody edits the map anymore
+        if (arena.hasAutoGame() && arenas().getEditWorld(arena) == null
+                && plugin().getGameManager().getGame(arena) == null) {
+            createGame(player, arena);
+        }
     }
 
     /**
@@ -485,7 +523,7 @@ public class CommandArena {
     /**
      * creates the game of the arena (if it has none)
      */
-    static void createGame(CommandSender sender, Arena arena) {
+    public static void createGame(CommandSender sender, Arena arena) {
         if (plugin().getNetworkManager().isLobby()) {
             send(sender, LangText.NO_GAMES_ON_LOBBY);
             return;

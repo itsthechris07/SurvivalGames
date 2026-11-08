@@ -213,6 +213,13 @@ public abstract class Game {
         return List.copyOf(participants.values());
     }
 
+    /**
+     * @return true if the game waits for players and nobody has joined (it can be removed without anybody noticing)
+     */
+    public boolean isUnused() {
+        return getState() == GameState.LOBBY && members.isEmpty() && participants.isEmpty();
+    }
+
     @Nullable
     public Participant getParticipant(UUID uuid) {
         return participants.get(uuid);

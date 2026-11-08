@@ -4,6 +4,7 @@ import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.ArenaManager;
 import com.christian34.survivalgames.arena.Lobby;
+import com.christian34.survivalgames.commands.CommandArena;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -13,6 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
+import java.util.function.Predicate;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
 
@@ -65,6 +68,8 @@ public final class AdminMenus {
      */
     public static void open(Player player) {
         Menu menu = new Menu(i18n(LangText.GUI_ADMIN));
+        menu.button(icon(Material.NETHER_STAR), i18n(LangText.GUI_NEW_GAME), I.itemLines(LangText.GUI_NEW_GAME_LORE),
+                AdminMenus::openNewGame);
         menu.button(icon(Material.GRASS_BLOCK), i18n(LangText.GUI_ADMIN_ARENAS),
                 I.itemLines(LangText.GUI_ADMIN_ARENAS_LORE, plugin().getArenaManager().getArenas().size()),
                 AdminMenus::openArenas);
@@ -105,12 +110,85 @@ public final class AdminMenus {
             menu.button(icon(material), Component.text(arena.getName(), NamedTextColor.YELLOW), lore,
                     clicker -> openArena(clicker, arena));
         }
-        // the name has to be typed
         menu.button(icon(Material.WRITABLE_BOOK), i18n(LangText.GUI_ARENA_CREATE),
-                I.itemLines(LangText.GUI_ARENA_CREATE_LORE),
-                clicker -> clicker.sendMessage(I.prefixed(clicker, LangText.ARENA_CREATE_HINT)));
+                I.itemLines(LangText.GUI_ARENA_CREATE_LORE), AdminMenus::openNewGame);
         back(menu, AdminMenus::open);
         menu.show(player);
+    }
+
+    // ---------------------------------------------------------------- new game
+
+    /**
+     * a new game in two clicks, nothing is typed: the game type, then the map
+     */
+    public static void openNewGame(Player player) {
+        Menu menu = new Menu(i18n(LangText.GUI_NEW_GAME_TYPE));
+        for (GameType type : GameType.values()) {
+            menu.button(icon(type.getIcon()), i18n(type.getDisplayName()), I.itemLines(LangText.GUI_NEW_GAME_TYPE_LORE),
+                    clicker -> openNewGameMap(clicker, type));
+        }
+        back(menu, AdminMenus::open);
+        menu.show(player);
+    }
+
+    /**
+     * where the new game is played: a new world (not for duels, first for Varo and UHC), a map in maps/ or a world of
+     * the server (click: the arena and its game are created)
+     */
+    public static void openNewGameMap(Player player, GameType type) {
+        ArenaManager arenas = plugin().getArenaManager();
+        Menu menu = new Menu(i18n(LangText.GUI_NEW_GAME_MAP, i18n(type.getDisplayName())));
+        boolean generate = type != GameType.DUELS;
+        boolean generateFirst = type == GameType.VARO || type == GameType.UHC;
+        Runnable generateButton = () -> menu.button(icon(Material.WHEAT_SEEDS), i18n(LangText.GUI_NEW_GAME_GENERATE),
+                I.itemLines(LangText.GUI_NEW_GAME_GENERATE_LORE), clicker -> createGame(clicker, type, null, null));
+        if (generate && generateFirst) generateButton.run();
+        List<String> maps = arenas.getMapNames();
+        for (String map : maps) {
+            menu.button(icon(Material.MAP), Component.text(map, NamedTextColor.YELLOW),
+                    I.itemLines(LangText.GUI_NEW_GAME_MAP_LORE), clicker -> createGame(clicker, type, map, null));
+        }
+        for (World world : ArenaManager.getImportableWorlds()) {
+            String name = world.getName();
+            if (maps.contains(name)) continue;
+            menu.button(icon(Material.GRASS_BLOCK), Component.text(name, NamedTextColor.YELLOW),
+                    I.itemLines(LangText.GUI_NEW_GAME_WORLD_LORE), clicker -> createGame(clicker, type, null, name));
+        }
+        if (generate && !generateFirst) generateButton.run();
+        back(menu, AdminMenus::openNewGame);
+        menu.show(player);
+    }
+
+    /**
+     * creates the arena (named after the map or the game type) and its game, then shows the arena
+     *
+     * @param map   a map in maps/
+     * @param world a world of the server, copied into maps/ (both null: a new world for every game)
+     */
+    private static void createGame(Player player, GameType type, @Nullable String map, @Nullable String world) {
+        ArenaManager arenas = plugin().getArenaManager();
+        String source = map != null ? map : world != null ? world : type == GameType.SURVIVAL_GAMES ? "sg" : type.getKey();
+        // a copied world gets a map of the arena's name
+        String name = freeName(source, candidate -> arenas.get(candidate) != null || map == null && arenas.isMap(candidate));
+        Arena arena = CommandArena.create(player, name, type, map, world, map == null && world == null, null);
+        if (arena == null) return;
+        arena.setAutoGame(true);
+        CommandArena.createGame(player, arena);
+        openArena(player, arena);
+    }
+
+    /**
+     * @return a valid arena name from the text (e.g. the name of a world) that isn't taken: castle, castle_2, ...
+     */
+    static String freeName(String text, Predicate<String> taken) {
+        String base = text.replaceAll("[^A-Za-z0-9_]", "_");
+        if (base.length() > 28) base = base.substring(0, 28);
+        if (base.isEmpty()) base = "arena";
+        String name = base;
+        for (int i = 2; taken.test(name); i++) {
+            name = base + "_" + i;
+        }
+        return name;
     }
 
     /**
@@ -138,7 +216,12 @@ public final class AdminMenus {
                     clicker -> Menus.run(clicker, command + "spawn add"));
             menu.button(icon(Material.LIME_DYE), i18n(LangText.GUI_ARENA_SAVE),
                     I.itemLines(LangText.GUI_ARENA_SAVE_LORE), run("sg arena save", again));
-        } else if (game == null) {
+        } else if (game != null && game.isUnused() && plugin().getArenaManager().getEditWorld(arena) == null) {
+            // the game is taken out while the map is edited - asked in the menu, as Bedrock players can't click the chat
+            menu.button(icon(Material.WOODEN_AXE), i18n(LangText.GUI_ARENA_EDIT),
+                    I.itemLines(LangText.GUI_ARENA_EDIT_LORE), clicker -> openPrepareEdit(clicker, arena));
+        } else {
+            // with players in the game: the command explains why the map can't be edited
             menu.button(icon(Material.WOODEN_AXE), i18n(LangText.GUI_ARENA_EDIT),
                     I.itemLines(LangText.GUI_ARENA_EDIT_LORE), clicker -> Menus.run(clicker, command + "edit"));
         }
@@ -154,6 +237,12 @@ public final class AdminMenus {
         setup.add(i18n(LangText.GUI_ARENA_SETUP_CLICK));
         menu.button(icon(Material.BOOK), i18n(LangText.GUI_ARENA_SETUP), setup, clicker -> openSetup(clicker, arena));
         if (game == null) {
+            // the type can't change while the arena has a game
+            menu.button(icon(arena.getType().getIcon()), i18n(LangText.GUI_ARENA_CHANGE_TYPE),
+                    I.itemLines(LangText.GUI_ARENA_CHANGE_TYPE_LORE, i18n(arena.getType().getDisplayName())),
+                    clicker -> openType(clicker, arena));
+        }
+        if (game == null) {
             menu.button(icon(Material.EMERALD), i18n(LangText.GUI_ARENA_CREATE_GAME),
                     I.itemLines(LangText.GUI_ARENA_CREATE_GAME_LORE), run(command + "creategame", again));
         } else {
@@ -165,6 +254,34 @@ public final class AdminMenus {
                     I.itemLines(LangText.GUI_ARENA_REMOVE_GAME_LORE), run(command + "removegame", again));
         }
         back(menu, AdminMenus::openArenas);
+        menu.show(player);
+    }
+
+    /**
+     * the game types (click: the arena gets it)
+     */
+    private static void openType(Player player, Arena arena) {
+        Consumer<Player> again = clicker -> openArena(clicker, arena);
+        Menu menu = new Menu(i18n(LangText.GUI_ARENA_TYPE_TITLE, arena.getName()));
+        for (GameType type : GameType.values()) {
+            List<Component> lore = type == arena.getType() ? List.of(i18n(LangText.GUI_ARENA_TYPE_CURRENT))
+                    : I.itemLines(LangText.GUI_ARENA_TYPE_CHOOSE);
+            menu.button(icon(type.getIcon()), i18n(type.getDisplayName()), lore,
+                    run("sg arena " + arena.getName() + " type " + type.getKey(), again));
+        }
+        back(menu, again);
+        menu.show(player);
+    }
+
+    /**
+     * the arena has a game nobody is in: it is removed while the map is edited and comes back when it is saved
+     */
+    private static void openPrepareEdit(Player player, Arena arena) {
+        Menu menu = new Menu(i18n(LangText.GUI_EDIT_PREPARE, arena.getName()));
+        menu.button(icon(Material.WOODEN_AXE), i18n(LangText.GUI_EDIT_PREPARE_YES),
+                I.itemLines(LangText.GUI_EDIT_PREPARE_LORE),
+                clicker -> Menus.run(clicker, "sg arena " + arena.getName() + " edit --prepare"));
+        back(menu, clicker -> openArena(clicker, arena));
         menu.show(player);
     }
 

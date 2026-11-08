@@ -53,7 +53,7 @@ and the games with their controls (start, deathmatch, backups, players, stop). I
 | `/sg arena create <name> [--type <type>] [--map <map>] [--world <world>] [--generate] [--seed <seed>]` | creates an arena (see [Getting started](getting-started.md#1-the-map)) |
 | `/sg arena list` | all arenas |
 | `/sg arena <arena> info` | the setup of an arena |
-| `/sg arena <arena> edit` | teleports you into a copy of the map |
+| `/sg arena <arena> edit [--prepare]` | teleports you into a copy of the map (`--prepare`: removes the game nobody is in until `/sg arena save`) |
 | `/sg arena save` | saves the map you edit and teleports you back |
 | `/sg arena <arena> lobby` / `center` | sets the lobby / the center to your position |
 | `/sg arena <arena> lobby remove` | removes the lobby of the arena: the players wait in the [lobby world](getting-started.md#the-lobby-world) |

@@ -114,6 +114,7 @@ public class GravityGrenade implements Listener {
         }
         List<LivingEntity> entities = new ArrayList<>();
         for (Entity entity : world.getNearbyEntities(center, radius * 2, radius * 2, radius * 2)) {
+            // isInvulnerable is deprecated in 26.3, its replacement isMarkedInvulnerable doesn't exist in 1.21.11
             if (entity instanceof LivingEntity living && !(entity instanceof Player player && player.isInvulnerable())) {
                 entities.add(living);
                 if (thrower != null) {

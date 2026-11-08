@@ -229,7 +229,8 @@ public class UserStorage {
             AttributeInstance instance = player.getAttribute(attribute);
             if (instance == null) continue;
             String key = attribute.getKey().toString();
-            // attributes the player didn't have before get their default value
+            // attributes the player didn't have before get their default value (deprecated in 26.3, but the suggested
+            // Attribute#getDefaultValue doesn't know the defaults of players, e.g. their movement speed)
             instance.setBaseValue(attributes != null && attributes.contains(key) ? attributes.getDouble(key)
                     : instance.getDefaultValue());
         }

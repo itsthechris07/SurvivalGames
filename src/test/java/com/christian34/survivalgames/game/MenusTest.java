@@ -96,7 +96,7 @@ class MenusTest extends PluginTestBase {
         assertEquals("Administration", forms.buttons().getLast());
         click(admin, "Administration");
         assertEquals("Administration", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("Arenas", "Games", "Lobby world", "Settings", "Reload"), forms.buttons());
+        assertEquals(List.of("New game", "Arenas", "Games", "Lobby world", "Settings", "Reload"), forms.buttons());
 
         execute(steve, "sg admin");
         assertContains(messages(steve), "permission");
@@ -211,13 +211,29 @@ class MenusTest extends PluginTestBase {
         assertTrue(forms.lore("castle").contains("Game: no game"));
 
         click(admin, "Create an arena");
-        assertContains(messages(admin), "Create an arena: /sg arena create <name>");
+        assertEquals("New game: the game type", FakeForms.plain(forms.last().getTitle()), "nothing is typed");
+        execute(admin, "sg admin");
+        click(admin, "Arenas");
 
         click(admin, "castle");
         assertEquals("Arena castle", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("Edit the map", "Setup", "Create the game", "Back"), forms.buttons());
+        assertEquals(List.of("Edit the map", "Setup", "Game type", "Create the game", "Back"), forms.buttons());
         assertTrue(forms.lore("Setup").contains("Spawn points: 0"));
         assertEquals("Click to change it", forms.lore("Setup").getLast());
+        assertTrue(forms.lore("Game type").contains("Now: Survival Games"));
+
+        // the game type is clicked
+        click(admin, "Game type");
+        assertEquals("Game type of castle", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("Survival Games", "Varo", "UHC", "Duels", "Back"), forms.buttons());
+        assertEquals(List.of("the game type now"), forms.lore("Survival Games"));
+        click(admin, "Varo");
+        assertEquals(GameType.VARO, arena.getType());
+        assertEquals("Arena castle", FakeForms.plain(forms.last().getTitle()), "back at the arena");
+        click(admin, "Game type");
+        click(admin, "Survival Games");
+        assertEquals(GameType.SURVIVAL_GAMES, arena.getType());
+        messages(admin);
 
         click(admin, "Edit the map");
         assertSame(arena, plugin.getArenaManager().getEditedArena(admin));
@@ -227,7 +243,7 @@ class MenusTest extends PluginTestBase {
         click(admin, "Arenas");
         click(admin, "castle");
         assertEquals(List.of("Set the lobby", "Set the center", "Add a spawn point", "Save the map", "Setup",
-                "Create the game", "Back"), forms.buttons());
+                "Game type", "Create the game", "Back"), forms.buttons());
         admin.teleport(new Location(admin.getWorld(), 10.5, 70, 10.5));
         click(admin, "Add a spawn point");
         assertEquals(1, arena.getSpawnCount());
@@ -241,7 +257,24 @@ class MenusTest extends PluginTestBase {
 
         click(admin, "Create the game");
         assertNotNull(plugin.getGameManager().getGame(arena));
-        assertEquals(List.of("Setup", "Control the game", "Remove the game", "Back"), forms.buttons());
+        assertEquals(List.of("Edit the map", "Setup", "Control the game", "Remove the game", "Back"), forms.buttons());
+        // the game nobody is in is taken out for editing - asked in a menu (Bedrock players can't click the chat)
+        click(admin, "Edit the map");
+        assertEquals("Edit the map of castle?", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("Yes, edit the map", "Back"), forms.buttons());
+        assertNull(plugin.getArenaManager().getEditedArena(admin), "nothing happens before the click");
+        click(admin, "Back");
+        assertEquals("Arena castle", FakeForms.plain(forms.last().getTitle()));
+        click(admin, "Edit the map");
+        click(admin, "Yes, edit the map");
+        assertSame(arena, plugin.getArenaManager().getEditedArena(admin));
+        assertNull(plugin.getGameManager().getGame(arena));
+        execute(admin, "sg arena save");
+        assertNotNull(plugin.getGameManager().getGame(arena), "the game is back");
+        messages(admin);
+        execute(admin, "sg admin");
+        click(admin, "Arenas");
+        click(admin, "castle");
 
         click(admin, "Remove the game");
         assertNull(plugin.getGameManager().getGame(arena));
@@ -251,6 +284,62 @@ class MenusTest extends PluginTestBase {
         assertEquals("Arenas", FakeForms.plain(forms.last().getTitle()));
         click(admin, "Back");
         assertEquals("Administration", FakeForms.plain(forms.last().getTitle()));
+    }
+
+    @Test
+    void aNewGameInTwoClicks() {
+        createMap("castle");
+        execute(admin, "sg admin");
+        click(admin, "New game");
+        assertEquals("New game: the game type", FakeForms.plain(forms.last().getTitle()));
+        assertEquals(List.of("Survival Games", "Varo", "UHC", "Duels", "Back"), forms.buttons());
+
+        click(admin, "Survival Games");
+        assertEquals("New game: where is Survival Games played?", FakeForms.plain(forms.last().getTitle()));
+        List<String> places = forms.buttons();
+        assertEquals("castle", places.getFirst(), "the maps first");
+        assertEquals("A new world", places.get(places.size() - 2), "a new world last for Survival Games");
+        click(admin, "castle");
+        Arena arena = plugin.getArenaManager().get("castle");
+        assertNotNull(arena);
+        assertEquals(GameType.SURVIVAL_GAMES, arena.getType());
+        assertNotNull(plugin.getGameManager().getGame(arena), "players can join right away");
+        assertContains(messages(admin), "The game of arena castle has been created. Join: /sg join castle");
+        assertEquals("Arena castle", FakeForms.plain(forms.last().getTitle()), "the arena can be set up now");
+
+        // the same map again: the arena gets a free name
+        execute(admin, "sg admin");
+        click(admin, "New game");
+        click(admin, "Varo");
+        assertEquals("A new world", forms.buttons().getFirst(), "a new world first for Varo");
+        click(admin, "castle");
+        Arena varo = plugin.getArenaManager().get("castle_2");
+        assertNotNull(varo);
+        assertEquals(GameType.VARO, varo.getType());
+        assertEquals("castle", varo.getMapName());
+        assertNotNull(plugin.getGameManager().getGame(varo));
+
+        execute(admin, "sg admin");
+        click(admin, "New game");
+        click(admin, "Survival Games");
+        click(admin, "A new world");
+        Arena generated = plugin.getArenaManager().get("sg");
+        assertNotNull(generated);
+        assertTrue(generated.isGenerated());
+        assertNotNull(plugin.getGameManager().getGame(generated));
+
+        execute(admin, "sg admin");
+        click(admin, "New game");
+        click(admin, "Duels");
+        assertFalse(forms.buttons().contains("A new world"), "duels need a small map");
+    }
+
+    @Test
+    void newArenasGetAFreeValidName() {
+        assertEquals("castle", AdminMenus.freeName("castle", name -> false));
+        assertEquals("my_world_1", AdminMenus.freeName("my world-1", name -> false));
+        assertEquals("uhc_3", AdminMenus.freeName("uhc", name -> name.equals("uhc") || name.equals("uhc_2")));
+        assertEquals(28, AdminMenus.freeName("a".repeat(40), name -> false).length());
     }
 
     @Test

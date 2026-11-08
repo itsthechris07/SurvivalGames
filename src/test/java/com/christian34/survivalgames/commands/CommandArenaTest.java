@@ -70,6 +70,49 @@ class CommandArenaTest extends PluginTestBase {
     }
 
     @Test
+    void anArenaWithAGameIsPreparedForEditing() {
+        createArena("a1", GameType.SURVIVAL_GAMES, 0);
+        execute(admin, "sg arena a1 creategame");
+        messages(admin);
+        execute(admin, "sg arena a1 edit");
+        assertContains(messages(admin), "Arena a1 has a game, so its map can't be changed right now.");
+        assertNull(plugin.getArenaManager().getEditedArena(admin));
+        assertNotNull(plugin.getGameManager().getGame(arena("a1")));
+
+        // the click on the message: the game is removed while the map is edited
+        execute(admin, "sg arena a1 edit --prepare");
+        assertSame(arena("a1"), plugin.getArenaManager().getEditedArena(admin));
+        assertNull(plugin.getGameManager().getGame(arena("a1")));
+        assertContains(messages(admin), "The game of a1 is back as soon as you save the map: /sg arena save");
+
+        execute(admin, "sg arena save");
+        assertNotNull(plugin.getGameManager().getGame(arena("a1")), "the game is back");
+        assertContains(messages(admin), "The game of arena a1 has been created.");
+    }
+
+    @Test
+    void theMapOfAGameWithPlayersIsntEdited() {
+        createArena("a1", GameType.SURVIVAL_GAMES, 0);
+        execute(admin, "sg arena a1 creategame");
+        PlayerMock steve = addPlayer("Steve");
+        execute(steve, "sg join a1");
+        messages(admin);
+        execute(admin, "sg arena a1 edit --prepare");
+        assertContains(messages(admin), "Players are in the game of arena a1 right now.");
+        assertNull(plugin.getArenaManager().getEditedArena(admin));
+        assertNotNull(plugin.getGameManager().getGame(arena("a1")).getMembers().stream()
+                .filter(member -> member.getPlayer() == steve).findFirst().orElse(null), "Steve stays");
+
+        createArena("v1", GameType.VARO, 0);
+        execute(admin, "sg arena v1 creategame");
+        PlayerMock alex = addPlayer("Alex");
+        execute(alex, "sg join v1");
+        messages(admin);
+        execute(admin, "sg arena v1 edit");
+        assertContains(messages(admin), "The Varo of arena v1 is going on");
+    }
+
+    @Test
     void invalidNames() {
         execute(admin, "sg arena create a-b");
         assertContains(messages(admin), "Arena names have 1 to 32 letters");

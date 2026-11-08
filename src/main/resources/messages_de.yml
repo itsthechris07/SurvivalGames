@@ -166,7 +166,6 @@ arena_not_found: '<red>Es gibt keine Arena namens <yellow>{0}<red>. Alle Arenen:
 arena_invalid_name: '<red>Arenanamen haben 1 bis 32 Buchstaben, Zahlen oder _.'
 arena_exists: '<red>Es gibt schon eine Arena namens <yellow>{0}<red>.'
 arena_created: '<green>Die Arena <yellow>{0} <green>({1}<green>) wurde erstellt. Einrichten: <yellow><run:"/sg arena {0} edit">/sg arena {0} edit</run>'
-arena_create_hint: '<gray>Arena erstellen: <yellow><suggest:"/sg arena create ">/sg arena create \<name></suggest> <gray>(für ein Varo <yellow>--type varo <gray>anhängen)'
 arena_in_use: '<red>Die Arena <yellow>{0} <red>hat ein Spiel oder wird bearbeitet. Entferne zuerst das Spiel: <yellow><run:"/sg arena {0} removegame">/sg arena {0} removegame</run>'
 arena_delete_confirm: '<red>Das löscht die Arena <yellow>{0} <red>(die Map bleibt in maps/, ein gespeicherter Varo samt Welt wird gelöscht). <yellow><run:"/sg arena {0} delete --confirm">[Löschen]</run>'
 arena_deleted: '<gray>Die Arena <yellow>{0} <gray>wurde gelöscht.'
@@ -197,6 +196,10 @@ setup_few_spawns: '<gray>nur <yellow>{0} <gray>Spawnpunkte für <yellow>{1} <gra
 already_editing: '<red>Du bearbeitest schon die Arena <yellow>{0}<red>. Speichere sie zuerst: <yellow><run:"/sg arena save">/sg arena save</run>'
 already_editing_lobby: '<red>Du bearbeitest bereits die Lobby-Welt. Speichere sie zuerst: <yellow><run:"/sg lobby save">/sg lobby save</run>'
 edit_started: '<green>Du bearbeitest eine Kopie der Map von <yellow>{0}<green>. Setze Lobby, Mitte und Spawnpunkte dort, wo du stehst (<yellow><run:"/sg help arena">/sg help arena</run><green>), speichern mit <yellow><run:"/sg arena save">/sg arena save</run>'
+edit_has_game: '<yellow>Die Arena {0} hat ein Spiel, deshalb kann ihre Map gerade nicht geändert werden. <gray>Klicke, um sie vorzubereiten: das Spiel wird entfernt, solange du bearbeitest, und kommt beim Speichern zurück. <green><run:"/sg arena {0} edit --prepare">[Map bearbeiten]</run>'
+edit_game_in_use: '<red>Im Spiel der Arena <yellow>{0} <red>sind gerade Spieler. Bearbeite die Map, wenn es vorbei ist - oder stoppe das Spiel zuerst: <yellow><run:"/sg game {0} stop">/sg game {0} stop</run>'
+edit_varo_in_use: '<red>Das Varo der Arena <yellow>{0} <red>läuft, seine Map kann erst nach dem Ende geändert werden.'
+edit_game_removed: '<gray>Das Spiel von <yellow>{0} <gray>ist wieder da, sobald du die Map speicherst: <yellow><run:"/sg arena save">/sg arena save</run>'
 edit_saved: '<green>Die Map der Arena <yellow>{0} <green>wurde gespeichert.'
 edit_stopped: '<gray>Du bearbeitest die Arena nicht mehr, die Map wurde gespeichert.'
 not_editing: '<red>Du bearbeitest gerade keine Arena.'
@@ -456,7 +459,7 @@ gui_arena: '<dark_gray>Arena {0}'
 gui_arena_type: '<gray>Spieltyp: {0}'
 gui_arena_state: '<gray>Spiel: {0}'
 gui_arena_create: '<green>Arena erstellen'
-gui_arena_create_lore: "Klicken, dann den Namen\nder Arena in den Chat schreiben"
+gui_arena_create_lore: "Spieltyp und Karte wählen,\ndas Spiel ist sofort bereit"
 gui_arena_edit: '<green>Karte bearbeiten'
 gui_arena_edit_lore: "Bringt dich in eine Kopie der Karte:\nsetze dort die Lobby, die Mitte\nund die Spawnpunkte"
 gui_arena_set_lobby: '<yellow>Lobby setzen'
@@ -521,6 +524,23 @@ gui_lobby_remove_lore: "Die Spieler warten wieder in den Arenen,\ndie Karte blei
 gui_lobby_worlds: '<dark_gray>Lobby-Welt auswählen'
 gui_lobby_map_lore: "eine Karte in maps/\n<green>Klicken zum Auswählen"
 gui_lobby_world_lore: "eine Welt des Servers,\nsie wird nach maps/ kopiert\n<green>Klicken zum Auswählen"
+gui_arena_change_type: '<aqua>Spieltyp'
+gui_arena_change_type_lore: "<gray>Jetzt: {0}\n<green>Klicken zum Ändern"
+gui_arena_type_title: '<dark_gray>Spieltyp von {0}'
+gui_arena_type_current: '<gray>der jetzige Spieltyp'
+gui_arena_type_choose: "<green>Klicken zum Auswählen"
+gui_edit_prepare: '<dark_gray>Map von {0} bearbeiten?'
+gui_edit_prepare_yes: '<green>Ja, Map bearbeiten'
+gui_edit_prepare_lore: "Die Arena hat ein Spiel, in dem niemand ist.\nEs wird entfernt, solange du bearbeitest,\nund kommt beim Speichern zurück."
+gui_new_game: '<green>Neues Spiel'
+gui_new_game_lore: "Zwei Klicks: Spieltyp und Karte,\ndann können Spieler beitreten"
+gui_new_game_type: '<dark_gray>Neues Spiel: der Spieltyp'
+gui_new_game_type_lore: "<green>Klicken, um die Karte zu wählen"
+gui_new_game_map: '<dark_gray>Neues Spiel: wo wird {0} <dark_gray>gespielt?'
+gui_new_game_map_lore: "eine Karte in maps/\n<green>Klicken: das Spiel wird erstellt"
+gui_new_game_world_lore: "eine Welt des Servers,\nsie wird nach maps/ kopiert\n<green>Klicken: das Spiel wird erstellt"
+gui_new_game_generate: '<green>Eine neue Welt'
+gui_new_game_generate_lore: "eine neue Zufallswelt für jedes Spiel\n<green>Klicken: das Spiel wird erstellt"
 gui_setup: '<dark_gray>Einrichtung von {0}'
 gui_setup_min_players: '<yellow>Nötige Spieler'
 gui_setup_max_players: '<yellow>Höchstens Spieler'

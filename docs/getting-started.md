@@ -12,6 +12,11 @@
 
 All setup commands need the permission `sg.admin` (operators have it).
 
+!!! tip "A game in two clicks"
+    `/sg admin` → **New game**: click the game type, then where it is played – a map in `maps/`, a world of the
+    server or a new world. The arena gets its name by itself and the game is created right away, players join with
+    `/sg join`. Lobby, center and spawn points are optional and can be set up later (the steps below).
+
 !!! tip "Everything in a menu"
     `/sg admin` shows the arenas and the games in a menu: a click on an arena leads through the steps below (edit the
     map, set the lobby, the center and the spawn points where you stand, save, create the game), a click on a game
@@ -29,7 +34,7 @@ Every arena plays on a map – a world folder that stays untouched; each game pl
   (good for Varo).
 
 The game type is Survival Games unless you add `--type varo`, `--type uhc` or `--type duels` (a [UHC](uhc.md) arena gets a generated
-world). You can change it later with `/sg arena <name> type`.
+world). You can change it later with `/sg arena <name> type` or the button "Game type" of the arena in `/sg admin`.
 
 ## 2. Setting up the arena
 
@@ -41,6 +46,10 @@ stand at the right place and run:
 | `/sg arena <name> lobby` | where the players wait before the game (default: the [lobby world](#the-lobby-world), without one the center) |
 | `/sg arena <name> center` | the middle of the world border, the spawn circle and the deathmatch (default: the world spawn) |
 | `/sg arena <name> spawn add` | a spawn point (the middle of the block you stand on; the players look at the center) – once per player |
+
+If the arena already has a game, a message offers to get it ready (`/sg arena <name> edit --prepare`): the game is
+removed while you edit and created again when you save. That only works while nobody is in the game – a running round
+can be stopped first, a Varo only after it is over.
 
 `/sg arena save` saves the copy back into the map and teleports you back. Without spawn points the players spawn in a
 circle around the center (`spawn-circle-radius`).

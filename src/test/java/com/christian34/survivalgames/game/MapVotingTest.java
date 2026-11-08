@@ -175,6 +175,20 @@ class MapVotingTest extends PluginTestBase {
     }
 
     @Test
+    void mapsThatAreEditedCantWin() {
+        createGame();
+        join();
+        execute(steve, "sg vote arena2");
+        execute(alex, "sg vote arena2");
+        PlayerMock admin = addAdmin("Admin");
+        execute(admin, "sg arena arena2 edit");
+        assertSame(arena2, plugin.getArenaManager().getEditedArena(admin));
+        seconds(6);
+        assertSame(game, gameOf(steve), "the players stay");
+        assertNull(plugin.getGameManager().getGame(arena2), "no game while the map is edited");
+    }
+
+    @Test
     void mapsWithPlayersInTheLobbyCantWin() {
         createGame();
         join();

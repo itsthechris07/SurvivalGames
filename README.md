@@ -62,6 +62,10 @@ one game per server in a network behind Velocity/BungeeCord.
 
 ## Quick start
 1. Put the jar into `plugins/` and start the server.
+
+The fastest way: `/sg admin` → **New game**, click the game type and where it is played (a map, a world of the
+server or a new world) – the game is ready, players join with `/sg join`. Or step by step:
+
 2. Put a map into `plugins/SurvivalGames/maps/<name>` (or import a world: `/sg arena create <name> --world <world>`,
    or generate one: `--generate`) and create the arena: `/sg arena create <name>` (`--type varo` for Varo).
 3. `/sg arena <name> edit`, set `center` and `spawn add`, then `/sg arena save`. The lobby of all arenas:
