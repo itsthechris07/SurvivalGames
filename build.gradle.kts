@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.christian34.survivalgames"
-version = "1.1.0"
+version = "1.2.0"
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
@@ -120,6 +120,8 @@ tasks {
         useJUnitPlatform()
         // the update checker doesn't ask GitHub and bStats gets nothing in tests
         systemProperty("sg.offline", "true")
+        // the test classes run in several JVMs at once (MockBukkit gives every test its own folders)
+        maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
         testLogging {
             events("failed", "skipped")
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

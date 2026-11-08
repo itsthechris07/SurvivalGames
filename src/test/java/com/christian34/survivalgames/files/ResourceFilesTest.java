@@ -7,13 +7,13 @@ import com.christian34.survivalgames.lib.lang.LangText;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,10 +30,13 @@ class ResourceFilesTest extends PluginTestBase {
                 Objects.requireNonNull(plugin.getResource(name)), StandardCharsets.UTF_8));
     }
 
-    @ParameterizedTest
-    @EnumSource(LangText.class)
-    void everyMessageExists(LangText text) {
-        assertNotNull(bundled("messages.yml").getString(text.getKey()), "missing in messages.yml: " + text.getKey());
+    // one test for all texts: a parameterized test would start a server for each of them (minutes)
+    @Test
+    void everyMessageExists() {
+        YamlConfiguration messages = bundled("messages.yml");
+        List<String> missing = Arrays.stream(LangText.values()).map(LangText::getKey)
+                .filter(key -> messages.getString(key) == null).toList();
+        assertEquals(List.of(), missing, "missing in messages.yml");
     }
 
     @Test
