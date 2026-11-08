@@ -448,7 +448,7 @@ gui_admin_arenas_lore: "Arenen erstellen und einrichten\n<gray>Arenen: <yellow>{
 gui_admin_games: '<gold>Spiele'
 gui_admin_games_lore: "Spiele starten, stoppen und steuern\n<gray>Spiele: <yellow>{0}"
 gui_admin_settings: '<aqua>Einstellungen'
-gui_admin_settings_lore: 'Die Regeln von Survival Games und Varo'
+gui_admin_settings_lore: 'Die Regeln der Spieltypen'
 gui_admin_reload: '<yellow>Neu laden'
 gui_admin_reload_lore: "Liest config.yml, loot.yml\nund die Nachrichten neu ein"
 gui_arenas: '<dark_gray>Arenen'
@@ -795,7 +795,7 @@ command_duel: 'fordert einen Spieler zum Duell heraus (ohne Spieler: wartet auf 
 command_duel_accept: 'nimmt das Duell eines Spielers an'
 command_duel_deny: 'lehnt das Duell eines Spielers ab'
 command_sponsor: 'Zuschauer schicken lebenden Spielern Items (ohne Spieler: das Menü)'
-command_settings: 'ändert die Einstellungen von Survival Games und Varo (ohne Wert: das Menü)'
+command_settings: 'ändert die Einstellungen der Spieltypen (ohne Wert: das Menü)'
 command_vote: 'stimmt in der Lobby für die Map ab (ohne Map: das Menü)'
 command_kit: 'wählt ein Kit (ohne Namen: das Menü)'
 command_kit_create: 'speichert dein Inventar als Kit, das Item in der Hand ist sein Symbol (--permission: nur mit sg.kit.name)'

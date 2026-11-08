@@ -452,7 +452,7 @@ replays:
   # the replays that can be watched at the same time - every one has its own world
   max-playbacks: 2
 
-# checks GitHub for new versions of SurvivalGames (at the start and every 12 hours) and tells the console and the
+# checks GitHub for new versions of SurvivalGames (at the start and every 6 hours) and tells the console and the
 # admins (sg.admin) every time they join - only the list of releases is requested, nothing is sent about the server
 # (the anonymous statistics of bStats are disabled in plugins/bStats/config.yml)
 update-checker:

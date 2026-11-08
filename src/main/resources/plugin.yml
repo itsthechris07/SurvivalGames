@@ -1,7 +1,7 @@
 name: SurvivalGames
 version: ${version}
 author: Christian34
-description: Survival Games and Varo - several games per server or one game per server in a network
+description: Survival Games, Varo, UHC and Duels - several games per server or one game per server in a network
 main: com.christian34.survivalgames.SurvivalGames
 # the oldest supported version (build.gradle.kts: paperApi)
 api-version: "1.21.11"
@@ -17,5 +17,5 @@ permissions:
     description: watch the replays of the games (/sg replay)
     default: true
   sg.network.bypass:
-    description: game servers of a network let the player in although he can't play (ops can always join)
+    description: game servers of a network let players in although they can't play (ops can always join)
     default: false

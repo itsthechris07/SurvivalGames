@@ -32,7 +32,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Checks the releases on GitHub for a new version (at the start and every 12 hours) and tells the console and the
+ * Checks the releases on GitHub for a new version (at the start and every 6 hours) and tells the console and the
  * admins when they join - every time, so the update isn't forgotten. The longer the server stays on an old version,
  * the louder it gets (see {@link Update#isOutdated()}).
  *
@@ -46,7 +46,7 @@ public class UpdateChecker implements Listener {
      */
     static final int OUTDATED_RELEASES = 3;
     static final Duration OUTDATED_AFTER = Duration.ofDays(30);
-    private static final long CHECK_INTERVAL_TICKS = 12 * 60 * 60 * 20L;
+    private static final long CHECK_INTERVAL_TICKS = 6 * 60 * 60 * 20L;
     private static final long JOIN_DELAY_TICKS = 3 * 20L;
     private static final Pattern NUMBERS = Pattern.compile("\\d+");
     private final SurvivalGames plugin;
@@ -76,7 +76,7 @@ public class UpdateChecker implements Listener {
     public void start() {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         if (isOffline() || !plugin.getFileManager().getConfigFile().getBoolean("update-checker.enabled")) return;
-        // the first check right away (async), then every 12 hours
+        // the first check right away (async), then every 6 hours
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> check(), 0L, CHECK_INTERVAL_TICKS);
     }
 
@@ -108,7 +108,7 @@ public class UpdateChecker implements Listener {
             this.update = found;
             if (found == null) return null;
             boolean newRelease = previous == null || !previous.version().equals(found.version());
-            // the console hears about it at the start and then every 12 hours once the update is overdue
+            // the console hears about it at the start and then every 6 hours once the update is overdue
             if (newRelease || found.isOutdated()) Debug.warn(found.consoleText(currentVersion));
             if (newRelease && previous != null) {
                 // a release came out while the server is running: the admins online learn it now

@@ -65,7 +65,8 @@ uhc:
   scenarios: [ cutclean, timber ]
 ```
 
-The scenarios are announced when the round begins – hovering over their names in the chat explains them.
+The scenarios are announced when the round begins – hovering over their names in the chat explains them. Admins change
+them in the game with `/sg settings uhc scenarios cutclean; timber` (`-`: none).
 
 ## Settings
 

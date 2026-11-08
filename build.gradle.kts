@@ -62,7 +62,7 @@ dependencies {
     // optional: god mode, vanish, /back, ... (integrations/EssentialsSupport)
     compileOnly("net.essentialsx:EssentialsX:2.21.2") { isTransitive = false }
     // optional: the worlds of games aren't managed by Multiverse (integrations/MultiverseSupport)
-    compileOnly("org.mvplugins.multiverse.core:multiverse-core:5.8.1") { isTransitive = false }
+    compileOnly("org.mvplugins.multiverse.core:multiverse-core:5.8.2") { isTransitive = false }
     compileOnly("org.mvplugins.multiverse.inventories:multiverse-inventories:5.3.6") { isTransitive = false }
     // optional: money for kills, wins and games (integrations/EconomySupport); VaultUnlocked (the Vault fork) contains
     // the legacy Vault api (net.milkbowl.vault) and its new one (net.milkbowl.vault2)
@@ -75,8 +75,8 @@ dependencies {
     implementation("org.bstats:bstats-bukkit:3.2.1")
 
     // tests run the plugin against a mocked Paper server
-    testImplementation("io.papermc.paper:paper-api:26.3.build.206-stable")
-    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.3:4.118.0")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.244-stable")
+    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.3:4.119.0")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains:annotations:26.1.0")

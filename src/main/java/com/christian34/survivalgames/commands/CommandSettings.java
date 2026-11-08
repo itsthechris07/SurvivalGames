@@ -4,6 +4,7 @@ import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.PlayHours;
+import com.christian34.survivalgames.game.UhcGame;
 import com.christian34.survivalgames.integrations.BedrockForms;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.lang.I;
@@ -36,7 +37,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
 
 /**
  * The settings of the game types in config.yml as a menu (/sg settings [type] [setting] [value]): switches, numbers and
- * some lists (entries separated by ";") of survival-games and varo
+ * some lists (entries separated by ";") of the game types
  *
  * @author Christian34
  */
@@ -50,7 +51,8 @@ public class CommandSettings {
     private static final Map<String, Predicate<String>> LISTS = Map.of(
             "play-hours", entry -> new PlayHours(List.of(entry), invalid -> {
             }).isRestricted(),
-            "strikes", entry -> STRIKES.contains(entry.toLowerCase(Locale.ROOT)));
+            "strikes", entry -> STRIKES.contains(entry.toLowerCase(Locale.ROOT)),
+            "scenarios", entry -> UhcGame.SCENARIOS.contains(entry.toLowerCase(Locale.ROOT)));
 
     private static ConfigFile config() {
         return SurvivalGames.getInstance().getFileManager().getConfigFile();

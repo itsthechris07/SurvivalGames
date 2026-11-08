@@ -55,7 +55,7 @@ files automatically – your values and comments stay.
 | `stats.storage` | `file` | `file` (`stats.yml`) or `mysql` (see [statistics](#statistics)) |
 | `stats.rating.games` | `[ survival-games ]` | the game types with an [Elo rating](#rating) |
 | `stats.achievements.enabled` | `true` | the players get [achievements](#achievements) |
-| `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 12 hours – admins (`sg.admin`) read it when they join |
+| `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 6 hours – admins (`sg.admin`) read it when they join |
 | `plugins/bStats/config.yml` | | anonymous statistics ([bStats](https://bstats.org)): servers, players, versions, the settings of the plugin (game types, extras, optional plugins) and how often games and features are used, without any names – `enabled: false` turns them off for all plugins |
 | `rewards.enabled` | `false` | [money](#rewards) for kills, wins and games |
 | `replays.enabled` | `true` | the games are recorded and can be watched again (see [replays](replays.md)) |
@@ -69,9 +69,10 @@ Arenas override `min-players`, `max-players`, `team-size` and `world-border.size
 
 ## Changing settings in the game
 
-`/sg settings` opens a menu with the switches and numbers of `survival-games` and `varo` in `config.yml`: a click
+`/sg settings` opens a menu with the switches and numbers of the game types in `config.yml`: a click
 turns a switch on or off, numbers are typed (`/sg settings <type> <setting> <value>`, Bedrock players get a form).
-The Varo lists `play-hours` and `strikes` are typed too: entries separated by `;`, `-` empties the list.
+The lists `play-hours` and `strikes` (Varo) and `scenarios` (UHC) are typed too: entries separated by `;`, `-`
+empties the list.
 The same as a command:
 
 ```
@@ -80,10 +81,11 @@ The same as a command:
 /sg settings varo world-border.damage 0.5
 /sg settings varo play-hours mon-fri 18:00-20:00; sat,sun 14:00-22:00
 /sg settings varo strikes warning; coordinates; out
+/sg settings uhc scenarios cutclean; timber
 ```
 
 The change is saved in `config.yml` and works right away. Other lists (`breakable-blocks`, ...) and everything
-outside of the two game types are changed in the file.
+outside of the game types are changed in the file.
 
 ## Statistics
 

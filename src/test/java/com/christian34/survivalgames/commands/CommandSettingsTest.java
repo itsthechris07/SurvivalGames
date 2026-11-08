@@ -68,6 +68,19 @@ class CommandSettingsTest extends PluginTestBase {
     }
 
     @Test
+    void uhcScenariosAreChanged() {
+        assertTrue(CommandSettings.getSettings(GameType.UHC).contains("scenarios"));
+        execute(admin, "sg settings uhc scenarios Timber");
+        assertContains(messages(admin), "scenarios is Timber now.");
+        assertEquals(List.of("Timber"), saved().getStringList("uhc.scenarios"));
+        execute(admin, "sg settings uhc scenarios timber; nofall");
+        assertContains(messages(admin), "timber; nofall isn't a valid value for scenarios.");
+        assertEquals(List.of("Timber"), config().getData().getStringList("uhc.scenarios"), "unchanged");
+        execute(admin, "sg settings uhc scenarios -");
+        assertTrue(config().getData().getStringList("uhc.scenarios").isEmpty(), "no scenarios");
+    }
+
+    @Test
     void switchesAreChanged() {
         assertTrue(config().getBoolean("survival-games.map-voting.enabled"));
         execute(admin, "sg settings survival-games map-voting.enabled off");

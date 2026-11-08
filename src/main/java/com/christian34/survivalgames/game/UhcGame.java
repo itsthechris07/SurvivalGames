@@ -51,6 +51,10 @@ public class UhcGame extends SurvivalGame {
     public static final String CUTCLEAN = "cutclean";
     public static final String TIMBER = "timber";
     /**
+     * the scenarios there are (uhc.scenarios)
+     */
+    public static final List<String> SCENARIOS = List.of(CUTCLEAN, TIMBER);
+    /**
      * chunks generated at the same time while the players wait in the lobby
      */
     private static final int PREGENERATION_CHUNKS = 4;
