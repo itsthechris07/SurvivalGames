@@ -76,7 +76,7 @@ dependencies {
 
     // tests run the plugin against a mocked Paper server
     testImplementation("io.papermc.paper:paper-api:26.3.build.244-stable")
-    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.3:4.119.0")
+    testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.3:4.120.0")
     testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains:annotations:26.1.0")
