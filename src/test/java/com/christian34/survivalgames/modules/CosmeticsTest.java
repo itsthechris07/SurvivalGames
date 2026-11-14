@@ -43,7 +43,7 @@ class CosmeticsTest extends PluginTestBase {
     @Test
     void freeCosmeticsAreChosenInTheMenu() {
         execute(steve, "sg cosmetics");
-        assertEquals(List.of("Kill effects", "Arrow trails", "Win effects"), forms.buttons());
+        assertEquals(List.of("Kill effects", "Arrow trails", "Win effects", "Back"), forms.buttons());
         assertTrue(forms.lore("Kill effects").contains("Selected: None"));
         forms.click(steve, "Kill effects");
         assertTrue(forms.lore("Blood").contains("Click to select"));

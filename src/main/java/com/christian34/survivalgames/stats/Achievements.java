@@ -8,6 +8,7 @@ import com.christian34.survivalgames.game.Rewards;
 import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.GameType;
+import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.lang.I;
@@ -174,6 +175,7 @@ public class Achievements {
                     lore, clicker -> {
                     });
         }
+        menu.back(Menus::openMain);
         menu.show(player);
     }
 

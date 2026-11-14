@@ -127,6 +127,7 @@ public final class Menus {
             player.sendMessage(I.prefixed(player, LangText.NO_GAMES));
             return;
         }
+        menu.back(Menus::openMain);
         menu.show(player);
     }
 
@@ -155,6 +156,7 @@ public final class Menus {
                     statsLore(PlayerStats.total(uuid, player.getName(), stats.values())), Menus::openStats);
             menu.corner(ItemStack.of(Material.GOLD_INGOT), i18n(LangText.GUI_MAIN_TOP),
                     I.itemLines(LangText.GUI_MAIN_TOP_LORE), clicker -> openTop(clicker, Stat.WINS));
+            menu.back(Menus::openMain);
             menu.show(player);
         }, () -> player.sendMessage(I.prefixed(player, LangText.STATS_ERROR)));
     }
@@ -189,7 +191,7 @@ public final class Menus {
                 menu.button(ItemStack.of(Material.PAPER), i18n(other.getDisplayName()).colorIfAbsent(NamedTextColor.YELLOW),
                         I.itemLines(LangText.GUI_TOP_OTHER_LORE), clicker -> openTop(clicker, other));
             }
-            menu.corner(ItemStack.of(Material.ARROW), i18n(LangText.GUI_BACK), List.of(), Menus::openStats);
+            menu.back(Menus::openStats);
             menu.show(player);
         }, () -> player.sendMessage(I.prefixed(player, LangText.STATS_ERROR)));
     }
@@ -350,6 +352,7 @@ public final class Menus {
             menu.button(offer.item(), Items.name(offer.item()), lore,
                     clicker -> sponsor.send(clicker, game, target, offer));
         }
+        menu.back(clicker -> openSponsor(clicker, game));
         menu.show(player);
     }
 

@@ -144,7 +144,7 @@ class AchievementsTest extends PluginTestBase {
         kill(alex, steve);
         execute(steve, "sg achievements");
         assertEquals("Achievements (5/" + Achievement.values().length + ")", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(Achievement.values().length, forms.buttons().size());
+        assertEquals(Achievement.values().length + 1, forms.buttons().size());
         assertContains(forms.lore("First blood"), "Get the first kill of a game");
         assertContains(forms.lore("First blood"), "Unlocked on ");
         assertContains(forms.lore("Legend"), "Not unlocked yet");

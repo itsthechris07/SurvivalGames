@@ -42,9 +42,14 @@ public class Menu {
      */
     private static final char CORNER = 'c';
     /**
+     * the marker of the back button in the rows of {@link #layout(int, boolean)}
+     */
+    private static final char BACK = 'b';
+    /**
      * the buttons of one page, if a menu has more buttons than a chest has slots: 5 rows, the last row has the arrows
      */
     static final int PAGE_SIZE = 5 * 9;
+    private static final int BACK_SLOT = PAGE_SIZE;
     private static final int PREVIOUS_SLOT = PAGE_SIZE + 3;
     private static final int NEXT_SLOT = PAGE_SIZE + 5;
     private static final int CORNER_SLOT = PAGE_SIZE + 8;
@@ -52,6 +57,8 @@ public class Menu {
     private final List<Button> buttons = new ArrayList<>();
     @Nullable
     private Button corner;
+    @Nullable
+    private Button back;
 
     /**
      * @param lore the lines below the name of the item
@@ -76,22 +83,38 @@ public class Menu {
         return this;
     }
 
+    /**
+     * a back button in its own row below the others, at the very left
+     *
+     * @param previous opens the menu before (built again, so it shows what has changed)
+     */
+    public Menu back(Consumer<Player> previous) {
+        back = new Button(ItemStack.of(Material.ARROW), I.i18n(LangText.GUI_BACK), List.of(), previous);
+        return this;
+    }
+
     public Component getTitle() {
         return title;
     }
 
     /**
-     * @return all buttons, the corner button last
+     * @return all buttons, the corner button and the back button last
      */
     public List<Button> getButtons() {
-        if (corner == null) return buttons;
+        if (corner == null && back == null) return buttons;
         List<Button> all = new ArrayList<>(buttons);
-        all.add(corner);
+        if (corner != null) all.add(corner);
+        if (back != null) all.add(back);
         return all;
     }
 
+    private boolean hasBottomRow() {
+        return corner != null || back != null;
+    }
+
     /**
-     * clicking a button closes the menu and runs its action - Bedrock players get a form (Floodgate)
+     * clicking a button runs its action (the menu stays open if it opens another one, so the mouse doesn't jump to
+     * the middle of the screen) - Bedrock players get a form (Floodgate)
      */
     public void show(Player player) {
         if (SurvivalGames.getInstance().getBedrockForms().show(player, this)) return;
@@ -106,18 +129,19 @@ public class Menu {
      * @return the number of pages of the chest menu (forms show all buttons in one list)
      */
     int getPages() {
-        int capacity = corner == null ? 6 * 9 : PAGE_SIZE;
+        int capacity = hasBottomRow() ? PAGE_SIZE : 6 * 9;
         return buttons.size() <= capacity ? 1 : (buttons.size() + PAGE_SIZE - 1) / PAGE_SIZE;
     }
 
     /**
-     * @param corner adds a row with the corner button at the right (the other buttons get at most 5 rows)
+     * @param bottomRow adds a row with the back button at the left and the corner button at the right (the other
+     *                  buttons get at most 5 rows)
      */
-    static String[] layout(int buttons, boolean corner) {
-        if (!corner) return layout(buttons);
+    static String[] layout(int buttons, boolean bottomRow) {
+        if (!bottomRow) return layout(buttons);
         String[] rows = buttons == 0 ? new String[0] : layout(Math.min(buttons, 5 * 9));
         String[] all = Arrays.copyOf(rows, rows.length + 1);
-        all[rows.length] = " ".repeat(8) + CORNER;
+        all[rows.length] = BACK + " ".repeat(7) + CORNER;
         return all;
     }
     /**
@@ -156,15 +180,18 @@ public class Menu {
                 if (current > 0) put(PREVIOUS_SLOT, arrow(menu, LangText.GUI_PAGE_PREVIOUS, current - 1, pages));
                 if (current < pages - 1) put(NEXT_SLOT, arrow(menu, LangText.GUI_PAGE_NEXT, current + 1, pages));
                 if (menu.corner != null) put(CORNER_SLOT, menu.corner);
+                if (menu.back != null) put(BACK_SLOT, menu.back);
                 return;
             }
-            String[] rows = layout(menu.buttons.size(), menu.corner != null);
+            String[] rows = layout(menu.buttons.size(), menu.hasBottomRow());
             this.inventory = Bukkit.createInventory(this, rows.length * 9, menu.title);
             int next = 0;
             for (int slot = 0; slot < rows.length * 9; slot++) {
                 char marker = rows[slot / 9].charAt(slot % 9);
                 if (marker == CORNER) {
-                    put(slot, menu.corner);
+                    if (menu.corner != null) put(slot, menu.corner);
+                } else if (marker == BACK) {
+                    if (menu.back != null) put(slot, menu.back);
                 } else if (marker == BUTTON && next < menu.buttons.size()) {
                     put(slot, menu.buttons.get(next++));
                 }
@@ -216,8 +243,9 @@ public class Menu {
             player.playSound(player, Sound.UI_BUTTON_CLICK, 0.5f, 1f);
             // the inventory mustn't be closed or changed during the click event
             Bukkit.getScheduler().runTask(SurvivalGames.getInstance(), () -> {
-                player.closeInventory();
+                // the next menu replaces this one: closing it first would put the mouse into the middle of the screen
                 button.action().accept(player);
+                if (player.getOpenInventory().getTopInventory().getHolder() == chest) player.closeInventory();
             });
         }
 

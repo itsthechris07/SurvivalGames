@@ -3,6 +3,7 @@ package com.christian34.survivalgames.modules;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
+import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.game.Rewards;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.lang.I;
@@ -188,6 +189,7 @@ public class Cosmetics implements Listener {
             menu.button(ItemStack.of(selected == null ? category.getIcon() : selected.getIcon()),
                     i18n(category.getDisplayName()), lore, clicker -> openCategory(clicker, category));
         }
+        menu.back(Menus::openMain);
         menu.show(player);
     }
 
@@ -224,6 +226,7 @@ public class Cosmetics implements Listener {
             deselect(clicker, category);
             openMenu(clicker);
         });
+        menu.back(this::openMenu);
         menu.show(player);
     }
 

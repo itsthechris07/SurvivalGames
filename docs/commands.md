@@ -48,6 +48,8 @@ setup (edit the map, set lobby, center and spawn points where you stand, save, t
 the world border, create the game), the lobby world (choose a map or a world of the server, edit it, set its spawn)
 and the games with their controls (start, deathmatch, backups, players, stop). Its buttons run the commands below.
 
+In every menu the arrow at the bottom left goes back to the menu before (submenus of `/sg` back to the main menu).
+
 ### Arenas
 
 | Command | |

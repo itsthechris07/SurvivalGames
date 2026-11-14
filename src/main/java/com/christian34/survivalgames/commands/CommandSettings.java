@@ -2,6 +2,7 @@ package com.christian34.survivalgames.commands;
 
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.files.ConfigFile;
+import com.christian34.survivalgames.game.AdminMenus;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.PlayHours;
 import com.christian34.survivalgames.game.UhcGame;
@@ -118,6 +119,7 @@ public class CommandSettings {
             menu.button(ItemStack.of(icon), i18n(type.getDisplayName()), List.of(i18n(LangText.GUI_SETTINGS_OPEN)),
                     clicker -> open(clicker, type));
         }
+        menu.back(AdminMenus::open);
         menu.show(player);
     }
 
@@ -143,6 +145,7 @@ public class CommandSettings {
                 }
             });
         }
+        menu.back(CommandSettings::openTypes);
         menu.show(player);
     }
 

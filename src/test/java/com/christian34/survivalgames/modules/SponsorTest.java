@@ -106,9 +106,9 @@ class SponsorTest extends PluginTestBase {
         execute(bob, "sg sponsor");
         assertEquals(List.of("Alex", "Steve"), forms.buttons().stream().sorted().toList());
         forms.click(bob, "Alex");
-        assertEquals(3, forms.last().getButtons().size());
+        assertEquals(4, forms.last().getButtons().size());
         assertContains(forms.last().getButtons().getFirst().lore().stream().map(FakeForms::plain).toList(), "Price: $10");
-        assertContains(forms.last().getButtons().getLast().lore().stream().map(FakeForms::plain).toList(), "Price: free");
+        assertContains(forms.last().getButtons().get(2).lore().stream().map(FakeForms::plain).toList(), "Price: free");
 
         forms.last().getButtons().getFirst().action().accept(bob);
         assertTrue(alex.getInventory().contains(Material.COOKED_BEEF, 4));

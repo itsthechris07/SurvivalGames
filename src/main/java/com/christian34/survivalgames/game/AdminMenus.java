@@ -60,7 +60,7 @@ public final class AdminMenus {
     }
 
     private static void back(Menu menu, Consumer<Player> previous) {
-        menu.corner(icon(Material.ARROW), i18n(LangText.GUI_BACK), List.of(), previous);
+        menu.back(previous);
     }
 
     /**
@@ -84,6 +84,7 @@ public final class AdminMenus {
                 I.itemLines(LangText.GUI_ADMIN_SETTINGS_LORE), clicker -> Menus.run(clicker, "sg settings"));
         menu.button(icon(Material.REPEATER), i18n(LangText.GUI_ADMIN_RELOAD),
                 I.itemLines(LangText.GUI_ADMIN_RELOAD_LORE), clicker -> Menus.run(clicker, "sg reload"));
+        back(menu, Menus::openMain);
         menu.show(player);
     }
 

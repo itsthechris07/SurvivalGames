@@ -93,6 +93,19 @@ class MenuTest extends PluginTestBase {
     }
 
     @Test
+    void theBackButtonIsBottomLeft() {
+        Menu menu = menu(3, true).back(player -> clicked.add("back"));
+        Menu.Chest chest = new Menu.Chest(menu, 0);
+        assertEquals("Back", name(chest, chest.getInventory().getSize() - 9));
+        assertEquals("corner", name(chest, chest.getInventory().getSize() - 1));
+
+        Menu paged = menu(100, false).back(player -> clicked.add("back"));
+        Menu.Chest first = new Menu.Chest(paged, 0);
+        assertEquals("Back", name(first, 45));
+        assertEquals("Next page (2/3)", name(first, 50));
+    }
+
+    @Test
     void theArrowsOpenTheOtherPages() {
         PlayerMock steve = addPlayer("Steve");
         Menu menu = menu(55, false);

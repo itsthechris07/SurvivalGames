@@ -4,6 +4,7 @@ import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.commands.CommandSurvivalGames;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameType;
+import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.lib.Menu;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -66,6 +67,7 @@ public final class ReplayMenus {
             player.sendMessage(I.prefixed(player, LangText.REPLAY_LIST_EMPTY));
             return;
         }
+        menu.back(Menus::openMain);
         menu.show(player);
     }
 
@@ -130,6 +132,9 @@ public final class ReplayMenus {
                         if (replays().getPlayback(clicker) == playback) ReplayControls.follow(clicker, playback, actor.name());
                     });
         }
+        menu.back(clicker -> {
+            if (replays().getPlayback(clicker) == playback) openControls(clicker, playback);
+        });
         menu.show(player);
     }
 

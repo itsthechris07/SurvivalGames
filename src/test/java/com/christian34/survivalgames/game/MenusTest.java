@@ -97,7 +97,7 @@ class MenusTest extends PluginTestBase {
         assertEquals("Administration", forms.buttons().getLast());
         click(admin, "Administration");
         assertEquals("Administration", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("New game", "Arenas", "Games", "Lobby world", "Settings", "Reload"), forms.buttons());
+        assertEquals(List.of("New game", "Arenas", "Games", "Lobby world", "Settings", "Reload", "Back"), forms.buttons());
 
         execute(steve, "sg admin");
         assertContains(messages(steve), "permission");
@@ -127,7 +127,7 @@ class MenusTest extends PluginTestBase {
         execute(steve, "sg");
         click(steve, "Statistics");
         assertEquals("Statistics of Steve", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("Survival Games", "Varo", "UHC", "Duels", "Total", "Top players"), forms.buttons());
+        assertEquals(List.of("Survival Games", "Varo", "UHC", "Duels", "Total", "Top players", "Back"), forms.buttons());
         assertEquals(List.of("Games: 4", "Wins: 1", "Kills: 6", "Deaths: 3", "K/D: 2.00", "Rating: 1000"),
                 forms.lore("Survival Games"));
         assertEquals(List.of("Games: 1", "Wins: 0", "Kills: 0", "Deaths: 0", "K/D: 0.00"), forms.lore("Varo"));
@@ -178,7 +178,7 @@ class MenusTest extends PluginTestBase {
         execute(steve, "sg");
         click(steve, "Play");
         assertEquals("Games", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("arena1", "arena2"), forms.buttons());
+        assertEquals(List.of("arena1", "arena2", "Back"), forms.buttons());
         assertEquals(List.of("Survival Games", "State: Lobby", "Players: 0/4", "", "Click to join"),
                 forms.lore("arena1"));
         assertTrue(forms.lore("arena2").contains("Click to watch"));
