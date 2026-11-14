@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,18 +18,19 @@ import java.util.regex.Pattern;
 
 /**
  * The statistics in a MySQL/MariaDB database (Paper ships the driver): one row per player and game type, the
- * achievements in &lt;table&gt;_achievements. Several servers of a network can use the same tables.
+ * achievements in &lt;table&gt;_achievements, the settings (cosmetics) in &lt;table&gt;_settings. Several servers of a network can use the same tables.
  *
  * @author Christian34
  */
 public class SqlStorage implements StatsStorage {
-    // MySQL allows 64 characters: room for the table of the achievements (_achievements)
+    // MySQL allows 64 characters: room for the tables of the achievements (_achievements) and settings (_settings)
     private static final Pattern TABLE = Pattern.compile("[A-Za-z0-9_]{1,50}");
     private final String url;
     private final String user;
     private final String password;
     private final String table;
     private final String achievementTable;
+    private final String settingsTable;
     @Nullable
     private Connection connection;
 
@@ -39,6 +41,7 @@ public class SqlStorage implements StatsStorage {
         this.password = password;
         this.table = table;
         this.achievementTable = table + "_achievements";
+        this.settingsTable = table + "_settings";
     }
 
     /**
@@ -60,6 +63,11 @@ public class SqlStorage implements StatsStorage {
                 statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + achievementTable + " ("
                         + "uuid CHAR(36) NOT NULL, achievement VARCHAR(32) NOT NULL, unlocked BIGINT NOT NULL, "
                         + "PRIMARY KEY (uuid, achievement))");
+            }
+            try (Statement statement = connection.createStatement()) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + settingsTable + " ("
+                        + "uuid CHAR(36) NOT NULL, setting VARCHAR(64) NOT NULL, setting_value VARCHAR(255) NOT NULL, "
+                        + "PRIMARY KEY (uuid, setting))");
             }
         }
         return connection;
@@ -190,6 +198,49 @@ public class SqlStorage implements StatsStorage {
             statement.setString(2, achievement);
             statement.setLong(3, time);
             return statement.executeUpdate() > 0;
+        } catch (SQLException ex) {
+            throw failed(ex);
+        }
+    }
+
+    @Override
+    public Map<String, String> loadSettings(UUID uuid) {
+        Map<String, String> settings = new HashMap<>();
+        try (PreparedStatement statement = connection().prepareStatement(
+                "SELECT setting, setting_value FROM " + settingsTable + " WHERE uuid = ?")) {
+            statement.setString(1, uuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    settings.put(result.getString("setting"), result.getString("setting_value"));
+                }
+            }
+        } catch (SQLException ex) {
+            throw failed(ex);
+        }
+        return settings;
+    }
+
+    @Override
+    public void setSetting(UUID uuid, String name, String key, @Nullable String value) {
+        String sql = value == null ? "DELETE FROM " + settingsTable + " WHERE uuid = ? AND setting = ?"
+                : "INSERT INTO " + settingsTable + " (uuid, setting, setting_value) VALUES (?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)";
+        try (PreparedStatement statement = connection().prepareStatement(sql)) {
+            statement.setString(1, uuid.toString());
+            statement.setString(2, key);
+            if (value != null) statement.setString(3, value);
+            statement.executeUpdate();
+        } catch (SQLException ex) {
+            throw failed(ex);
+        }
+    }
+
+    @Override
+    public void reset(Collection<Stat> stats) {
+        if (stats.isEmpty()) return;
+        String columns = String.join(", ", stats.stream().map(stat -> stat.getKey() + " = 0").toList());
+        try (Statement statement = connection().createStatement()) {
+            statement.executeUpdate("UPDATE " + table + " SET " + columns);
         } catch (SQLException ex) {
             throw failed(ex);
         }

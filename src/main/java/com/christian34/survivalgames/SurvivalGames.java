@@ -11,6 +11,7 @@ import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Loot;
 import com.christian34.survivalgames.game.SignManager;
 import com.christian34.survivalgames.integrations.BedrockForms;
+import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.integrations.EssentialsSupport;
 import com.christian34.survivalgames.integrations.MultiverseSupport;
@@ -30,6 +31,7 @@ import com.christian34.survivalgames.modules.Backpack;
 import com.christian34.survivalgames.modules.Bounty;
 import com.christian34.survivalgames.modules.BuildMode;
 import com.christian34.survivalgames.modules.ChestLock;
+import com.christian34.survivalgames.modules.Cosmetics;
 import com.christian34.survivalgames.modules.GravityGrenade;
 import com.christian34.survivalgames.modules.InventoryView;
 import com.christian34.survivalgames.modules.Kits;
@@ -43,6 +45,7 @@ import com.christian34.survivalgames.network.NetworkManager;
 import com.christian34.survivalgames.replay.Replays;
 import com.christian34.survivalgames.stats.Leaderboards;
 import com.christian34.survivalgames.stats.Achievements;
+import com.christian34.survivalgames.stats.Seasons;
 import com.christian34.survivalgames.stats.StatsManager;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
@@ -110,6 +113,9 @@ public class SurvivalGames extends JavaPlugin {
     private UpdateChecker updateChecker;
     private Achievements achievements;
     private Telemetry telemetry;
+    private Discord discord;
+    private Seasons seasons;
+    private Cosmetics cosmetics;
 
     public static SurvivalGames getInstance() {
         return instance;
@@ -127,7 +133,10 @@ public class SurvivalGames extends JavaPlugin {
         this.telemetry = new Telemetry(this);
         this.loot = new Loot(this);
         this.stats = new StatsManager(this);
+        this.discord = new Discord(this);
         this.achievements = new Achievements(this);
+        this.seasons = new Seasons(this);
+        this.cosmetics = new Cosmetics(this);
         this.leaderboards = new Leaderboards(this);
         this.inventoryView = new InventoryView(this);
         this.kits = new Kits(this);
@@ -165,7 +174,7 @@ public class SurvivalGames extends JavaPlugin {
         }
         register(new PlayerListener(this), new ProtectionListener(this), new TeleportListener(this),
                 new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this),
-                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays, uhcListener);
+                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays, uhcListener, cosmetics);
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new SgExpansion(this).register();
         }
@@ -201,6 +210,8 @@ public class SurvivalGames extends JavaPlugin {
         if (offlineNpc != null) offlineNpc.removeAll();
         // after the games: their last statistics are saved
         if (stats != null) stats.stop();
+        // the end of the games is still posted
+        if (discord != null) discord.close();
         users.clear();
     }
 
@@ -448,6 +459,18 @@ public class SurvivalGames extends JavaPlugin {
 
     public Achievements getAchievements() {
         return achievements;
+    }
+
+    public Discord getDiscord() {
+        return discord;
+    }
+
+    public Seasons getSeasons() {
+        return seasons;
+    }
+
+    public Cosmetics getCosmetics() {
+        return cosmetics;
     }
 
     public Telemetry getTelemetry() {

@@ -40,6 +40,22 @@ stats:
   # with the statistics
   achievements:
     enabled: true
+    # what a player gets for an achievement (also offline): money of an economy plugin (Vault) and commands of the
+    # console ({player}, {uuid}, {achievement}) - for every achievement (all) or one (e.g. legend)
+    money: 0
+    commands:
+      all: [ ]
+  # seasons: /sg season end (admins) keeps the best players of the season (/sg season <number>), runs the rewards of
+  # the best players of the ranking and sets the statistics of reset to 0 - in a network on one server only
+  seasons:
+    ranking: rating
+    # the statistics that start at 0 again (games, wins, kills, deaths, rating)
+    reset: [ rating ]
+    # commands of the console per place ({player}, {uuid}, {place}, {season}, {value})
+    rewards:
+      1: [ ]
+      2: [ ]
+      3: [ ]
 
 # standalone: the games run next to each other on this server (players join with /sg join or a [sg] sign)
 # game: this server runs exactly one game (network.arena), the players come from the lobby server and go back there
@@ -242,7 +258,8 @@ uhc:
   health-in-tab: true
   # the teams start at random places inside the world border, at least ... blocks apart (less if there is no room)
   scatter-distance: 100
-  # the world inside the border is generated while the players wait in the lobby (less lag in the game)
+  # the world inside the border is generated while players wait in the lobby (less lag in the game), not before
+  # somebody joins (on a game server of a network right away)
   pregenerate: true
   # cutclean: ores and meat drop smelted, timber: the whole tree falls when a log is broken
   scenarios: [ cutclean, timber ]
@@ -403,6 +420,42 @@ modules:
     chance: 30
     # damage every 2 seconds (2 = one heart)
     damage: 1.0
+  cosmetics:
+    # the players choose an effect for their kills, a trail for their arrows and an effect for their wins
+    # (/sg cosmetics) - kept with the statistics (stats.enabled), so a MySQL database shares them in a network
+    enabled: true
+    games: [ survival-games, varo, uhc, duels ]
+    # how a cosmetic is unlocked: free, a price (money of an economy plugin), achievement:<achievement> or permission
+    # (only with the permission) - the permission sg.cosmetic.<name> (sg.cosmetic.* for all) always unlocks it
+    unlock:
+      blood: free
+      hearts: 250
+      firework: 500
+      lightning: 1000
+      souls: achievement:hunter
+      explosion: achievement:unstoppable
+      flames: free
+      notes: 250
+      magic: 500
+      soul-flames: 750
+      stars: achievement:rampage
+      flame-ring: 500
+      music: 750
+      totem: achievement:first_win
+      starfall: achievement:champion
+
+# posts what happens in the games to a Discord channel: create a webhook in the settings of the channel
+# (Integrations > Webhooks) and paste its URL
+discord:
+  enabled: false
+  webhook-url: ""
+  # start, win, elimination, varo-day, strike, achievement, season
+  events: [ start, win, varo-day, strike, season ]
+  # the game types that are posted (survival-games, varo, uhc, duels)
+  games: [ survival-games, varo, uhc ]
+  # the name and picture of the messages (empty: those of the webhook)
+  username: ""
+  avatar-url: ""
 
 # money of an economy plugin for every game type (needs Vault or VaultUnlocked and an economy plugin, e.g.
 # EssentialsX), 0 = nothing

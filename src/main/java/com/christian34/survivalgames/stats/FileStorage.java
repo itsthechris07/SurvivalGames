@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -16,12 +17,13 @@ import java.util.UUID;
 
 /**
  * The statistics in stats.yml: &lt;uuid&gt;.name, &lt;uuid&gt;.&lt;game type&gt;.&lt;statistic&gt; and
- * &lt;uuid&gt;.achievements.&lt;achievement&gt; (when the player got it).
+ * &lt;uuid&gt;.achievements.&lt;achievement&gt; (when the player got it) and &lt;uuid&gt;.settings.&lt;key&gt;.
  *
  * @author Christian34
  */
 public class FileStorage implements StatsStorage {
     private static final String ACHIEVEMENTS = "achievements";
+    private static final String SETTINGS = "settings";
     private final File file;
     private final YamlConfiguration data;
 
@@ -54,7 +56,7 @@ public class FileStorage implements StatsStorage {
         String name = player.getString("name", uuid.toString());
         for (String type : player.getKeys(false)) {
             ConfigurationSection section = player.getConfigurationSection(type);
-            if (section == null || type.equals(ACHIEVEMENTS)) continue;
+            if (section == null || type.equals(ACHIEVEMENTS) || type.equals(SETTINGS)) continue;
             stats.put(type, new PlayerStats(uuid, name, section.getInt(Stat.GAMES.getKey()),
                     section.getInt(Stat.WINS.getKey()), section.getInt(Stat.KILLS.getKey()),
                     section.getInt(Stat.DEATHS.getKey()), section.getInt(Stat.RATING.getKey())));
@@ -113,6 +115,40 @@ public class FileStorage implements StatsStorage {
         data.set(path, time);
         save();
         return true;
+    }
+
+    @Override
+    public Map<String, String> loadSettings(UUID uuid) {
+        Map<String, String> settings = new HashMap<>();
+        ConfigurationSection section = data.getConfigurationSection(uuid + "." + SETTINGS);
+        if (section == null) return settings;
+        for (String key : section.getKeys(false)) {
+            settings.put(key, section.getString(key, ""));
+        }
+        return settings;
+    }
+
+    @Override
+    public void setSetting(UUID uuid, String name, String key, @Nullable String value) {
+        data.set(uuid + ".name", name);
+        data.set(uuid + "." + SETTINGS + "." + key, value);
+        save();
+    }
+
+    @Override
+    public void reset(Collection<Stat> stats) {
+        for (String key : data.getKeys(false)) {
+            ConfigurationSection player = data.getConfigurationSection(key);
+            if (player == null) continue;
+            for (String type : player.getKeys(false)) {
+                ConfigurationSection section = player.getConfigurationSection(type);
+                if (section == null || type.equals(ACHIEVEMENTS) || type.equals(SETTINGS)) continue;
+                for (Stat stat : stats) {
+                    section.set(stat.getKey(), null);
+                }
+            }
+        }
+        save();
     }
 
     @Override

@@ -16,6 +16,26 @@ turned on.
 | [Multiverse-Core](https://modrinth.com/plugin/multiverse-core), Multiverse-Inventories | the worlds of games are left alone |
 | [EasyPrefix](https://modrinth.com/plugin/easyprefix-christian34) and other chat plugins | outside of games they format the chat; in a game the chat shows the team (`chat.format: false` leaves it to them) |
 
+## Discord
+
+A [webhook](https://support.discord.com/hc/en-us/articles/228383668) posts what happens in the games to a channel –
+no bot and no extra plugin: in the settings of the channel, *Integrations > Webhooks > New Webhook*, copy its URL.
+
+```yaml
+discord:
+  enabled: true
+  webhook-url: "https://discord.com/api/webhooks/..."
+  # start, win, elimination, varo-day, strike, achievement, season
+  events: [ start, win, varo-day, strike, season ]
+  games: [ survival-games, varo, uhc ]
+  username: ""                      # empty: the name and picture of the webhook
+  avatar-url: ""
+```
+
+The messages are those of the game without colors (`discord_...` in `messages.yml` for the start, the kills and the
+achievements). Nobody is pinged, also not by a name like `@everyone`. They are sent by an own thread one after
+another, so a slow Discord doesn't hold up the server.
+
 ## Economy
 
 With Vault (or VaultUnlocked) and an economy plugin like EssentialsX:
@@ -23,6 +43,8 @@ With Vault (or VaultUnlocked) and an economy plugin like EssentialsX:
 - **[Rewards](configuration.md#rewards):** money for kills, wins and games (`rewards.enabled`).
 - **[Bounties](survival-games.md#bounties):** players put money on an enemy, the killer gets it.
 - **[Sponsors](survival-games.md#sponsors):** spectators buy items for the players alive.
+- **[Cosmetics](configuration.md#cosmetics)** and **[achievements](configuration.md#achievements):** buying effects,
+  money for achievements.
 
 If the economy plugin supports the new API of VaultUnlocked, it is used – otherwise the one of Vault.
 

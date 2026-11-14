@@ -73,6 +73,10 @@ public final class Menus {
             menu.button(ItemStack.of(Material.NETHER_STAR), i18n(LangText.GUI_MAIN_ACHIEVEMENTS),
                     I.itemLines(LangText.GUI_MAIN_ACHIEVEMENTS_LORE), clicker -> run(clicker, "sg achievements"));
         }
+        if (plugin.getCosmetics().isEnabled()) {
+            menu.button(ItemStack.of(Material.BLAZE_POWDER), i18n(LangText.GUI_MAIN_COSMETICS),
+                    I.itemLines(LangText.GUI_MAIN_COSMETICS_LORE), plugin.getCosmetics()::openMenu);
+        }
         if (plugin.getReplays().isEnabled() && player.hasPermission(Replays.PERMISSION)) {
             menu.button(ItemStack.of(Material.CLOCK), i18n(LangText.GUI_MAIN_REPLAYS),
                     I.itemLines(LangText.GUI_MAIN_REPLAYS_LORE), clicker -> run(clicker, "sg replay"));

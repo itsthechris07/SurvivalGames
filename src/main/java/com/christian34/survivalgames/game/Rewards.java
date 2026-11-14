@@ -8,6 +8,7 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
@@ -17,6 +18,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
@@ -46,9 +48,21 @@ public final class Rewards {
         plugin.getEconomySupport().reward(player, reward);
         List<String> commands = plugin.getFileManager().getConfigFile().getData()
                 .getStringList("rewards.commands." + reward.getKey());
+        dispatch(plugin, commands, Map.of("{player}", name, "{uuid}", player.toString(),
+                "{arena}", game.getArena().getName(), "{type}", game.getType().getKey()));
+    }
+
+    /**
+     * runs the commands in the console ("[10s] ..." 10 seconds later)
+     *
+     * @param placeholders e.g. {player} - the name of the player
+     */
+    public static void dispatch(SurvivalGames plugin, List<String> commands, Map<String, String> placeholders) {
         for (String command : commands) {
-            String resolved = command.replace("{player}", name).replace("{uuid}", player.toString())
-                    .replace("{arena}", game.getArena().getName()).replace("{type}", game.getType().getKey());
+            String resolved = command;
+            for (Map.Entry<String, String> placeholder : placeholders.entrySet()) {
+                resolved = resolved.replace(placeholder.getKey(), placeholder.getValue());
+            }
             Matcher delay = DELAY.matcher(resolved);
             if (delay.matches()) {
                 String delayed = delay.group(2);
@@ -98,6 +112,19 @@ public final class Rewards {
                         });
             }
         }, 0L, 20L);
+    }
+
+    /**
+     * a firework that explodes right away and doesn't hurt anybody (cosmetics)
+     */
+    public static void burst(Location location, FireworkEffect effect) {
+        location.getWorld().spawn(location, Firework.class, firework -> {
+            FireworkMeta meta = firework.getFireworkMeta();
+            meta.addEffect(effect);
+            meta.setPower(0);
+            firework.setFireworkMeta(meta);
+            firework.getPersistentDataContainer().set(Items.key(FIREWORK), PersistentDataType.BOOLEAN, true);
+        }).detonate();
     }
 
     /**

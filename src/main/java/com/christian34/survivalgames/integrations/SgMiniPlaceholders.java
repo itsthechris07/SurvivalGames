@@ -43,6 +43,7 @@ public class SgMiniPlaceholders {
         builder.globalPlaceholder("top", (queue, context) ->
                 tag(Placeholders.value(plugin, null, "top_" + String.join("_", arguments(queue, 3)))));
         builder.globalPlaceholder("games", (queue, context) -> tag(Placeholders.value(plugin, null, "games")));
+        builder.globalPlaceholder("season", (queue, context) -> tag(Placeholders.value(plugin, null, "season")));
         for (String kind : Placeholders.ARENA_GAME) {
             builder.globalPlaceholder("game_" + kind, (queue, context) ->
                     queue.hasNext() ? tag(Placeholders.arenaGame(plugin, kind, queue.pop().value())) : null);

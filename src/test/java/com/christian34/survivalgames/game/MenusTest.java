@@ -55,7 +55,8 @@ class MenusTest extends PluginTestBase {
     void theMainMenuOfPlayers() {
         execute(steve, "sg");
         assertEquals("SurvivalGames", FakeForms.plain(forms.last().getTitle()));
-        assertEquals(List.of("Play", "Statistics", "Top players", "Achievements", "Replays", "Help"), forms.buttons());
+        assertEquals(List.of("Play", "Statistics", "Top players", "Achievements", "Cosmetics", "Replays", "Help"),
+                forms.buttons());
         assertTrue(forms.lore("Help").contains("Version " + plugin.getPluginMeta().getVersion()));
 
         click(steve, "Help");

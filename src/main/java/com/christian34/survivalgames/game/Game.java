@@ -6,6 +6,7 @@ import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.arena.Lobby;
+import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
@@ -1018,6 +1019,9 @@ public abstract class Game {
         showTitle(Title.title(i18n(LangText.GAME_STARTED_TITLE), i18n(getType().getDisplayName())),
                 Sound.ENTITY_ENDER_DRAGON_GROWL);
         onBegin();
+        plugin.getDiscord().post(Discord.Event.START, this, I.plain(LangText.DISCORD_GAME_STARTED,
+                i18n(getType().getDisplayName()), arena.getDisplayName(), participants.size(),
+                String.join(", ", participants.values().stream().map(Participant::getName).sorted().toList())));
     }
 
     /**
@@ -1172,19 +1176,29 @@ public abstract class Game {
             plugin.getStats().add(killer.getUuid(), killer.getName(), getType(), Stat.KILLS);
             plugin.getAchievements().onKill(this, killer);
             Rewards.give(plugin, this, killer.getUuid(), killer.getName(), EconomySupport.Reward.KILL);
+            plugin.getCosmetics().onKill(this, killer.getUuid(), participant.getUuid());
         }
         plugin.getBounty().onEliminated(this, participant, killer);
         GameTeam team = teams.getTeam(participant.getUuid());
+        LangText message;
+        Object[] arguments;
         if (arena.getTeamSize() == 1 || team == null) {
-            broadcast(LangText.PLAYER_ELIMINATED_SOLO, participant.getName(), getAlive().size());
+            message = LangText.PLAYER_ELIMINATED_SOLO;
+            arguments = new Object[]{participant.getName(), getAlive().size()};
         } else {
             long teammates = getAlive().stream().filter(alive -> team.isMember(alive.getUuid())).count();
             if (teammates > 0) {
-                broadcast(LangText.PLAYER_ELIMINATED, participant.getName(), team.getDisplayName(), teammates);
+                message = LangText.PLAYER_ELIMINATED;
+                arguments = new Object[]{participant.getName(), team.getDisplayName(), teammates};
             } else {
-                broadcast(LangText.TEAM_ELIMINATED, team.getDisplayName(), getAliveTeams().size());
+                message = LangText.TEAM_ELIMINATED;
+                arguments = new Object[]{team.getDisplayName(), getAliveTeams().size()};
             }
         }
+        broadcast(message, arguments);
+        String text = I.plain(message, arguments);
+        plugin.getDiscord().post(Discord.Event.ELIMINATION, this, killer == null || killer == participant ? text
+                : I.plain(LangText.DISCORD_KILLED_BY, text, killer.getName()));
         onEliminated(participant);
         checkWinner();
     }
@@ -1218,6 +1232,7 @@ public abstract class Game {
         Title title;
         if (winner == null) {
             broadcast(LangText.GAME_DRAW);
+            plugin.getDiscord().post(Discord.Event.WIN, this, I.plain(LangText.GAME_DRAW));
             title = Title.title(i18n(LangText.GAME_DRAW_TITLE), Component.empty());
         } else {
             for (UUID member : winner.getMembers()) {
@@ -1225,11 +1240,17 @@ public abstract class Game {
             }
             plugin.getAchievements().onWin(this, winner);
             String names = String.join(", ", winner.getMembers().stream().map(this::getName).toList());
+            String kills = String.join(", ", winner.getMembers().stream().map(participants::get)
+                    .filter(Objects::nonNull).map(member -> member.getName() + " (" + member.getKills() + ")").toList());
             if (arena.getTeamSize() == 1) {
                 broadcast(LangText.GAME_WON_SOLO, names, arena.getDisplayName());
+                plugin.getDiscord().post(Discord.Event.WIN, this, I.plain(LangText.DISCORD_GAME_WON,
+                        I.plain(LangText.GAME_WON_SOLO, names, arena.getDisplayName()), kills));
                 title = Title.title(i18n(LangText.GAME_WON_TITLE, Component.text(names, winner.getColor())), Component.empty());
             } else {
                 broadcast(LangText.GAME_WON, winner.getDisplayName(), names, arena.getDisplayName());
+                plugin.getDiscord().post(Discord.Event.WIN, this, I.plain(LangText.DISCORD_GAME_WON,
+                        I.plain(LangText.GAME_WON, winner.getDisplayName(), names, arena.getDisplayName()), kills));
                 title = Title.title(i18n(LangText.GAME_WON_TITLE, winner.getDisplayName()), Component.text(names));
             }
         }
@@ -1243,6 +1264,7 @@ public abstract class Game {
                     .filter(player -> winner.isMember(player.getUniqueId())).toList();
             plugin.getInventoryView().onEnd(this, inGame);
             Rewards.fireworks(plugin, this, inGame, winner.getColor());
+            plugin.getCosmetics().onWin(this, inGame);
         }
         for (Participant participant : participants.values()) {
             Rewards.give(plugin, this, participant.getUuid(), participant.getName(), EconomySupport.Reward.GAME);

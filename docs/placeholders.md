@@ -53,6 +53,7 @@ These work without a game, for online players. `<stat>` is `games`, `wins`, `kil
 | `%sg_top_<stat>_<rank>_value%` | their value |
 | `%sg_achievements%` | the number of [achievements](configuration.md#achievements) of the player |
 | `%sg_achievements_total%` | the number of achievements there are |
+| `%sg_season%` | the number of the current [season](configuration.md#seasons) |
 
 ## MiniPlaceholders
 
@@ -67,3 +68,4 @@ tags – with arguments instead of underscores:
 | `<sg_stats:wins>`, `<sg_stats:varo:kills>` | `%sg_stats_wins%`, `%sg_stats_varo_kills%` |
 | `<sg_top:wins:1:name>`, `<sg_top:wins:1:value>` | `%sg_top_wins_1_name%`, `%sg_top_wins_1_value%` |
 | `<sg_achievements>`, `<sg_achievements_total>` | `%sg_achievements%`, `%sg_achievements_total%` |
+| `<sg_season>` | `%sg_season%` |

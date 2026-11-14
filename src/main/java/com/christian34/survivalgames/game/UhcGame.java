@@ -55,9 +55,10 @@ public class UhcGame extends SurvivalGame {
      */
     public static final List<String> SCENARIOS = List.of(CUTCLEAN, TIMBER);
     /**
-     * chunks generated at the same time while the players wait in the lobby
+     * chunks requested at the same time while the players wait in the lobby: enough to keep every worker thread of
+     * the chunk system busy (4 left them idle most of the time, ~45 chunks per second)
      */
-    private static final int PREGENERATION_CHUNKS = 4;
+    private static final int PREGENERATION_CHUNKS = Math.clamp(Runtime.getRuntime().availableProcessors() * 4L, 16, 64);
     /**
      * random places tried per team until one is on dry land
      */
@@ -68,12 +69,20 @@ public class UhcGame extends SurvivalGame {
     private int finalHealIn = -1;
     @Nullable
     private BukkitTask pregeneration;
+    /**
+     * the chunks still to generate, the ones at the center first
+     */
+    private final Deque<int[]> toGenerate = new ArrayDeque<>();
+    private final AtomicInteger generating = new AtomicInteger();
     private int pregenerated;
     private int toPregenerate;
+    private long pregenerationStarted;
 
     public UhcGame(SurvivalGames plugin, Arena arena) {
         super(plugin, arena);
-        startPregeneration();
+        preparePregeneration();
+        // a game server of a network is there for this game only: nothing else that would have to wait
+        if (plugin.getNetworkManager().isGameServer()) startPregeneration();
     }
 
     @Override
@@ -106,14 +115,14 @@ public class UhcGame extends SurvivalGame {
     // ---------------------------------------------------------------- pregeneration
 
     /**
-     * the chunks inside the world border are generated while the players wait in the lobby, the ones at the center
-     * first - the rest is generated when somebody gets there
+     * the chunks inside the world border are generated while players wait in the lobby (not before somebody joins: a
+     * waiting game nobody plays costs nothing - except on a game server of a network, there right away), the ones at
+     * the center first - the rest is generated when somebody gets there
      */
-    private void startPregeneration() {
+    private void preparePregeneration() {
         int size = arena.getBorderSize();
         if (!settings().getBoolean("pregenerate") || size <= 0) return;
-        World world = getWorld();
-        Location center = arena.getCenter(world);
+        Location center = arena.getCenter(getWorld());
         int centerX = center.getBlockX() >> 4;
         int centerZ = center.getBlockZ() >> 4;
         int radius = (size / 2 >> 4) + 1;
@@ -124,34 +133,50 @@ public class UhcGame extends SurvivalGame {
             }
         }
         chunks.sort(Comparator.comparingInt(chunk -> Math.max(Math.abs(chunk[0] - centerX), Math.abs(chunk[1] - centerZ))));
-        Deque<int[]> queue = new ArrayDeque<>(chunks);
+        toGenerate.addAll(chunks);
         this.toPregenerate = chunks.size();
-        AtomicInteger loading = new AtomicInteger();
-        long started = System.currentTimeMillis();
+    }
+
+    @Override
+    protected void onLobbyChange() {
+        super.onLobbyChange();
+        if (getState() != GameState.LOBBY) return;
+        if (participants.isEmpty() && !plugin.getNetworkManager().isGameServer()) {
+            // nobody waits anymore: paused, the next player continues where it stopped
+            stopPregeneration();
+        } else {
+            startPregeneration();
+        }
+    }
+
+    private void startPregeneration() {
+        if (pregeneration != null || toGenerate.isEmpty() || isStopped()) return;
+        World world = getWorld();
+        if (pregenerationStarted == 0) this.pregenerationStarted = System.currentTimeMillis();
         this.pregeneration = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (isStopped() || getState() != GameState.LOBBY) {
                 stopPregeneration();
                 return;
             }
-            while (loading.get() < PREGENERATION_CHUNKS && !queue.isEmpty()) {
-                int[] chunk = queue.poll();
-                loading.incrementAndGet();
+            while (generating.get() < PREGENERATION_CHUNKS && !toGenerate.isEmpty()) {
+                int[] chunk = toGenerate.poll();
+                generating.incrementAndGet();
                 try {
                     world.getChunkAtAsync(chunk[0], chunk[1], true).whenComplete((loaded, ex) -> {
-                        loading.decrementAndGet();
+                        generating.decrementAndGet();
                         pregenerated++;
                     });
                 } catch (RuntimeException ex) {
                     // not implemented by MockBukkit: one chunk per tick
                     world.getChunkAt(chunk[0], chunk[1]).load();
-                    loading.decrementAndGet();
+                    generating.decrementAndGet();
                     pregenerated++;
                     break;
                 }
             }
-            if (queue.isEmpty() && loading.get() == 0) {
+            if (toGenerate.isEmpty() && generating.get() == 0) {
                 Debug.info("Generated " + toPregenerate + " chunks of the world of arena '" + arena.getName() + "' in "
-                        + (System.currentTimeMillis() - started) / 1000 + " seconds");
+                        + (System.currentTimeMillis() - pregenerationStarted) / 1000 + " seconds");
                 stopPregeneration();
             }
         }, 1L, 1L);

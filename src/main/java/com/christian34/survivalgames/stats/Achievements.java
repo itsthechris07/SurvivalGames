@@ -2,7 +2,10 @@ package com.christian34.survivalgames.stats;
 
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.commands.CommandSurvivalGames;
+import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
+import com.christian34.survivalgames.game.Rewards;
+import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Participant;
@@ -17,6 +20,7 @@ import org.bukkit.Sound;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,12 +51,34 @@ public class Achievements {
     public void unlock(UUID uuid, String name, Achievement achievement) {
         if (!isEnabled()) return;
         plugin.getStats().unlock(uuid, name, achievement.getKey(), () -> {
+            reward(uuid, name, achievement);
+            plugin.getDiscord().post(Discord.Event.ACHIEVEMENT, null, I.plain(LangText.DISCORD_ACHIEVEMENT, name,
+                    I.i18n(achievement.getDisplayName()), I.i18n(achievement.getDescription())));
             Player player = Bukkit.getPlayer(uuid);
             if (player == null) return;
             player.sendMessage(I.prefixed(player, LangText.ACHIEVEMENT_UNLOCKED, I.i18n(achievement.getDisplayName()),
                     I.i18n(achievement.getDescription())));
             player.playSound(player, Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.6f, 1f);
         });
+    }
+
+    /**
+     * the reward for the achievement (stats.achievements.money and .commands) - also if the player is offline
+     */
+    private void reward(UUID uuid, String name, Achievement achievement) {
+        ConfigFile config = plugin.getFileManager().getConfigFile();
+        double money = config.getDouble("stats.achievements.money");
+        if (money > 0 && plugin.getEconomySupport().pay(uuid, money)) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                player.sendMessage(I.prefixed(player, LangText.ACHIEVEMENT_REWARD,
+                        plugin.getEconomySupport().format(money), I.i18n(achievement.getDisplayName())));
+            }
+        }
+        List<String> commands = new ArrayList<>(config.getData().getStringList("stats.achievements.commands.all"));
+        commands.addAll(config.getData().getStringList("stats.achievements.commands." + achievement.getKey()));
+        Rewards.dispatch(plugin, commands, Map.of("{player}", name, "{uuid}", uuid.toString(),
+                "{achievement}", achievement.getKey()));
     }
 
     /**
@@ -120,9 +146,20 @@ public class Achievements {
     }
 
     /**
+     * @return the progress of the achievement ("37/50"), null if it isn't reached with a statistic or is unlocked
+     */
+    @Nullable
+    private static String progress(Achievement achievement, StatsManager.Profile profile) {
+        Stat stat = achievement.getStat();
+        if (stat == null || profile.total() == null || profile.unlocked().containsKey(achievement.getKey())) return null;
+        return Math.min(profile.total().get(stat), achievement.getGoal()) + "/" + achievement.getGoal();
+    }
+
+    /**
      * shows the player his achievements in a menu
      */
-    public void showMenu(Player player, Map<String, Long> unlocked) {
+    public void showMenu(Player player, StatsManager.Profile profile) {
+        Map<String, Long> unlocked = profile.unlocked();
         Menu menu = new Menu(I.i18n(LangText.GUI_ACHIEVEMENTS, count(unlocked), Achievement.values().length));
         for (Achievement achievement : Achievement.values()) {
             Long time = unlocked.get(achievement.getKey());
@@ -130,6 +167,8 @@ public class Achievements {
             lore.add(I.i18n(achievement.getDescription()));
             lore.add(time == null ? I.i18n(LangText.GUI_ACHIEVEMENT_LOCKED)
                     : I.i18n(LangText.GUI_ACHIEVEMENT_UNLOCKED, CommandSurvivalGames.formatDate(time)));
+            String progress = progress(achievement, profile);
+            if (progress != null) lore.add(I.i18n(LangText.GUI_ACHIEVEMENT_PROGRESS, progress));
             menu.button(new ItemStack(time == null ? Material.GRAY_DYE : achievement.getIcon()),
                     I.i18n(achievement.getDisplayName()).color(time == null ? NamedTextColor.GRAY : NamedTextColor.GOLD),
                     lore, clicker -> {
@@ -141,15 +180,18 @@ public class Achievements {
     /**
      * lists the achievements of a player in the chat
      */
-    public void sendList(CommandSender sender, String name, Map<String, Long> unlocked) {
+    public void sendList(CommandSender sender, String name, StatsManager.Profile profile) {
+        Map<String, Long> unlocked = profile.unlocked();
         sender.sendMessage(I.i18n(LangText.ACHIEVEMENTS_TITLE, name, count(unlocked), Achievement.values().length));
         for (Achievement achievement : Achievement.values()) {
             Long time = unlocked.get(achievement.getKey());
             Component displayName = I.i18n(achievement.getDisplayName());
             Component description = I.i18n(achievement.getDescription());
-            sender.sendMessage(time == null ? I.i18n(LangText.ACHIEVEMENTS_ENTRY_LOCKED, displayName, description)
-                    : I.i18n(LangText.ACHIEVEMENTS_ENTRY_UNLOCKED, displayName, description,
-                    CommandSurvivalGames.formatDate(time)));
+            String progress = progress(achievement, profile);
+            sender.sendMessage(time != null ? I.i18n(LangText.ACHIEVEMENTS_ENTRY_UNLOCKED, displayName, description,
+                    CommandSurvivalGames.formatDate(time))
+                    : progress != null ? I.i18n(LangText.ACHIEVEMENTS_ENTRY_PROGRESS, displayName, description, progress)
+                    : I.i18n(LangText.ACHIEVEMENTS_ENTRY_LOCKED, displayName, description));
         }
     }
 

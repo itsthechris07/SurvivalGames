@@ -149,7 +149,46 @@ another player. The names and descriptions are texts of `messages.yml` (`achieve
 | Spotless | win a Varo without a strike |
 
 Games, kills and wins count over all game types. What a player reached while they were offline (their team won a
-Varo) comes with their next join.
+Varo) comes with their next join. Achievements of a statistic show how far a player is (`Veteran (37/50)`).
+
+An achievement can bring a reward – money of an economy plugin and commands of the console, also for players who are
+offline:
+
+```yaml
+stats:
+  achievements:
+    money: 25                       # for every achievement
+    commands:
+      all: [ ]                      # for every achievement
+      legend:                       # only for this one
+        - "lp user {player} parent add legend"
+```
+
+`{player}`, `{uuid}` and `{achievement}` are replaced.
+
+### Seasons
+
+`/sg season` shows the current season and its best players, `/sg season <number>` the best ones of a past season. An
+admin ends the season with `/sg season end` (and `--confirm`):
+
+1. the best 10 players of every statistic are kept in `seasons.yml`,
+2. the best players of `ranking` get the commands of their place (`{player}`, `{uuid}`, `{place}`, `{season}`,
+   `{value}`),
+3. the statistics of `reset` start at 0 again (the rating at 1000) and the next season begins.
+
+```yaml
+stats:
+  seasons:
+    ranking: rating
+    reset: [ rating ]               # games, wins, kills, deaths, rating
+    rewards:
+      1: [ "give {player} nether_star 1", "broadcast {player} is the champion of season {season}!" ]
+      2: [ "give {player} diamond 16" ]
+      3: [ "give {player} diamond 8" ]
+```
+
+Achievements are kept. In a network with a shared database one server ends the season; `seasons.yml` (the number and
+the archive) is on that server.
 
 ## Rewards
 
@@ -170,6 +209,34 @@ rewards:
 ```
 
 `{player}`, `{uuid}`, `{arena}` and `{type}` are replaced.
+
+## Cosmetics
+
+The players choose effects in `/sg cosmetics` (or in the main menu `/sg`): one for their kills, a trail behind their
+arrows (snowballs, tridents, ...) and one when they win. They are shown in the game types of `modules.cosmetics.games`.
+
+| Kind | Cosmetics |
+|---|---|
+| Kill effects | `blood`, `hearts`, `firework`, `lightning`, `souls`, `explosion` |
+| Arrow trails | `flames`, `notes`, `magic`, `soul-flames`, `stars` |
+| Win effects | `flame-ring`, `music`, `totem`, `starfall` |
+
+`modules.cosmetics.unlock` says how each one is unlocked:
+
+```yaml
+modules:
+  cosmetics:
+    unlock:
+      blood: free                   # everybody
+      hearts: 250                   # bought once with money of an economy plugin
+      souls: achievement:hunter     # with an achievement
+      lightning: permission         # only with the permission
+```
+
+The permission `sg.cosmetic.<name>` (`sg.cosmetic.*` for all) always unlocks a cosmetic, e.g. for a rank of a shop.
+What a player chose and bought is kept with the statistics (`stats.yml` or the table `<table>_settings`), so the
+cosmetics need `stats.enabled` – with MySQL the servers of a network share them. The names are texts of
+`messages.yml` (`cosmetic_..._name`).
 
 ## The whole file
 

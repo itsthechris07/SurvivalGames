@@ -3,6 +3,7 @@ package com.christian34.survivalgames.game;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.Telemetry;
+import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.files.FileManager;
@@ -552,6 +553,7 @@ public class VaroGame extends Game {
         if (day <= borderDay) return;
         this.borderDay = day;
         broadcast(LangText.NEW_DAY, day);
+        plugin.getDiscord().post(Discord.Event.VARO_DAY, this, I.plain(LangText.NEW_DAY, day));
         int peaceful = settings().getInt("peaceful-days");
         if (peaceful > 0 && day == peaceful + 1) announce(LangText.VARO_PVP_ENABLED);
         checkInactive();
@@ -740,6 +742,7 @@ public class VaroGame extends Game {
     public int strike(Participant participant, String reason, String by) {
         int number = participant.addStrike(new Participant.Strike(reason, by, System.currentTimeMillis()));
         announce(LangText.STRIKE_GIVEN, participant.getName(), number, reason);
+        plugin.getDiscord().post(Discord.Event.STRIKE, this, I.plain(LangText.STRIKE_GIVEN, participant.getName(), number, reason));
         plugin.getTelemetry().used(Telemetry.Feature.STRIKE);
         List<String> consequences = settings().getStringList("strikes");
         if (number <= consequences.size()) punish(participant, consequences.get(number - 1).trim().toLowerCase(Locale.ROOT));

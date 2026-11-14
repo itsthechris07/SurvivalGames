@@ -60,6 +60,7 @@ public final class Placeholders {
         String param = params.toLowerCase(Locale.ROOT);
         if (param.equals("games")) return String.valueOf(plugin.getGameManager().getGames().size());
         if (param.equals("achievements_total")) return String.valueOf(Achievement.values().length);
+        if (param.equals("season")) return String.valueOf(plugin.getSeasons().getNumber());
         if (param.equals("achievements")) {
             Map<String, Long> unlocked = player == null ? null : plugin.getStats().getCachedAchievements(player.getUniqueId());
             return unlocked == null ? "0" : String.valueOf(Achievements.count(unlocked));

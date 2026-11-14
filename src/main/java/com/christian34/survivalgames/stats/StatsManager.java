@@ -53,6 +53,10 @@ public class StatsManager implements Listener {
      * the achievements of the online players (key - when they got it)
      */
     private final Map<UUID, Map<String, Long>> achievements = new ConcurrentHashMap<>();
+    /**
+     * the settings of the online players (cosmetics)
+     */
+    private final Map<UUID, Map<String, String>> settings = new ConcurrentHashMap<>();
     private volatile Map<Stat, List<PlayerStats>> top = Map.of();
     @Nullable
     private StatsStorage storage;
@@ -105,6 +109,7 @@ public class StatsManager implements Listener {
         this.storage = null;
         cache.clear();
         achievements.clear();
+        settings.clear();
         this.top = Map.of();
         if (service != null) {
             service.shutdown();
@@ -293,6 +298,7 @@ public class StatsManager implements Listener {
         run(storage -> {
             Map<String, PlayerStats> stats = Map.copyOf(storage.load(uuid));
             achievements.put(uuid, Map.copyOf(storage.loadAchievements(uuid)));
+            settings.put(uuid, Map.copyOf(storage.loadSettings(uuid)));
             cache.put(uuid, stats);
             // what he reached while he was away (the win of his team in a Varo) or before there were achievements
             if (!stats.isEmpty()) checkAchievements(uuid, stats.values().iterator().next().name());
@@ -368,6 +374,98 @@ public class StatsManager implements Listener {
         run(storage -> {
             cache.remove(uuid);
             achievements.remove(uuid);
+            settings.remove(uuid);
+        });
+    }
+
+    // ---------------------------------------------------------------- settings
+
+    /**
+     * @return the setting of an online player, null if he hasn't got it or it isn't loaded (yet)
+     */
+    @Nullable
+    public String getSetting(UUID uuid, String key) {
+        Map<String, String> player = settings.get(uuid);
+        return player == null ? null : player.get(key);
+    }
+
+    /**
+     * @return true if the settings of the online player are loaded
+     */
+    public boolean hasSettings(UUID uuid) {
+        return settings.containsKey(uuid);
+    }
+
+    /**
+     * changes the setting of an online player right away and saves it
+     *
+     * @param value null: removes it
+     */
+    public void setSetting(UUID uuid, String name, String key, @Nullable String value) {
+        if (!isEnabled()) return;
+        settings.compute(uuid, (ignored, old) -> {
+            Map<String, String> copy = old == null ? new HashMap<>() : new HashMap<>(old);
+            if (value == null) {
+                copy.remove(key);
+            } else {
+                copy.put(key, value);
+            }
+            return Map.copyOf(copy);
+        });
+        run(storage -> storage.setSetting(uuid, name, key, value));
+    }
+
+    // ---------------------------------------------------------------- seasons
+
+    /**
+     * @return the best players of every statistic (all game types) right now
+     */
+    public CompletableFuture<Map<Stat, List<PlayerStats>>> topOfAll() {
+        return query(storage -> {
+            Map<Stat, List<PlayerStats>> top = new EnumMap<>(Stat.class);
+            for (Stat stat : Stat.values()) {
+                top.put(stat, storage.top(stat, null, TOP_SIZE));
+            }
+            return top;
+        });
+    }
+
+    /**
+     * sets the statistics of all players to 0 (the end of a season) and loads them again
+     */
+    public CompletableFuture<Void> reset(java.util.Collection<Stat> stats) {
+        CompletableFuture<Void> future = query(storage -> {
+            storage.reset(stats);
+            for (UUID uuid : cache.keySet()) {
+                cache.put(uuid, Map.copyOf(storage.load(uuid)));
+            }
+            return null;
+        });
+        refreshTop();
+        return future;
+    }
+
+    /**
+     * the achievements of a player and his statistics of all game types (for the progress of the achievements)
+     *
+     * @param unlocked key of the achievement - when he got it
+     * @param total    null: there is no player with statistics and this name
+     */
+    public record Profile(Map<String, Long> unlocked, @Nullable PlayerStats total) {
+    }
+
+    /**
+     * @return the achievements and statistics of the player (empty if there is no player with statistics and this name)
+     */
+    public CompletableFuture<Profile> loadProfile(String name) {
+        Player online = Bukkit.getPlayerExact(name);
+        UUID uuid = online == null ? null : online.getUniqueId();
+        return query(storage -> {
+            UUID player = uuid != null ? uuid : storage.find(name);
+            if (player == null) return new Profile(Map.of(), null);
+            Map<String, PlayerStats> stats = storage.load(player);
+            String playerName = stats.isEmpty() ? name : stats.values().iterator().next().name();
+            return new Profile(storage.loadAchievements(player), PlayerStats.total(player, playerName, stats.values()));
         });
     }
 

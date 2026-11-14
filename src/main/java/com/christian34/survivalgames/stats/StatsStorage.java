@@ -2,6 +2,7 @@ package com.christian34.survivalgames.stats;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -47,6 +48,22 @@ public interface StatsStorage {
      * @return false if he has it already
      */
     boolean addAchievement(UUID uuid, String name, String achievement, long time);
+
+    /**
+     * @return the settings of the player (the cosmetics he chose and bought, ...): key - value
+     */
+    Map<String, String> loadSettings(UUID uuid);
+
+    /**
+     * @param key   letters, digits, - and _ (at most 64)
+     * @param value null: the setting is removed
+     */
+    void setSetting(UUID uuid, String name, String key, @Nullable String value);
+
+    /**
+     * sets the statistics of all players to 0 in all game types (the end of a season)
+     */
+    void reset(Collection<Stat> stats);
 
     void close();
 

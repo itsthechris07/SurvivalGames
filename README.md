@@ -42,7 +42,12 @@ one game per server in a network behind Velocity/BungeeCord.
 - Duels: a queue (`/sg duel`), challenges with a clickable accept/deny, kits, private arenas, rating
 - Statistics (games, wins, kills, deaths, Elo rating) per game type in a file or a MySQL database: `/sg stats`,
   `/sg top`, leaderboard holograms and `[sgtop]` signs
-- Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...): `/sg achievements`
+- Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...) with their progress
+  and rewards: `/sg achievements`
+- Seasons: `/sg season end` keeps the best players, runs their rewards and resets the rating (`/sg season`)
+- Cosmetics: kill effects, arrow trails and win effects – free, bought, unlocked with an achievement or a permission
+  (`/sg cosmetics`)
+- Discord: a webhook posts the start, the winners, Varo days, strikes and seasons to a channel
 - Update checker: admins read about new releases when they join
 - Anonymous statistics with [bStats](https://bstats.org/plugin/bukkit/SurvivalGames-Varo/34655) (servers, players,
   versions, settings and how often games and features are used, no names) – turned off with `enabled: false` in

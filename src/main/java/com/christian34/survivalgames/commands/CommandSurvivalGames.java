@@ -402,11 +402,11 @@ public class CommandSurvivalGames {
             return;
         }
         String player = name != null ? name : sender.getName();
-        stats().then(stats().loadAchievements(player), unlocked -> {
+        stats().then(stats().loadProfile(player), profile -> {
             if (name == null && sender instanceof Player viewer) {
-                if (viewer.isOnline()) plugin().getAchievements().showMenu(viewer, unlocked);
+                if (viewer.isOnline()) plugin().getAchievements().showMenu(viewer, profile);
             } else {
-                plugin().getAchievements().sendList(sender, player, unlocked);
+                plugin().getAchievements().sendList(sender, player, profile);
             }
         }, () -> sender.sendMessage(I.prefixed(sender, LangText.STATS_ERROR)));
     }

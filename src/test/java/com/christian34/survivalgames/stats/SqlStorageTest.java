@@ -87,4 +87,26 @@ class SqlStorageTest {
         assertTrue(storage.load(steve).isEmpty(), "achievements are no statistics");
     }
 
+    @Test
+    void settingsAreChangedAndRemoved() {
+        storage.setSetting(steve, "Steve", "cosmetic-kill", "blood");
+        storage.setSetting(steve, "Steve", "cosmetic-kill", "hearts");
+        storage.setSetting(steve, "Steve", "bought-hearts", "1");
+        assertEquals(Map.of("cosmetic-kill", "hearts", "bought-hearts", "1"), storage.loadSettings(steve));
+        storage.setSetting(steve, "Steve", "cosmetic-kill", null);
+        assertEquals(Map.of("bought-hearts", "1"), storage.loadSettings(steve));
+        assertTrue(storage.loadSettings(alex).isEmpty());
+    }
+
+    @Test
+    void aResetSetsTheStatisticsToZero() {
+        storage.add(steve, "Steve", "survival-games", Stat.RATING, 30);
+        storage.add(steve, "Steve", "survival-games", Stat.KILLS, 4);
+        storage.add(alex, "Alex", "varo", Stat.RATING, -10);
+        storage.reset(List.of(Stat.RATING));
+        assertEquals(PlayerStats.RATING_START, storage.load(steve).get("survival-games").get(Stat.RATING));
+        assertEquals(4, storage.load(steve).get("survival-games").kills());
+        assertEquals(PlayerStats.RATING_START, storage.load(alex).get("varo").get(Stat.RATING));
+    }
+
 }

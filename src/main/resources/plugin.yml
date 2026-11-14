@@ -19,3 +19,6 @@ permissions:
   sg.network.bypass:
     description: game servers of a network let players in although they can't play (ops can always join)
     default: false
+  sg.cosmetic.*:
+    description: all cosmetics (/sg cosmetics) without buying or unlocking them - sg.cosmetic.<name> for one
+    default: op

@@ -24,7 +24,9 @@ The lobby, countdowns, join signs, NPCs, teams, spectators, statistics and repla
 ## A round
 
 - **Generation:** while the players wait in the lobby, the world inside the border is generated, the center first
-  (`pregenerate`). A round can start before it is done – the rest is generated when somebody gets there.
+  (`pregenerate`). It starts with the first player in the lobby and pauses when the lobby is empty again, so a
+  waiting round nobody plays costs nothing (on a game server of a network it starts right away). A round can start before it is done – the rest is generated when somebody
+  gets there.
 - **Scatter:** every team starts at a random place inside the world border, at least `scatter-distance` blocks away
   from the other teams (less if there is no room), on open ground: never in water or lava and never on or under a
   tree. Up to 200 random places are tried per team; if the world has no dry land there (an ocean), the team starts

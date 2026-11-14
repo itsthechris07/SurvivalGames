@@ -25,6 +25,8 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 | `/sg stats [player]` | the statistics of a player per game type (games, wins, kills, deaths, K/D) |
 | `/sg top [stat] [type]` | the best 10 players (stat: `games`, `wins`, `kills`, `deaths`, `rating`; default: wins) |
 | `/sg achievements [player]` | your [achievements](configuration.md#achievements) in a menu (with a player: theirs in the chat) |
+| `/sg season [number]` | the current [season](configuration.md#seasons) and its best players (with a number: the best ones of a past season) |
+| `/sg cosmetics` | chooses (and buys) [effects](configuration.md#cosmetics) for your kills, arrows and wins |
 | `/sg strikes` | your strikes in your Varo |
 | `/sg vote [arena]` | votes for the map in the lobby of Survival Games (without: the menu, see [map voting](survival-games.md#map-voting)) |
 | `/sg kit [kit]` | chooses a [kit](survival-games.md#kits) in the lobby (without: the menu) |
@@ -113,6 +115,7 @@ and the games with their controls (start, deathmatch, backups, players, stop). I
 | `/sg settings [type] [setting] [value]` | changes a switch, number or list (`play-hours`, `strikes`) of a game type in `config.yml` (without a value: a [menu](configuration.md#changing-settings-in-the-game)) |
 | `/sg build` | build mode: change the world of your game (e.g. in the lobby) |
 | `/sg replay delete <id>` | deletes the recording of a [replay](replays.md) |
+| `/sg season end [--confirm]` | ends the [season](configuration.md#seasons): keeps the best players, runs their rewards and resets the statistics |
 | `/sg reload` | reloads `config.yml`, `loot.yml` and the messages |
 | `/sg debug` | debug information |
 
@@ -124,4 +127,5 @@ and the games with their controls (start, deathmatch, backups, players, stop). I
 | `sg.replay` | everybody | watching the [replays](replays.md) (`/sg replay`) |
 | `sg.network.bypass` | nobody | game servers of a network let the player in although they can't play (operators always get in) |
 | `sg.kit.<kit>` | nobody | the kit, if it was created with `--permission` |
+| `sg.cosmetic.<name>`, `sg.cosmetic.*` | operators | the [cosmetic](configuration.md#cosmetics) (all of them) without buying or unlocking it |
 | `sg.vote.2` ... `sg.vote.5` | nobody | the vote of the player for a map counts 2 ... 5 times |

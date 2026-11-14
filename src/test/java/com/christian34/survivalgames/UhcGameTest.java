@@ -212,11 +212,34 @@ class UhcGameTest extends PluginTestBase {
         config().set("uhc.pregenerate", true);
         config().set("uhc.world-border.size", 64);
         UhcGame game = (UhcGame) createGame("uhc1", GameType.UHC, 0);
-        assertTrue(game.getPregenerationProgress() < 100);
+        server.getScheduler().performTicks(20);
+        assertEquals(0, game.getPregenerationProgress(), "nothing is generated while nobody waits");
+
+        execute(steve, "sg join uhc1");
+        server.getScheduler().performTicks(5);
+        int progress = game.getPregenerationProgress();
+        assertTrue(progress > 0 && progress < 100, "generated while somebody waits");
+
+        execute(steve, "sg leave");
+        server.getScheduler().performTicks(20);
+        assertEquals(progress, game.getPregenerationProgress(), "paused when the lobby is empty again");
+
+        execute(steve, "sg join uhc1");
         for (int tick = 0; tick < 20 * 30 && game.getPregenerationProgress() < 100; tick++) {
             server.getScheduler().performOneTick();
         }
         assertEquals(100, game.getPregenerationProgress());
+    }
+
+    @Test
+    void aGameServerGeneratesTheWorldRightAway() {
+        config().set("network.mode", "game");
+        config().set("network.arena", "uhc1");
+        config().set("uhc.pregenerate", true);
+        config().set("uhc.world-border.size", 64);
+        UhcGame game = (UhcGame) createGame("uhc1", GameType.UHC, 0);
+        server.getScheduler().performTicks(5);
+        assertTrue(game.getPregenerationProgress() > 0, "the server is there for this game only");
     }
 
 }
