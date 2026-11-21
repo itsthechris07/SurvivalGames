@@ -155,6 +155,10 @@ public class PlayerListener implements Listener {
             e.setCancelled(true);
             return;
         }
+        if (plugin.getAlliances().areAllies(game, attacker.getUniqueId(), victim.getUniqueId())) {
+            e.setCancelled(true);
+            return;
+        }
         // who attacks isn't protected anymore
         Participant participant = game.getParticipant(attacker.getUniqueId());
         if (participant != null && participant.isProtected()) participant.protect(0);
@@ -196,6 +200,10 @@ public class PlayerListener implements Listener {
         GamePlayer gamePlayer = plugin.getUser(e.getPlayer());
         Game game = gamePlayer.getGame();
         if (game == null || game.getState() != GameState.STARTING || gamePlayer.isSpectator()) return;
+        if (game.hasExplodingPlatforms()) {
+            game.checkPlatform(gamePlayer, e.getTo());
+            return;
+        }
         Location to = e.getFrom().clone();
         to.setYaw(e.getTo().getYaw());
         to.setPitch(e.getTo().getPitch());

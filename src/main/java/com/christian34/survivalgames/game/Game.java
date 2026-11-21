@@ -9,6 +9,7 @@ import com.christian34.survivalgames.arena.Lobby;
 import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.Items;
+import com.christian34.survivalgames.modules.Betting;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.stats.Rating;
@@ -94,6 +95,26 @@ public abstract class Game {
      * the bounties (modules.bounty): target -> player who has put it on him -> amount
      */
     private final Map<UUID, Map<UUID, Double>> bounties = new ConcurrentHashMap<>();
+    /**
+     * the bets on the winner (modules.betting)
+     */
+    private final List<Betting.Bet> bets = new CopyOnWriteArrayList<>();
+    /**
+     * the alliances (modules.alliances): member -> all members of his alliance (the same set for all of them)
+     */
+    private final Map<UUID, Set<UUID>> alliances = new ConcurrentHashMap<>();
+    /**
+     * who has been asked for an alliance -> who has asked him
+     */
+    private final Map<UUID, Set<UUID>> allyRequests = new ConcurrentHashMap<>();
+    /**
+     * the participants out since the last list of the fallen (modules.fallen)
+     */
+    private final List<UUID> fallen = new CopyOnWriteArrayList<>();
+    /**
+     * seconds since the game began (while it runs)
+     */
+    private int runningSeconds;
 
     public enum LeaveReason {
         /**
@@ -179,6 +200,48 @@ public abstract class Game {
      */
     public Map<UUID, Map<UUID, Double>> getBounties() {
         return bounties;
+    }
+
+    /**
+     * the bets on the winner (modules.betting)
+     */
+    public List<Betting.Bet> getBets() {
+        return bets;
+    }
+
+    /**
+     * the alliances (member -> all members of his alliance, modules.alliances)
+     */
+    public Map<UUID, Set<UUID>> getAlliances() {
+        return alliances;
+    }
+
+    /**
+     * the requests for an alliance (who has been asked -> who has asked him)
+     */
+    public Map<UUID, Set<UUID>> getAllyRequests() {
+        return allyRequests;
+    }
+
+    /**
+     * the participants out since the last list of the fallen (modules.fallen)
+     */
+    public List<UUID> getFallen() {
+        return fallen;
+    }
+
+    /**
+     * @return the seconds since the game began (0 before)
+     */
+    public int getRunningSeconds() {
+        return runningSeconds;
+    }
+
+    /**
+     * @return true in the last phase of the game (the deathmatch of Survival Games): no more alliances and events
+     */
+    public boolean isFinalPhase() {
+        return false;
     }
 
     /**
@@ -359,7 +422,14 @@ public abstract class Game {
      * @return true if players can join the game right now (as a new player in the lobby)
      */
     public boolean isJoinable() {
-        return !stopped && state == GameState.LOBBY && participants.size() < getMaxPlayers();
+        return !stopped && state == GameState.LOBBY && participants.size() < getLobbyLimit();
+    }
+
+    /**
+     * @return how many players can wait in the lobby: max-players, more with a reaping (modules.reaping)
+     */
+    public int getLobbyLimit() {
+        return plugin.getReaping().getLobbyLimit(this);
     }
 
     /**
@@ -446,6 +516,7 @@ public abstract class Game {
         player.teleport(location != null ? location : safe(arena.getCenter(getWorld())));
         player.sendMessage(prefixed(LangText.SPECTATING));
         if (plugin.getSponsor().isUsed(this)) player.sendMessage(prefixed(LangText.SPONSOR_HINT));
+        if (plugin.getBetting().isUsed(this) && state == GameState.RUNNING) player.sendMessage(prefixed(LangText.BET_HINT));
         plugin.updateVisibility();
     }
 
@@ -805,6 +876,12 @@ public abstract class Game {
      */
     public void start() {
         countdown = -1;
+        // more players than places: who isn't drawn watches
+        for (Participant out : plugin.getReaping().reap(this)) {
+            removeParticipant(out.getUuid());
+            members.stream().filter(member -> member.getPlayer().getUniqueId().equals(out.getUuid())).findFirst()
+                    .ifPresent(member -> outOfPlay(member, null));
+        }
         fillTeams();
         assignSpawns();
         setState(GameState.STARTING);
@@ -812,6 +889,7 @@ public abstract class Game {
             Participant participant = participants.get(member.getPlayer().getUniqueId());
             if (participant != null) placeOnSpawn(member.getPlayer(), participant);
         }
+        plugin.getTrainingScores().announce(this);
         onStart();
         int seconds = Math.max(0, settings().getInt("start-countdown"));
         if (seconds == 0) {
@@ -988,10 +1066,44 @@ public abstract class Game {
     }
 
     /**
+     * @return true if players who leave their spawn point before the start blow up (start-platforms: explode),
+     * otherwise they can't move
+     */
+    public boolean hasExplodingPlatforms() {
+        return "explode".equalsIgnoreCase(settings().getString("start-platforms"));
+    }
+
+    /**
+     * the player moves during the start countdown (start-platforms: explode): more than a block away from his spawn
+     * point he is out (jumping and turning around is fine)
+     */
+    public void checkPlatform(GamePlayer gamePlayer, Location to) {
+        Player player = gamePlayer.getPlayer();
+        Participant participant = participants.get(player.getUniqueId());
+        if (state != GameState.STARTING || participant == null || !participant.isAlive()) return;
+        Location spawn = getSpawn(participant);
+        double x = to.getX() - spawn.getX();
+        double z = to.getZ() - spawn.getZ();
+        if (x * x + z * z <= 1.0) return;
+        participant.setAlive(false);
+        participant.setOut(++eliminations);
+        Location location = player.getLocation();
+        location.getWorld().playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
+        try {
+            location.getWorld().createExplosion(location, 0f, false, false);
+        } catch (RuntimeException ignored) {
+            // MockBukkit
+        }
+        broadcast(LangText.PLATFORM_EXPLODED, player.getName());
+        outOfPlay(gamePlayer, location);
+    }
+
+    /**
      * the countdown is over: the game runs
      */
     protected void begin() {
         countdown = -1;
+        runningSeconds = 0;
         setState(GameState.RUNNING);
         closeLobby();
         // the level showed the countdown
@@ -1092,7 +1204,13 @@ public abstract class Game {
                     return;
                 }
             }
+            if (state == GameState.RUNNING) runningSeconds++;
             onTick();
+            if (state == GameState.RUNNING && !stopped) {
+                plugin.getArenaEvents().tick(this);
+                plugin.getFallen().tick(this);
+                plugin.getAlliances().check(this);
+            }
         } catch (RuntimeException ex) {
             Debug.warn("Error in the game of arena '" + arena.getName() + "'", ex);
         }
@@ -1179,6 +1297,8 @@ public abstract class Game {
             plugin.getCosmetics().onKill(this, killer.getUuid(), participant.getUuid());
         }
         plugin.getBounty().onEliminated(this, participant, killer);
+        plugin.getFallen().onEliminated(this, participant);
+        plugin.getAlliances().onEliminated(this, participant);
         GameTeam team = teams.getTeam(participant.getUuid());
         LangText message;
         Object[] arguments;
@@ -1272,6 +1392,9 @@ public abstract class Game {
         rate(winner);
         // nobody has killed them
         plugin.getBounty().refundAll(this);
+        plugin.getBetting().settle(this, winner);
+        alliances.clear();
+        allyRequests.clear();
         onEnd();
     }
 
@@ -1336,6 +1459,9 @@ public abstract class Game {
         stopped = true;
         ticker.cancel();
         plugin.getReplays().stop(this);
+        // a round stopped before its end (a Varo goes on, but its bets don't)
+        plugin.getBetting().refundAll(this);
+        plugin.getArenaEvents().tick(this);
         for (GamePlayer member : members) {
             leave(member, LeaveReason.STOP);
         }

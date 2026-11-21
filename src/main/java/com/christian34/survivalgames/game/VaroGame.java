@@ -124,6 +124,13 @@ public class VaroGame extends Game {
                 if (contents != null) getBackpacks().put(key, contents);
             }
         }
+        for (String uuid : data.getStringList("fallen")) {
+            try {
+                getFallen().add(UUID.fromString(uuid));
+            } catch (IllegalArgumentException ex) {
+                Debug.warn("Invalid player in the fallen of the Varo of arena '" + arena.getName() + "': " + uuid);
+            }
+        }
         ConfigurationSection bounties = data.getConfigurationSection("bounties");
         if (bounties != null) {
             for (String target : bounties.getKeys(false)) {
@@ -167,6 +174,7 @@ public class VaroGame extends Game {
         }
         ConfigurationSection backpacks = data.createSection("backpacks");
         getBackpacks().forEach(backpacks::set);
+        data.set("fallen", getFallen().stream().map(UUID::toString).toList());
         ConfigurationSection bounties = data.createSection("bounties");
         getBounties().forEach((target, amounts) -> amounts.forEach((setter, amount) ->
                 bounties.set(target + "." + setter, amount)));
@@ -554,6 +562,8 @@ public class VaroGame extends Game {
         this.borderDay = day;
         broadcast(LangText.NEW_DAY, day);
         plugin.getDiscord().post(Discord.Event.VARO_DAY, this, I.plain(LangText.NEW_DAY, day));
+        // who has fallen yesterday
+        if (day > 1) plugin.getFallen().showFallen(this);
         int peaceful = settings().getInt("peaceful-days");
         if (peaceful > 0 && day == peaceful + 1) announce(LangText.VARO_PVP_ENABLED);
         checkInactive();

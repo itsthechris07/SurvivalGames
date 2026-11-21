@@ -13,6 +13,8 @@ import com.christian34.survivalgames.game.Teams;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.modules.ArenaEvents;
+import com.christian34.survivalgames.modules.Quell;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -35,6 +37,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.christian34.survivalgames.commands.CommandSurvivalGames.ADMIN;
 import static com.christian34.survivalgames.commands.CommandSurvivalGames.ROOT;
@@ -276,6 +279,65 @@ public class CommandGame {
             return;
         }
         sg.startDeathmatch();
+    }
+
+    // ---------------------------------------------------------------- quells and Gamemaker events
+
+    @Suggestions("quell-rules")
+    public List<String> quellRules(CommandContext<CommandSender> context, String input) {
+        return plugin().getQuell().getRules();
+    }
+
+    @Command(GAME + " quell [rule]")
+    @CommandDescription("command_game_quell")
+    @Permission(ADMIN)
+    public void quellCmd(CommandSender sender, @Argument("arena") Arena arena,
+                         @Argument(value = "rule", suggestions = "quell-rules") @Nullable String rule) {
+        if (arena.getType() != GameType.SURVIVAL_GAMES) {
+            send(sender, LangText.ONLY_SURVIVAL_GAMES);
+            return;
+        }
+        Quell quell = plugin().getQuell();
+        if (rule == null) {
+            send(sender, LangText.QUELL_RULES, String.join(", ", quell.getRules()));
+            return;
+        }
+        String name = quell.find(rule);
+        if (name == null) {
+            send(sender, LangText.QUELL_UNKNOWN_RULE, rule, String.join(", ", quell.getRules()));
+            return;
+        }
+        Game game = plugin().getGameManager().getGame(arena);
+        if (game instanceof SurvivalGame sg && sg.getState() == GameState.LOBBY) {
+            // the round that waits for players
+            sg.setQuell(name);
+            send(sender, LangText.QUELL_SET, arena.getName(), Quell.describe(name));
+        } else {
+            quell.choose(arena, name);
+            send(sender, LangText.QUELL_SET_NEXT, arena.getName(), Quell.describe(name));
+        }
+    }
+
+    @Suggestions("arena-events")
+    public List<String> arenaEvents(CommandContext<CommandSender> context, String input) {
+        return Stream.of(ArenaEvents.Event.values()).map(ArenaEvents.Event::getKey).toList();
+    }
+
+    @Command(GAME + " event <event>")
+    @CommandDescription("command_game_event")
+    @Permission(ADMIN)
+    public void eventCmd(CommandSender sender, @Argument("arena") Arena arena,
+                         @Argument(value = "event", suggestions = "arena-events") String name) {
+        Game game = game(sender, arena);
+        if (game == null) return;
+        ArenaEvents.Event event = ArenaEvents.Event.parse(name);
+        if (event == null) {
+            send(sender, LangText.ARENA_EVENT_UNKNOWN, name);
+        } else if (!plugin().getArenaEvents().start(game, event)) {
+            send(sender, LangText.NOT_RUNNING);
+        } else if (!(sender instanceof Player player) || !game.isMember(player)) {
+            send(sender, LangText.ARENA_EVENT_STARTED, event.getKey(), arena.getName());
+        }
     }
 
     // ---------------------------------------------------------------- strikes (Varo)

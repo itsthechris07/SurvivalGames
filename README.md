@@ -60,6 +60,9 @@ one game per server in a network behind Velocity/BungeeCord.
 - Teams (menu or `/sg team create <name> [color]`), team chat (`@message`), separate chat per game, scoreboard
 - Extras (per game type): backpack, chest lock with a `[Lock]` sign, gravity grenade, toxic rain, tracker, supply drops,
   kits, bounties, sponsors, item restrictions
+- Hunger Games ideas (optional): bets on the winner with odds from the Elo ratings, alliances, a force field at the
+  world border, cannon shots and the fallen, training scores, a reaping for full lobbies, Quells with special rules,
+  Gamemaker events (poisoned water, swarms, fog, heat waves) and exploding start platforms
 - English and German messages (MiniMessage, clickable commands, an own prefix per game type),
   PlaceholderAPI (`%sg_...%`) and MiniPlaceholders
 - Integrations: Vault/VaultUnlocked, Parties, Party and Friends, Citizens and FancyNpcs (join NPCs), Floodgate

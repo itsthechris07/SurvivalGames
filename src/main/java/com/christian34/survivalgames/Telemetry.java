@@ -80,7 +80,13 @@ public class Telemetry {
         TOXIC_RAIN("toxic rain"),
         OFFLINE_NPC("offline npc"),
         STRIKE("strike"),
-        REPLAY("replay watched");
+        REPLAY("replay watched"),
+        BET("bet placed"),
+        ALLIANCE("alliance formed"),
+        FORCE_FIELD("force field bounce"),
+        REAPING("reaping"),
+        QUELL("quell"),
+        ARENA_EVENT("gamemaker event");
 
         private final String label;
 

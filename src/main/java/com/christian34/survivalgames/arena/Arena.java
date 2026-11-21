@@ -143,6 +143,17 @@ public class Arena {
         set("max-players", max);
     }
 
+    /**
+     * counts a new round of the arena (modules.quell: every n-th round is a quell)
+     *
+     * @return the number of the round (1: the first one)
+     */
+    public int addRound() {
+        int round = file().getInt(path("rounds")) + 1;
+        set("rounds", round);
+        return round;
+    }
+
     public int getTeamSize() {
         return getInt("team-size", 1);
     }

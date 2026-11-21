@@ -102,6 +102,9 @@ survival-games:
   full-countdown: 10
   # seconds the players stand frozen on their spawn points before the game begins
   start-countdown: 10
+  # what happens to players who leave their spawn point before the start: freeze (they can't move) or explode (they
+  # are out)
+  start-platforms: freeze
   # without spawn points the players spawn in a circle around the center (radius in blocks)
   spawn-circle-radius: 15
   # seconds without PvP after the start
@@ -443,6 +446,86 @@ modules:
       music: 750
       totem: achievement:first_win
       starfall: achievement:champion
+  betting:
+    # spectators (also players who are out) bet money (economy plugin via Vault) on the winner: /sg bet <player>
+    # <amount> bets on his team. The odds come from the Elo ratings of the teams alive (minus the margin of the house)
+    # and stay as they were when the bet was placed - bets on the winners pay amount * odds, a draw or a stopped round
+    # pays everything back (also the bets of a Varo when the server restarts)
+    enabled: false
+    games: [ survival-games, uhc ]
+    min: 10
+    # the highest bet at once (0: no limit)
+    max: 0
+    # the share of the house (0.1: the odds are 10 % lower than fair ones) and the highest odds
+    margin: 0.1
+    max-odds: 20
+    # no more bets once only ... teams are left
+    close-at: 2
+  alliances:
+    # in games where everybody plays alone: /sg ally <player> offers an alliance, the same command of the other player
+    # accepts it - allies can't hurt each other and the tracker ignores them. /sg ally leave betrays the allies, all
+    # alliances break once only break-at players are left (0: never), in the deathmatch or when nobody else is left
+    enabled: false
+    games: [ survival-games, uhc ]
+    # players per alliance
+    max-size: 2
+    break-at: 3
+  force-field:
+    # the world border throws back what hits it: projectiles (arrows, tridents, ender pearls, ...) bounce off, players
+    # who run into it get a shock (damage, 2 = one heart) and are pushed back
+    enabled: false
+    games: [ survival-games ]
+    damage: 2.0
+  fallen:
+    # a cannon shot everybody in the game hears for every player who is out, every ... minutes (0: never, Varo: when
+    # a new day begins) a list of the players who have fallen since the last one
+    enabled: false
+    games: [ survival-games, varo, uhc ]
+    cannon: true
+    minutes: 5
+  training-score:
+    # when the players stand on their spawn points everybody gets a training score from 1 to 12: 6 for the start
+    # rating, one more (less) for every points-per-score rating points above (below) and up to +-random by chance
+    enabled: false
+    games: [ survival-games, uhc ]
+    points-per-score: 50
+    random: 1
+  reaping:
+    # more players than max-players can wait in the lobby (applicants * max-players), when the game starts max-players
+    # of them are drawn - the others watch. Everybody has one lot, plus missed-lots for every reaping he wasn't drawn
+    # in (until he is) and n - 1 with the permission sg.reaping.lots.<n> (2-10)
+    enabled: false
+    games: [ survival-games ]
+    applicants: 2.0
+    missed-lots: 1
+  quell:
+    # every ... rounds of an arena (0: never) or by chance (percent) a round is a Quell with one of the rules - a
+    # rule changes settings of survival-games for that round. Admins choose the rule: /sg game <arena> quell <rule>
+    enabled: false
+    games: [ survival-games ]
+    every: 25
+    chance: 0
+    # name: the settings of survival-games it changes (the description is the message quell_rule_<name>, otherwise
+    # the name)
+    rules:
+      no-grace: { grace-period: 0 }
+      nowhere-to-hide: { reveal: { minutes: 1, interval: 30 } }
+      sudden-border: { world-border: { shrink-after: 1, shrink-minutes: 5 } }
+      no-refill: { refill-minutes: 0 }
+  arena-events:
+    # the Gamemakers strike: every min-minutes to max-minutes (after the grace period, not in the deathmatch) the arena
+    # turns against the players for duration seconds, announced warning seconds before - poison-water: the water
+    # poisons, swarm: swarm-size mobs (swarm-mob) attack every player, fog: nobody sees far, heat-wave: hungry and slow
+    # under the open sky. Admins start one: /sg game <arena> event <event>
+    enabled: false
+    games: [ survival-games ]
+    min-minutes: 3
+    max-minutes: 6
+    warning: 10
+    duration: 30
+    events: [ poison-water, swarm, fog, heat-wave ]
+    swarm-mob: silverfish
+    swarm-size: 3
 
 # posts what happens in the games to a Discord channel: create a webhook in the settings of the channel
 # (Integrations > Webhooks) and paste its URL

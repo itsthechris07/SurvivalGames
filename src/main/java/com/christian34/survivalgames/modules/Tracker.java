@@ -63,6 +63,7 @@ public class Tracker {
             Player other = member.getPlayer();
             if (other == player || !other.getWorld().equals(player.getWorld()) || other.isDead()) continue;
             if (team != null && team.isMember(other.getUniqueId())) continue;
+            if (SurvivalGames.getInstance().getAlliances().areAllies(game, player.getUniqueId(), other.getUniqueId())) continue;
             Participant participant = game.getParticipant(other.getUniqueId());
             if (participant == null || !participant.isAlive()) continue;
             double otherDistance = other.getLocation().distanceSquared(player.getLocation());

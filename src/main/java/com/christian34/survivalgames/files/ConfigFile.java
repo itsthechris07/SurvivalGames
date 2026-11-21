@@ -8,7 +8,8 @@ package com.christian34.survivalgames.files;
 public class ConfigFile extends ResourceFile {
 
     ConfigFile() {
-        super("config.yml");
+        // the rules of the quells are the server owner's (deleted ones don't come back)
+        super("config.yml", "modules.quell.rules");
     }
 
 }

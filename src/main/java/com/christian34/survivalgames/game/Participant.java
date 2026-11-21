@@ -25,6 +25,7 @@ public class Participant {
     private boolean alive = true;
     private int kills;
     private int rating;
+    private int score;
     private int out;
     @Nullable
     private String kit;
@@ -113,6 +114,17 @@ public class Participant {
 
     public void setRating(int rating) {
         this.rating = rating;
+    }
+
+    /**
+     * @return the training score (1-12, modules.training-score), 0: none (not saved)
+     */
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
     }
 
     /**

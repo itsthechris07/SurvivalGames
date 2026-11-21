@@ -239,6 +239,10 @@ public class UhcGame extends SurvivalGame {
      * @return a random place on the ground (not in water or lava) away from the others - if there is no dry land (an
      * ocean), the center on a small platform
      */
+    private static double square(double value) {
+        return value * value;
+    }
+
     private static Location scatter(World world, Location center, double radius, double distance, List<Location> others) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         Location place = null;
@@ -246,7 +250,9 @@ public class UhcGame extends SurvivalGame {
             // the distance is halved every 10 attempts: a small world doesn't have room for everybody
             double minDistance = attempt < 60 ? distance / (1 << attempt / 10) : 0;
             Location candidate = center.clone().add(random.nextDouble(-radius, radius), 0, random.nextDouble(-radius, radius));
-            if (others.stream().anyMatch(other -> other.distanceSquared(candidate) < minDistance * minDistance)) continue;
+            // horizontally: the others stand on the ground, the candidate is still at the height of the center
+            if (others.stream().anyMatch(other -> square(other.getX() - candidate.getX())
+                    + square(other.getZ() - candidate.getZ()) < minDistance * minDistance)) continue;
             if (isSafeGround(world, candidate)) place = candidate;
         }
         if (place == null) {

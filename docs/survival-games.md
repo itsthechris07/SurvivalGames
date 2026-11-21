@@ -35,6 +35,8 @@ The players choose their kit in the lobby with the kit item or `/sg kit [kit]` a
 
 Everybody is put onto a spawn point (or into the spawn circle) with an empty inventory and stands still until the
 **start countdown** (`start-countdown`) is over. Then the round begins.
+With `start-platforms: explode` players can move, but whoever leaves their spawn point before the end of the
+countdown blows up and is out (jumping and looking around is fine).
 
 - **Grace period:** for `grace-period` seconds nobody can hurt the others. The time left is shown above the hotbar.
 - **Loot:** chests, trapped chests and barrels are filled when they are opened for the first time and again every
@@ -94,6 +96,79 @@ items:
 
 Items with a price need an economy plugin ([Vault](integrations.md#economy)). A spectator can send one item every
 `modules.sponsor.cooldown` seconds.
+
+## Bets
+
+With `modules.betting` (off by default) and an economy plugin ([Vault](integrations.md#economy)) spectators – also
+the players who are out – bet on the winner: `/sg bet` shows the odds of the teams alive (click one to bet),
+`/sg bet <player> <amount>` bets on the team of the player. The odds come from the [Elo ratings](configuration.md#statistics)
+of the teams alive, minus the `margin` of the house (at most `max-odds`), and stay as they were when the bet was
+placed. **Bets on the winners pay amount × odds**, the others are lost; a draw or a stopped round pays everything back.
+Once only `close-at` teams are left, no more bets are taken. The players alive can't bet.
+
+## Alliances
+
+In games where everybody plays alone, `modules.alliances` (off by default) lets two players (`max-size`) team up:
+`/sg ally <player>` offers an alliance, the same command of the other player (or a click on the offer) accepts it.
+Allies can't hurt each other and the [tracker](#tracker) ignores them. `/sg ally leave` breaks the alliance – everybody
+hears about the betrayal. All alliances break once only `break-at` players are left, in the deathmatch, or when nobody
+but the allies is left.
+
+## Force field
+
+With `modules.force-field` (off by default) the world border throws back what hits it: arrows, tridents, snowballs and
+ender pearls bounce off and fly back into the arena, players who run into it get a shock (`damage`) and are pushed
+back.
+
+## The fallen
+
+With `modules.fallen` (off by default) everybody in the game hears a cannon shot when a player is out, and every
+`minutes` minutes the fallen since the last list are announced (with a title). In a [Varo](varo.md) the list comes
+with every new day.
+
+## Training scores
+
+With `modules.training-score` (off by default) everybody gets a score from 1 to 12 while they stand on their spawn
+points: 6 for the start rating, one more (less) for every `points-per-score` rating points above (below) and up to
+±`random` by the mood of the Gamemakers. The scores are announced, the best first.
+
+## Reaping
+
+With `modules.reaping` (off by default) more players than `max-players` can wait in the lobby (`applicants` ×
+`max-players`). When the game starts, `max-players` of them are drawn – the others watch. Everybody has one lot, plus
+`missed-lots` for every reaping they weren't drawn in (until they are) and n − 1 with the permission
+`sg.reaping.lots.<n>` (2–10).
+
+## Quells
+
+With `modules.quell` (off by default) every `every`-th round of an arena – or by `chance` (percent) – is a Quell with
+one of the `rules`. A rule changes settings of `survival-games` for that round only:
+
+```yaml
+rules:
+  no-grace: { grace-period: 0 }
+  nowhere-to-hide: { reveal: { minutes: 1, interval: 30 } }
+  sudden-border: { world-border: { shrink-after: 1, shrink-minutes: 5 } }
+  no-refill: { refill-minutes: 0 }
+```
+
+The players learn the rule in the lobby and when the game begins (its description is the message
+`quell_rule_<name>`, otherwise its name). Admins choose the rule of the round in the lobby (otherwise of the next one)
+with `/sg game <arena> quell <rule>` – also while the module is off.
+
+## Gamemaker events
+
+With `modules.arena-events` (off by default) the arena turns against the players every `min-minutes` to `max-minutes`
+(after the grace period, not in the deathmatch) for `duration` seconds, announced `warning` seconds before:
+
+| Event | What happens |
+|-------|--------------|
+| `poison-water` | the water poisons |
+| `swarm` | `swarm-size` mobs (`swarm-mob`) attack every player, they disappear afterwards |
+| `fog` | nobody sees far |
+| `heat-wave` | hungry and slow under the open sky |
+
+`events` lists the ones that can happen. Admins start one right away: `/sg game <arena> event <event>`.
 
 ## Deathmatch
 

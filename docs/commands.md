@@ -34,6 +34,8 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 | `/sg duel [player] [kit]` | waits for an opponent in a [duel](duels.md) (with a player: challenges them, optionally with a kit) |
 | `/sg duel accept <player>` / `deny <player>` | accepts / denies the challenge of a player |
 | `/sg sponsor [player]` | spectators send [items](survival-games.md#sponsors) to a player alive (without: the menu) |
+| `/sg bet [player] [amount]` | spectators [bet](survival-games.md#bets) on the team of a player (without an amount: the odds) |
+| `/sg ally [player]` / `ally leave` | offers a player an [alliance](survival-games.md#alliances) or accepts their offer / betrays your allies (without a player: your allies) |
 | `/sg inventory <id>` | opens the [inventory](survival-games.md#the-end) of a message after a kill or a game (click the message) |
 | `/sg replay` | the [replays](replays.md) of the games in a menu (while you watch one: its controls) |
 | `/sg replay list [arena]` / `play <id>` | lists the recordings / watches one |
@@ -85,6 +87,8 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | `/sg game <arena> stop` | stops the game (a Varo is saved) |
 | `/sg game <arena> create` | creates the game once (not after a restart) |
 | `/sg game <arena> deathmatch` | starts the deathmatch right away (Survival Games) |
+| `/sg game <arena> quell [rule]` | the round in the lobby (otherwise the next one) is a [Quell](survival-games.md#quells) with the rule (without: the rules) |
+| `/sg game <arena> event <event>` | the Gamemakers start an [event](survival-games.md#gamemaker-events) right away |
 | `/sg game <arena> reset [--teams] --confirm` | starts a Varo again from the lobby |
 | `/sg game <arena> revive <player>` | brings a player who is out back into the game |
 | `/sg game <arena> strike <player> [reason]` | gives a player a strike (Varo, see [strikes](varo.md#strikes)) |
@@ -131,3 +135,4 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | `sg.kit.<kit>` | nobody | the kit, if it was created with `--permission` |
 | `sg.cosmetic.<name>`, `sg.cosmetic.*` | operators | the [cosmetic](configuration.md#cosmetics) (all of them) without buying or unlocking it |
 | `sg.vote.2` ... `sg.vote.5` | nobody | the vote of the player for a map counts 2 ... 5 times |
+| `sg.reaping.lots.2` ... `sg.reaping.lots.10` | nobody | 2 ... 10 lots in the [reaping](survival-games.md#reaping) |

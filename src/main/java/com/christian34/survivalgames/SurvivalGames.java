@@ -28,7 +28,14 @@ import com.christian34.survivalgames.listeners.ProtectionListener;
 import com.christian34.survivalgames.listeners.TeleportListener;
 import com.christian34.survivalgames.listeners.UhcListener;
 import com.christian34.survivalgames.modules.Backpack;
+import com.christian34.survivalgames.modules.Alliances;
+import com.christian34.survivalgames.modules.ArenaEvents;
+import com.christian34.survivalgames.modules.Betting;
 import com.christian34.survivalgames.modules.Bounty;
+import com.christian34.survivalgames.modules.Fallen;
+import com.christian34.survivalgames.modules.ForceField;
+import com.christian34.survivalgames.modules.Quell;
+import com.christian34.survivalgames.modules.Reaping;
 import com.christian34.survivalgames.modules.BuildMode;
 import com.christian34.survivalgames.modules.ChestLock;
 import com.christian34.survivalgames.modules.Cosmetics;
@@ -40,6 +47,7 @@ import com.christian34.survivalgames.modules.Restrictions;
 import com.christian34.survivalgames.modules.Sponsor;
 import com.christian34.survivalgames.modules.SupplyDrop;
 import com.christian34.survivalgames.modules.ToxicRain;
+import com.christian34.survivalgames.modules.TrainingScores;
 import com.christian34.survivalgames.modules.Tracker;
 import com.christian34.survivalgames.network.NetworkManager;
 import com.christian34.survivalgames.replay.Replays;
@@ -100,6 +108,13 @@ public class SurvivalGames extends JavaPlugin {
     private Kits kits;
     private Duels duels;
     private Bounty bounty;
+    private Betting betting;
+    private Alliances alliances;
+    private Fallen fallen;
+    private TrainingScores trainingScores;
+    private Reaping reaping;
+    private Quell quell;
+    private ArenaEvents arenaEvents;
     private Sponsor sponsor;
     private OfflineNpc offlineNpc;
     private Leaderboards leaderboards;
@@ -142,6 +157,13 @@ public class SurvivalGames extends JavaPlugin {
         this.kits = new Kits(this);
         this.duels = new Duels(this);
         this.bounty = new Bounty(this);
+        this.betting = new Betting(this);
+        this.alliances = new Alliances(this);
+        this.fallen = new Fallen(this);
+        this.trainingScores = new TrainingScores(this);
+        this.reaping = new Reaping(this);
+        this.quell = new Quell(this);
+        this.arenaEvents = new ArenaEvents(this);
         this.sponsor = new Sponsor(this);
         this.offlineNpc = new OfflineNpc(this);
         this.essentials = EssentialsSupport.create(this);
@@ -174,7 +196,8 @@ public class SurvivalGames extends JavaPlugin {
         }
         register(new PlayerListener(this), new ProtectionListener(this), new TeleportListener(this),
                 new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this),
-                stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays, uhcListener, cosmetics);
+                new ForceField(this), stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays,
+                uhcListener, cosmetics);
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new SgExpansion(this).register();
         }
@@ -394,6 +417,34 @@ public class SurvivalGames extends JavaPlugin {
 
     public Bounty getBounty() {
         return bounty;
+    }
+
+    public Betting getBetting() {
+        return betting;
+    }
+
+    public Alliances getAlliances() {
+        return alliances;
+    }
+
+    public Fallen getFallen() {
+        return fallen;
+    }
+
+    public TrainingScores getTrainingScores() {
+        return trainingScores;
+    }
+
+    public Reaping getReaping() {
+        return reaping;
+    }
+
+    public Quell getQuell() {
+        return quell;
+    }
+
+    public ArenaEvents getArenaEvents() {
+        return arenaEvents;
     }
 
     public Sponsor getSponsor() {

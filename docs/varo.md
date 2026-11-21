@@ -122,5 +122,6 @@ The extras can be turned off or used in other game types (`modules` in `config.y
 | **Tracker** | A compass that points at the nearest enemy, given on the spawn point (only in Survival Games by default, `modules.tracker.games`). |
 | **Supply drop** | A chest with the supply loot that lands near the center (only in Survival Games by default). |
 | **Bounty** | Players put money on an enemy, the killer gets it – see [bounties](survival-games.md#bounties). Bounties of a Varo are saved with the game. |
+| **The fallen** | A cannon shot for every player who is out, the fallen of the last day are announced when a new day begins – see [the fallen](survival-games.md#the-fallen) (off by default, `modules.fallen`). |
 | **Inventory view** | After a kill the victim can look at the inventory of the killer (and the other way round), at the end everybody at those of the winners. |
 | **Kits**, **sponsors** | Only in Survival Games by default (`modules.kits.games`, `modules.sponsor.games`). |

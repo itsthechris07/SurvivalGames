@@ -6,6 +6,7 @@ import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.modules.Quell;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.GameRules;
@@ -15,6 +16,7 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -72,15 +74,54 @@ public class SurvivalGame extends Game {
      */
     @Nullable
     private MapVoting mapVoting;
+    /**
+     * the rule of the quell (modules.quell), null: a normal round
+     */
+    @Nullable
+    private String quell;
+    /**
+     * the settings with the changes of the quell
+     */
+    @Nullable
+    private ConfigurationSection quellSettings;
 
     public SurvivalGame(SurvivalGames plugin, Arena arena) {
         super(plugin, arena, arena.createWorld(arena.getName() + "_"
                 + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)), false));
+        setQuell(plugin.getQuell().nextRound(arena));
         if (MapVoting.isEnabled(plugin, arena)) {
             this.mapVoting = new MapVoting(plugin, this);
             // nothing to choose from
             if (!mapVoting.hasChoice()) this.mapVoting = null;
         }
+    }
+
+    @Override
+    protected ConfigurationSection settings() {
+        return quellSettings != null ? quellSettings : super.settings();
+    }
+
+    /**
+     * @return the rule of the quell of this round, null if it is a normal round
+     */
+    @Nullable
+    public String getQuell() {
+        return quell;
+    }
+
+    /**
+     * this round is a quell with the rule (in the lobby, null: a normal round)
+     */
+    public void setQuell(@Nullable String rule) {
+        if (getState() != GameState.LOBBY) return;
+        this.quell = rule;
+        this.quellSettings = rule == null ? null : plugin.getQuell().apply(super.settings(), rule);
+        if (rule != null) broadcast(LangText.QUELL_ANNOUNCED, Quell.describe(rule));
+    }
+
+    @Override
+    public boolean isFinalPhase() {
+        return deathmatch;
     }
 
     @Override
@@ -112,7 +153,7 @@ public class SurvivalGame extends Game {
     @Nullable
     public Component getJoinDenial(UUID uuid) {
         if (getState() != GameState.LOBBY) return i18n(LangText.GAME_RUNNING, arena.getName());
-        if (participants.size() >= getMaxPlayers()) return i18n(LangText.GAME_FULL);
+        if (participants.size() >= getLobbyLimit()) return i18n(LangText.GAME_FULL);
         return null;
     }
 
@@ -175,6 +216,7 @@ public class SurvivalGame extends Game {
     protected void onLobbyJoin(GamePlayer gamePlayer) {
         super.onLobbyJoin(gamePlayer);
         if (getMapVoting() != null) gamePlayer.getPlayer().sendMessage(prefixed(LangText.MAP_VOTE_HINT));
+        if (quell != null) gamePlayer.getPlayer().sendMessage(prefixed(LangText.QUELL_ANNOUNCED, Quell.describe(quell)));
     }
 
     @Override
@@ -257,6 +299,9 @@ public class SurvivalGame extends Game {
     protected void onBegin() {
         this.seconds = 0;
         plugin.getGameManager().setLastPlayed(arena);
+        if (quell != null) {
+            showTitle(net.kyori.adventure.title.Title.title(i18n(LangText.QUELL_TITLE), Quell.describe(quell)), null);
+        }
         this.graceLeft = Math.max(0, settings().getInt("grace-period"));
         if (graceLeft > 0) {
             broadcast(LangText.SG_STARTED_GRACE, formatDuration(graceLeft));
