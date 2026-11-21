@@ -95,6 +95,11 @@ The plugin puts `AGENTS.md` there (and `CLAUDE.md`, which only refers to it): wh
 option is in `config.yml` and nothing may be invented, which files the plugin overwrites while the server runs, how
 the messages work, ... The plugin itself doesn't use any AI.
 
+The documentation is available for AI assistants as Markdown, too: [`llms.txt`](https://itsthechris07.github.io/SurvivalGames/llms.txt)
+lists the pages, [`llms-full.txt`](https://itsthechris07.github.io/SurvivalGames/llms-full.txt) contains all of them in one
+file, the button at the top of every page copies it as Markdown, and `<page>/index.md` is the Markdown version of
+a page (for example [`commands/index.md`](https://itsthechris07.github.io/SurvivalGames/commands/index.md)).
+
 The files are written again on every start and `/sg reload` (an update brings the notes of its version), so changes
 in them are lost. `agent-files: false` in `config.yml` stops writing them – delete them yourself then.
 

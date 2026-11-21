@@ -8,7 +8,9 @@ Games, Varo, UHC and Duels. If you help the owner of the server to configure it,
 
 Documentation: https://itsthechris07.github.io/SurvivalGames/ (configuration:
 https://itsthechris07.github.io/SurvivalGames/configuration/, commands and permissions:
-https://itsthechris07.github.io/SurvivalGames/commands/).
+https://itsthechris07.github.io/SurvivalGames/commands/). As Markdown: an index in
+https://itsthechris07.github.io/SurvivalGames/llms.txt, every page at `<page>/index.md`, all pages in one file in
+https://itsthechris07.github.io/SurvivalGames/llms-full.txt.
 
 ## Rules
 

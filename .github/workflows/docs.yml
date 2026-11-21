@@ -1,5 +1,5 @@
-# Builds the documentation (docs/, mkdocs.yml) with MkDocs Material and publishes it on GitHub Pages
-# (repository settings → Pages → Source: GitHub Actions). Local preview: pip install "mkdocs-material<10" && mkdocs serve
+# Builds the documentation (docs/, mkdocs.yml) with Zensical and publishes it on GitHub Pages
+# (repository settings → Pages → Source: GitHub Actions). Local preview: pip install "zensical<0.2" && zensical serve
 name: Docs
 
 on:
@@ -30,8 +30,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
-      - run: pip install "mkdocs-material<10" "mkdocs<2"
-      - run: mkdocs build --strict
+      - run: pip install "zensical>=0.1.3,<0.2"
+      - run: zensical build --strict
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site

@@ -10,3 +10,6 @@ build
 /.claude/
 /.floo
 /.flooignore
+# documentation build (zensical build)
+/site/
+/.cache/

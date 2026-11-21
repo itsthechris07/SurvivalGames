@@ -30,6 +30,8 @@ theme:
     - navigation.top
     - search.highlight
     - content.code.copy
+    # "Copy page" button: copies the Markdown version of the page (llmstxt)
+    - content.action.copy
     - content.action.edit
 
 nav:
@@ -48,6 +50,39 @@ nav:
       - Messages and languages: customization.md
       - Placeholders: placeholders.md
   - FAQ and troubleshooting: faq.md
+
+plugins:
+  - search
+  # For AI assistants (built into Zensical): /llms.txt (index, https://llmstxt.org), /llms-full.txt (all pages in one
+  # file) and a Markdown version of every page next to its HTML
+  - llmstxt:
+      full_output: llms-full.txt
+      markdown_description: >-
+        SurvivalGames is a Paper/Purpur plugin (Paper 1.21.11 - 26.3, Java 25) for Survival Games, Varo, UHC and Duels:
+        several games next to each other on one server (network.mode: standalone) or one game per server behind
+        Velocity/BungeeCord (game/lobby). All commands are under /sg (aliases /survivalgames, /varo). Every option
+        that exists is in config.yml and loot.yml (see Configuration) - never invent options, unknown keys are
+        ignored without an error. Texts are MiniMessage in messages.yml/messages_<language>.yml.
+      sections:
+        Overview:
+          - index.md: what the plugin does, the game types, requirements
+          - getting-started.md: install the plugin, set up an arena and start the first game
+        Game types:
+          - survival-games.md: map voting, kits, loot, grace period, bounties, sponsors, deathmatch, modules
+          - varo.md: play time per day, one life, the world border, optional rules, backups, the extras
+          - uhc.md: generated worlds, scatter, golden heads, final heal, scenarios (cutclean, timber)
+          - duels.md: queue, challenges, a kit per duel, Elo rating
+        Features:
+          - replays.md: every round and every Varo day is recorded and can be watched again
+          - network.md: one game per server behind Velocity or BungeeCord, the lobby server
+          - integrations.md: Vault, parties, join NPCs, Bedrock forms, TAB, EssentialsX, Multiverse
+        Reference:
+          - commands.md: every command under /sg and its permission
+          - configuration.md: config.yml and loot.yml (complete default files), statistics, rating, leaderboards, rewards
+          - customization.md: messages and languages - English, German or your own texts (MiniMessage)
+          - placeholders.md: PlaceholderAPI and MiniPlaceholders for scoreboards, tab lists and holograms
+        Optional:
+          - faq.md: FAQ and troubleshooting
 
 markdown_extensions:
   - admonition
