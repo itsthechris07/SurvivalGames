@@ -1,5 +1,11 @@
 # FAQ and troubleshooting
 
+## The plugin doesn't load ("UnsupportedClassVersionError")
+
+The server runs on an older Java than 25. The plugin needs **Java 25** – also on Paper 1.21.11, which itself still
+starts with Java 21. Start the server with Java 25 (`java -version` shows the version; your host usually has a setting
+for it). Paper versions older than 1.21.11 aren't supported, see the [requirements](index.md#requirements).
+
 ## "The game can't start"
 
 The message tells why:

@@ -69,7 +69,8 @@ one game per server in a network behind Velocity/BungeeCord.
   (Bedrock forms), TAB, EssentialsX, vanish plugins, Multiverse
 
 ## Quick start
-1. Put the jar into `plugins/` and start the server.
+1. Put the jar into `plugins/` and start the server: Paper or Purpur 1.21.11 – 26.3 with **Java 25** (also for
+   1.21.11).
 
 The fastest way: `/sg admin` → **New game**, click the game type and where it is played (a map, a world of the
 server or a new world) – the game is ready, players join with `/sg join`. Or step by step:

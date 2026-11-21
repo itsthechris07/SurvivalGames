@@ -2,6 +2,9 @@
 
 ## Installation
 
+The server needs Paper or Purpur 1.21.11 – 26.3 and **Java 25** – also for Paper 1.21.11, which itself still runs on
+Java 21 (see [requirements](index.md#requirements)).
+
 1. Download `SurvivalGames-<version>.jar` and put it into the `plugins` folder of your server.
 2. Start the server. The plugin creates `plugins/SurvivalGames/` with `config.yml`, `loot.yml`, the messages and the
    folder `maps/`.
