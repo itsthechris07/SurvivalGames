@@ -2,12 +2,14 @@ package com.christian34.survivalgames.files;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -62,6 +64,41 @@ public final class ConfigUpdater {
         }
         if (changed) {
             current.save(file);
+        }
+    }
+
+    /**
+     * values of the file that are still an old default (listed in the resource outdatedName: key - list of old texts)
+     * get the current default of resourceName, values changed by the server owner stay
+     *
+     * @return the keys that were replaced
+     */
+    public static List<String> replaceOutdated(Plugin plugin, String resourceName, File file, String outdatedName)
+            throws IOException {
+        YamlConfiguration defaults = load(plugin, resourceName);
+        YamlConfiguration outdated = load(plugin, outdatedName);
+        if (defaults == null || outdated == null || !file.exists()) return List.of();
+        YamlConfiguration current = YamlConfiguration.loadConfiguration(file);
+        List<String> replaced = new ArrayList<>();
+        for (String key : outdated.getKeys(false)) {
+            String value = current.getString(key);
+            String latest = defaults.getString(key);
+            if (value == null || latest == null || value.equals(latest)) continue;
+            if (outdated.getStringList(key).contains(value)) {
+                current.set(key, latest);
+                replaced.add(key);
+            }
+        }
+        if (!replaced.isEmpty()) current.save(file);
+        return replaced;
+    }
+
+    @Nullable
+    private static YamlConfiguration load(Plugin plugin, String resourceName) throws IOException {
+        InputStream resource = plugin.getResource(resourceName);
+        if (resource == null) return null;
+        try (InputStreamReader reader = new InputStreamReader(resource, StandardCharsets.UTF_8)) {
+            return YamlConfiguration.loadConfiguration(reader);
         }
     }
 

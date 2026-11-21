@@ -4,6 +4,7 @@ import com.christian34.survivalgames.PluginTestBase;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
+import com.christian34.survivalgames.lib.lang.TextContainer;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,42 @@ class ResourceFilesTest extends PluginTestBase {
     }
 
     // one test for all texts: a parameterized test would start a server for each of them (minutes)
+    @Test
+    void theNotesForAiAssistantsAreWritten() throws IOException {
+        File agents = new File(plugin.getDataFolder(), "AGENTS.md");
+        File claude = new File(plugin.getDataFolder(), "CLAUDE.md");
+        assertTrue(java.nio.file.Files.readString(agents.toPath()).contains("Never invent options"));
+        assertEquals("@AGENTS.md", java.nio.file.Files.readString(claude.toPath()).strip());
+
+        // always the version of the plugin
+        java.nio.file.Files.writeString(agents.toPath(), "changed");
+        plugin.reload();
+        assertTrue(java.nio.file.Files.readString(agents.toPath()).contains("Never invent options"));
+
+        assertTrue(agents.delete() && claude.delete());
+        config().set("agent-files", false);
+        plugin.reload();
+        assertFalse(agents.exists() || claude.exists());
+    }
+
+    @Test
+    void secretsComeFromEnvironmentVariables() {
+        ConfigFile.setEnvironment(name -> name.equals("SG_MYSQL_PASSWORD") ? "s3cr$t\\" : null);
+        try {
+            config().set("stats.mysql.password", "${SG_MYSQL_PASSWORD}");
+            config().set("stats.mysql.user", "minecraft");
+            config().set("stats.mysql.url", "jdbc:mysql://${SG_DB_HOST}:3306/minecraft");
+
+            assertEquals("s3cr$t\\", config().getString("stats.mysql.password"));
+            assertEquals("minecraft", config().getString("stats.mysql.user"), "without a variable as before");
+            assertEquals("jdbc:mysql://:3306/minecraft", config().getString("stats.mysql.url"), "not set: empty");
+            assertEquals("${SG_MYSQL_PASSWORD}", config().getData().getString("stats.mysql.password"),
+                    "the file keeps the reference");
+        } finally {
+            ConfigFile.setEnvironment(System::getenv);
+        }
+    }
+
     @Test
     void everyMessageExists() {
         YamlConfiguration messages = bundled("messages.yml");
@@ -106,6 +143,36 @@ class ResourceFilesTest extends PluginTestBase {
         YamlConfiguration updated = YamlConfiguration.loadConfiguration(file);
         assertEquals("custom text", updated.getString("no_perms"));
         assertEquals(bundled("messages.yml").getString("player_not_found"), updated.getString("player_not_found"));
+    }
+
+    @Test
+    void oldDefaultTextsAreReplacedChangedOnesStay() throws IOException {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        YamlConfiguration messages = YamlConfiguration.loadConfiguration(file);
+        messages.set("sg_started_grace", "<gold>The game has begun! <gray>No PvP for <yellow>{0} <gray>seconds.");
+        messages.set("team_eliminated", "custom text");
+        messages.save(file);
+
+        plugin.reload();
+
+        YamlConfiguration updated = YamlConfiguration.loadConfiguration(file);
+        assertEquals(bundled("messages.yml").getString("sg_started_grace"), updated.getString("sg_started_grace"));
+        assertEquals("custom text", updated.getString("team_eliminated"));
+        assertEquals("The game has begun! No PvP for 1 minute.", I.plain(LangText.SG_STARTED_GRACE, "1 minute"));
+    }
+
+    @Test
+    void outdatedTextsAreNoDefaults() {
+        YamlConfiguration outdated = bundled(TextContainer.OUTDATED_FILE);
+        assertFalse(outdated.getKeys(false).isEmpty());
+        for (String language : List.of("messages.yml", "messages_de.yml")) {
+            YamlConfiguration messages = bundled(language);
+            for (String key : outdated.getKeys(false)) {
+                assertNotNull(messages.getString(key), key + " doesn't exist in " + language);
+                assertFalse(outdated.getStringList(key).contains(messages.getString(key)),
+                        "the default of " + key + " in " + language + " is listed as outdated");
+            }
+        }
     }
 
     @Test

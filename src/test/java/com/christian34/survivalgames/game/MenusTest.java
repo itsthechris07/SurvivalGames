@@ -471,6 +471,34 @@ class MenusTest extends PluginTestBase {
     }
 
     @Test
+    void anAdminWaitingInALobbyWatchesAnotherGame() {
+        Game game = createGame("arena1", GameType.SURVIVAL_GAMES, 4);
+        Game other = createGame("arena2", GameType.SURVIVAL_GAMES, 4);
+        PlayerMock alex = addPlayer("Alex");
+        execute(steve, "sg join arena1");
+        execute(alex, "sg join arena1");
+        run(game);
+        execute(admin, "sg join arena2");
+        assertSame(other, plugin.getUser(admin).getGame());
+
+        execute(admin, "sg admin");
+        click(admin, "Games");
+        click(admin, "arena1");
+        assertTrue(forms.buttons().contains("Watch"), forms.buttons().toString());
+        click(admin, "Watch");
+
+        assertSame(game, plugin.getUser(admin).getGame());
+        assertTrue(plugin.getUser(admin).isSpectator());
+        assertTrue(other.getParticipants().isEmpty(), "he has left the lobby");
+
+        // not in the game he watches
+        execute(admin, "sg admin");
+        click(admin, "Games");
+        click(admin, "arena1");
+        assertFalse(forms.buttons().contains("Watch"));
+    }
+
+    @Test
     void playersOfAGameAreRevivedWithTheMenu() {
         config().set("survival-games.deathmatch.players", 0);
         Game game = createGame("arena1", GameType.SURVIVAL_GAMES, 4);

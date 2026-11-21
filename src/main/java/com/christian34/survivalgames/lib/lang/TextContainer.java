@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -22,6 +23,10 @@ import java.util.regex.Pattern;
  */
 public class TextContainer {
     private static final String DEFAULT_FILE = "messages.yml";
+    /**
+     * the old default texts that are replaced by the current ones
+     */
+    public static final String OUTDATED_FILE = "messages-outdated.yml";
     private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}([_-][a-z0-9]+)?");
     private final YamlConfiguration data;
 
@@ -32,6 +37,8 @@ public class TextContainer {
         if (plugin.getResource(fileName) != null) {
             try {
                 ConfigUpdater.update(plugin, fileName, file);
+                List<String> replaced = ConfigUpdater.replaceOutdated(plugin, fileName, file, OUTDATED_FILE);
+                if (!replaced.isEmpty()) Debug.info("Updated the texts " + replaced + " in " + fileName);
             } catch (IOException ex) {
                 Debug.warn("Couldn't update file '" + fileName + "'", ex);
             }

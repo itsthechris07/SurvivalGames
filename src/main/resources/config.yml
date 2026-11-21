@@ -23,6 +23,8 @@ stats:
   enabled: true
   # file: plugins/SurvivalGames/stats.yml
   # mysql: a MySQL/MariaDB database - the servers of a network share the statistics this way (/sg reload after a change)
+  # every value can refer to an environment variable, so the password doesn't have to be in this file:
+  # password: "${SG_MYSQL_PASSWORD}" - best with a MySQL user of its own that only has rights on this database
   storage: file
   mysql:
     url: "jdbc:mysql://localhost:3306/minecraft"
@@ -105,6 +107,8 @@ survival-games:
   # what happens to players who leave their spawn point before the start: freeze (they can't move) or explode (they
   # are out)
   start-platforms: freeze
+  # explode: how often the players are warned (and put back onto their spawn point) before they blow up
+  start-platform-warnings: 1
   # without spawn points the players spawn in a circle around the center (radius in blocks)
   spawn-circle-radius: 15
   # seconds without PvP after the start
@@ -528,7 +532,8 @@ modules:
     swarm-size: 3
 
 # posts what happens in the games to a Discord channel: create a webhook in the settings of the channel
-# (Integrations > Webhooks) and paste its URL
+# (Integrations > Webhooks) and paste its URL - or keep it out of this file with an environment variable:
+# webhook-url: "${SG_DISCORD_WEBHOOK}"
 discord:
   enabled: false
   webhook-url: ""
@@ -593,3 +598,8 @@ replays:
 # (the anonymous statistics of bStats are disabled in plugins/bStats/config.yml)
 update-checker:
   enabled: true
+
+# writes AGENTS.md and CLAUDE.md into this folder: notes for AI assistants (Claude Code, Codex, Cursor, ...) that help
+# to configure the plugin - which files they may change, that they mustn't invent options, ... (the plugin itself
+# doesn't use any AI). false: the files are not written (delete them yourself)
+agent-files: true

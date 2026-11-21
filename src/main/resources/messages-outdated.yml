@@ -1,0 +1,57 @@
+# texts that used to be the defaults of messages.yml / messages_<language>.yml (all languages): a file that still has
+# one of them gets the current default - texts changed by the server owner stay. Add the old text here whenever the
+# default text of a key changes.
+command_replay_speed:
+  - 'sets the speed of the replay (0.25 to 8)'
+  - 'stellt die Geschwindigkeit des Replays ein (0.25 bis 8)'
+command_settings:
+  - 'changes the settings of Survival Games and Varo (without a value: the menu)'
+  - 'ändert die Einstellungen von Survival Games und Varo (ohne Wert: das Menü)'
+command_spectate:
+  - 'schaut einem laufenden Spiel zu'
+  - 'watches a running game'
+command_version:
+  - 'shows the plugin version'
+  - 'zeigt die Plugin-Version'
+gui_admin_settings_lore:
+  - 'Die Regeln von Survival Games und Varo'
+  - 'The rules of Survival Games and Varo'
+gui_arena_create_lore:
+  - "Click, then type the name\nof the arena into the chat"
+  - "Klicken, dann den Namen\nder Arena in den Chat schreiben"
+gui_arena_setup_click:
+  - '<green>Click to change it in the chat'
+  - '<green>Klicken, um es im Chat zu ändern'
+help_arguments:
+  - 'Argumente'
+  - 'Arguments'
+help_command:
+  - 'Befehl'
+  - 'Command'
+help_description:
+  - 'Beschreibung'
+  - 'Description'
+help_title:
+  - 'SurvivalGames help'
+  - 'SurvivalGames-Hilfe'
+info_rules_sg:
+  - "<gray>Players per team: <yellow>{0}\n<gray>No PvP for the first <yellow>{1} <gray>seconds. One death and you are out!"
+  - "<gray>Spieler pro Team: <yellow>{0}\n<gray>Kein PvP in den ersten <yellow>{1} <gray>Sekunden. Ein Tod und du bist raus!"
+player_eliminated:
+  - '<yellow>{0} <gray>({1}<gray>) is out of the game! <yellow>{2} <gray>teams left.'
+  - '<yellow>{0} <gray>({1}<gray>) ist ausgeschieden! Noch <yellow>{2} <gray>Teams.'
+replay_controls:
+  - '<gray>Replay: <yellow><run:"/sg replay">[Menu]</run> <run:"/sg replay pause">[Pause]</run> <run:"/sg replay skip -10">[-10s]</run> <run:"/sg replay skip 10">[+10s]</run> <run:"/sg replay players">[Players]</run> <red><run:"/sg replay leave">[Leave]</run>'
+  - '<gray>Replay: <yellow><run:"/sg replay">[Menü]</run> <run:"/sg replay pause">[Pause]</run> <run:"/sg replay skip -10">[-10s]</run> <run:"/sg replay skip 10">[+10s]</run> <run:"/sg replay players">[Spieler]</run> <red><run:"/sg replay leave">[Verlassen]</run>'
+sg_started_grace:
+  - '<gold>Das Spiel hat begonnen! <gray>Kein PvP für <yellow>{0} <gray>Sekunden.'
+  - '<gold>The game has begun! <gray>No PvP for <yellow>{0} <gray>seconds.'
+spectating:
+  - '<gray>Du schaust dem Spiel zu. Verlassen: <yellow><run:"/sg leave">/sg leave</run>'
+  - '<gray>You are watching the game. Leave: <yellow><run:"/sg leave">/sg leave</run>'
+team_eliminated:
+  - '<red>Das Team {0} <red>ist ausgeschieden!'
+  - '<red>Team {0} <red>is out of the game!'
+uhc_scenarios:
+  - '<gray>Scenarios: <yellow>{0}'
+  - '<gray>Szenarien: <yellow>{0}'

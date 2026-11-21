@@ -32,6 +32,9 @@ discord:
   avatar-url: ""
 ```
 
+Whoever has the URL can post into the channel – keep it out of `config.yml` with an
+[environment variable](configuration.md#secrets-in-environment-variables): `webhook-url: "${SG_DISCORD_WEBHOOK}"`.
+
 The messages are those of the game without colors (`discord_...` in `messages.yml` for the start, the kills and the
 achievements). Nobody is pinged, also not by a name like `@everyone`. They are sent by an own thread one after
 another, so a slow Discord doesn't hold up the server.

@@ -312,7 +312,9 @@ public class SurvivalGames extends JavaPlugin {
                 if (viewer == target) continue;
                 GamePlayer targetUser = getUser(target);
                 boolean visible = viewerUser.getGame() == targetUser.getGame()
-                        && (!targetUser.isSpectator() || viewerUser.isSpectator());
+                        && (!targetUser.isSpectator() || viewerUser.isSpectator())
+                        // the viewers of a replay fly around on their own
+                        && (replays == null || replays.getPlayback(target) == null);
                 if (visible && !viewer.canSee(target)) {
                     viewer.showPlayer(this, target);
                 } else if (!visible && viewer.canSee(target)) {

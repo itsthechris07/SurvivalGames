@@ -1,11 +1,22 @@
 package com.christian34.survivalgames.game;
 
 import com.christian34.survivalgames.PluginTestBase;
+import com.christian34.survivalgames.lib.Items;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Cow;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Zombie;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +65,66 @@ class SurvivalGamesFlowTest extends PluginTestBase {
         assertEquals(GameState.RUNNING, game.getState());
         messages(steve);
         messages(alex);
+    }
+
+    @Test
+    void theStartItemStartsTheGameRightAway() {
+        steve.addAttachment(plugin, Game.START_PERMISSION, true);
+        join(steve);
+        assertTrue(Items.is(steve.getInventory().getItem(6), Items.START), "the start item in the lobby");
+        PlayerInteractEvent tooFew = new PlayerInteractEvent(steve, Action.RIGHT_CLICK_AIR,
+                steve.getInventory().getItem(6), null, BlockFace.SELF, EquipmentSlot.HAND);
+        server.getPluginManager().callEvent(tooFew);
+        assertEquals(GameState.LOBBY, game.getState(), "not enough players");
+        join(alex);
+        assertFalse(Items.is(alex.getInventory().getItem(6), Items.START), "only with the permission");
+        messages(alex);
+        PlayerInteractEvent click = new PlayerInteractEvent(steve, Action.RIGHT_CLICK_AIR,
+                steve.getInventory().getItem(6), null, BlockFace.SELF, EquipmentSlot.HAND);
+        server.getPluginManager().callEvent(click);
+        assertEquals(GameState.STARTING, game.getState());
+        assertContains(messages(alex), "Steve has started the game!");
+    }
+
+    @Test
+    void theTabListShowsTheNameOnceInSoloGames() {
+        begin();
+        seconds(1);
+        PlainTextComponentSerializer plain = PlainTextComponentSerializer.plainText();
+        assertEquals("Steve", plain.serialize(steve.playerListName()));
+
+        steve.setHealth(0);
+        seconds(1);
+
+        assertEquals("Alex", plain.serialize(alex.playerListName()));
+    }
+
+    @Test
+    void noMonstersWaitAtTheSpawnPoints() {
+        join(steve);
+        World world = game.getWorld();
+        Zombie zombie = (Zombie) world.spawnEntity(game.getArena().getCenter(world), EntityType.ZOMBIE);
+        Cow cow = (Cow) world.spawnEntity(game.getArena().getCenter(world), EntityType.COW);
+        CreatureSpawnEvent lobby = new CreatureSpawnEvent(zombie, CreatureSpawnEvent.SpawnReason.NATURAL);
+        server.getPluginManager().callEvent(lobby);
+        assertTrue(lobby.isCancelled(), "no monsters spawn while the players wait");
+        CreatureSpawnEvent egg = new CreatureSpawnEvent(zombie, CreatureSpawnEvent.SpawnReason.SPAWNER_EGG);
+        server.getPluginManager().callEvent(egg);
+        assertFalse(egg.isCancelled(), "spawn eggs still work");
+
+        join(alex);
+        game.start();
+        assertEquals(GameState.STARTING, game.getState());
+        assertTrue(zombie.isDead(), "the monsters of the map are removed at the start");
+        assertFalse(cow.isDead(), "animals stay");
+
+        for (int tick = 0; tick < 20 * 10 && game.getState() != GameState.RUNNING; tick++) {
+            server.getScheduler().performOneTick();
+        }
+        CreatureSpawnEvent running = new CreatureSpawnEvent((Zombie) world.spawnEntity(game.getArena().getCenter(world),
+                EntityType.ZOMBIE), CreatureSpawnEvent.SpawnReason.NATURAL);
+        server.getPluginManager().callEvent(running);
+        assertFalse(running.isCancelled(), "once the game runs the gamerules decide");
     }
 
     @Test

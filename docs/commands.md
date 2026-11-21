@@ -130,6 +130,7 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | Permission | Default | |
 |---|---|---|
 | `sg.admin` | operators | all admin commands, join signs, leaderboard signs, join NPCs |
+| `sg.start` | operators | the start item in the lobby: starts the game right away (like `/sg start`, at least `min-players`) |
 | `sg.replay` | everybody | watching the [replays](replays.md) (`/sg replay`) |
 | `sg.network.bypass` | nobody | game servers of a network let the player in although they can't play (operators always get in) |
 | `sg.kit.<kit>` | nobody | the kit, if it was created with `--permission` |

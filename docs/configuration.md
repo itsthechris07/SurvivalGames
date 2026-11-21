@@ -22,6 +22,7 @@ files automatically – your values and comments stay.
 | `backups/<uuid>.yml` | the inventory, location, ... of players outside of the games while they play (restored after a crash) |
 | `backups/<arena>/<day>.zip`, `<day>_<time>.zip` | the [backups](varo.md#backups) of a Varo |
 | `replays/<id>.sgr` | the recordings of the [replays](replays.md) |
+| `AGENTS.md`, `CLAUDE.md` | notes for [AI assistants](#configuring-with-an-ai-assistant) (written by the plugin) |
 
 !!! warning
     Don't edit `arenas.yml` and `games/` while the server is running – use the commands.
@@ -87,6 +88,16 @@ The same as a command:
 The change is saved in `config.yml` and works right away. Other lists (`breakable-blocks`, ...) and everything
 outside of the game types are changed in the file.
 
+## Configuring with an AI assistant
+
+If you let an AI assistant (Claude Code, Codex, Cursor, ...) change the files, open it in `plugins/SurvivalGames/`.
+The plugin puts `AGENTS.md` there (and `CLAUDE.md`, which only refers to it): which files may be changed, that every
+option is in `config.yml` and nothing may be invented, which files the plugin overwrites while the server runs, how
+the messages work, ... The plugin itself doesn't use any AI.
+
+The files are written again on every start and `/sg reload` (an update brings the notes of its version), so changes
+in them are lost. `agent-files: false` in `config.yml` stops writing them – delete them yourself then.
+
 ## Statistics
 
 Every game counts the games, wins, kills and deaths of the players per game type (`/sg stats`, `/sg top`, the
@@ -100,11 +111,36 @@ stats:
   mysql:
     url: jdbc:mysql://localhost:3306/minecraft
     user: minecraft
-    password: secret
+    password: "${SG_MYSQL_PASSWORD}"
     table: sg_stats
 ```
 
 The table is created automatically. Paper ships the MySQL driver, nothing else has to be installed.
+
+### Secrets in environment variables
+
+Every text in `config.yml` can refer to an environment variable: `${NAME}` is replaced with the value of the variable
+`NAME` when the file is loaded. That keeps the password of the database (and the [Discord webhook](integrations.md#discord))
+out of the file, so you can share `config.yml` – in a support chat, with an AI assistant, in a git repository –
+without giving it away. A password written directly into the file works as well.
+
+Set the variable where the server is started:
+
+- **Docker:** `-e SG_MYSQL_PASSWORD=...` or `environment:` in `docker-compose.yml`
+- **Pterodactyl** and other panels: a variable of the server (startup / environment settings)
+- **start script:** `export SG_MYSQL_PASSWORD=...` (Linux) or `set SG_MYSQL_PASSWORD=...` (Windows) before `java -jar ...`
+
+If the variable isn't set, the console warns once (with the name of the variable, never a value) and the value is
+empty. The name is up to you, `SG_MYSQL_PASSWORD` is only an example.
+
+!!! tip
+    Create a database user of its own for SurvivalGames that only has rights on its database – not `root`. If the
+    password gets out anyway, nothing else is at risk:
+
+    ```sql
+    CREATE USER 'survivalgames'@'%' IDENTIFIED BY '...';
+    GRANT ALL PRIVILEGES ON minecraft.* TO 'survivalgames'@'%';
+    ```
 
 ### Rating
 

@@ -1,10 +1,15 @@
 package com.christian34.survivalgames.files;
 
+import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,6 +24,10 @@ public class FileManager {
      * files of a running world that must not be copied: its lock and uuid, the chunks kept loaded and the raids
      */
     private static final Set<String> SKIPPED_FILES = Set.of("uid.dat", "session.lock", "chunk_tickets.dat", "raids.dat");
+    /**
+     * notes for AI assistants that help to configure the plugin (CLAUDE.md only imports AGENTS.md)
+     */
+    public static final List<String> AGENT_FILES = List.of("AGENTS.md", "CLAUDE.md");
     private ConfigFile configFile;
     private DataFile arenasFile;
     private ResourceFile lootFile;
@@ -51,6 +60,25 @@ public class FileManager {
     public void reloadConfig() {
         this.configFile = new ConfigFile();
         this.lootFile = new ResourceFile("loot.yml", "containers", "upgrades");
+        if (configFile.getData().getBoolean("agent-files", true)) writeAgentFiles();
+    }
+
+    /**
+     * the notes for AI assistants (agent-files) - always the version of the plugin, the files are not meant to be
+     * changed
+     */
+    private static void writeAgentFiles() {
+        for (String name : AGENT_FILES) {
+            try (InputStream in = SurvivalGames.getInstance().getResource("agents/" + name)) {
+                if (in == null) continue;
+                byte[] content = in.readAllBytes();
+                File file = new File(getPluginFolder(), name);
+                if (file.isFile() && Arrays.equals(content, Files.readAllBytes(file.toPath()))) continue;
+                Files.write(file.toPath(), content);
+            } catch (IOException ex) {
+                Debug.warn("Couldn't write " + name + ": " + ex);
+            }
+        }
     }
 
     private void load() {

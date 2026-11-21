@@ -9,7 +9,11 @@ The players wait in the [lobby world](getting-started.md#the-lobby-world) or the
 (`team-size` > 1) they choose a team with the team item or `/sg team`; who has no team at the start gets one.
 
 Once `min-players` are there, the **lobby countdown** (`lobby-countdown`) starts. When the game is full it is
-shortened to `full-countdown`. If too many players leave, it stops.
+shortened to `full-countdown`. If too many players leave, it stops. Players with the permission `sg.start` (operators)
+start the game right away with the start item (green dye) once `min-players` are there.
+
+Monsters don't wait for the players: when they are put onto their spawn points, the monsters of the world are
+removed, and until the game runs none spawn (also with `monsters: true`).
 
 ### Map voting
 
@@ -36,7 +40,9 @@ The players choose their kit in the lobby with the kit item or `/sg kit [kit]` a
 Everybody is put onto a spawn point (or into the spawn circle) with an empty inventory and stands still until the
 **start countdown** (`start-countdown`) is over. Then the round begins.
 With `start-platforms: explode` players can move, but whoever leaves their spawn point before the end of the
-countdown blows up and is out (jumping and looking around is fine).
+countdown is put back and warned (`start-platform-warnings` times; the first 3 seconds and 2 seconds after a warning
+they are only held back) – after that they blow up and are out (jumping
+and looking around is fine).
 
 - **Grace period:** for `grace-period` seconds nobody can hurt the others. The time left is shown above the hotbar.
 - **Loot:** chests, trapped chests and barrels are filled when they are opened for the first time and again every

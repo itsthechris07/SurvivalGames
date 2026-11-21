@@ -99,6 +99,11 @@ public class Sidebar {
         if (team == null) return null;
         Participant participant = game.getParticipant(player.getUniqueId());
         boolean alive = participant == null || participant.isAlive();
+        // alone in a team of his name (solo): "Steve | Steve" would say the same twice
+        if (team.getName().equalsIgnoreCase(player.getName())) {
+            return alive ? i18n(LangText.TABLIST_NAME_SOLO, team.getDisplayName())
+                    : i18n(LangText.TABLIST_NAME_SOLO_OUT, player.getName());
+        }
         return i18n(alive ? LangText.TABLIST_NAME : LangText.TABLIST_NAME_OUT, team.getDisplayName(), player.getName());
     }
 

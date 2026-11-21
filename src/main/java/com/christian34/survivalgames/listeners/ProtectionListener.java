@@ -1,6 +1,7 @@
 package com.christian34.survivalgames.listeners;
 
 import com.christian34.survivalgames.SurvivalGames;
+import com.christian34.survivalgames.commands.CommandGame;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Menus;
@@ -12,6 +13,7 @@ import com.christian34.survivalgames.modules.GravityGrenade;
 import com.christian34.survivalgames.user.GamePlayer;
 import org.bukkit.Location;
 import org.bukkit.block.DoubleChest;
+import org.bukkit.entity.Enemy;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
@@ -20,6 +22,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -81,6 +84,13 @@ public class ProtectionListener implements Listener {
             if (Items.is(e.getItem(), Items.VOTE)) {
                 e.setCancelled(true);
                 if (game instanceof SurvivalGame survivalGame) Menus.openVoting(player, survivalGame);
+                return;
+            }
+            if (Items.is(e.getItem(), Items.START)) {
+                e.setCancelled(true);
+                if (player.hasPermission(Game.START_PERMISSION) || player.hasPermission(SurvivalGames.ADMIN_PERMISSION)) {
+                    CommandGame.start(player, game, false);
+                }
                 return;
             }
             if (Items.is(e.getItem(), Items.LEAVE)) {
@@ -186,6 +196,26 @@ public class ProtectionListener implements Listener {
         if (!(e.getView().getPlayer() instanceof Player player)
                 || !plugin.isModuleEnabled(module, plugin.getUser(player).getGame())) {
             e.getInventory().setResult(null);
+        }
+    }
+
+    /**
+     * no monsters while the players wait in the lobby or on their spawn points (also with monsters: true) - the swarm
+     * of the Gamemakers, commands and spawn eggs still work
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onCreatureSpawn(CreatureSpawnEvent e) {
+        if (!(e.getEntity() instanceof Enemy)) return;
+        switch (e.getSpawnReason()) {
+            case CUSTOM, COMMAND, SPAWNER_EGG -> {
+                return;
+            }
+            default -> {
+            }
+        }
+        Game game = plugin.getGameManager().getGame(e.getLocation().getWorld());
+        if (game != null && (game.getState() == GameState.LOBBY || game.getState() == GameState.STARTING)) {
+            e.setCancelled(true);
         }
     }
 

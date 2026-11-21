@@ -48,6 +48,8 @@ public class Participant {
      * not saved: until then the player can't get damage after joining
      */
     private long protectedUntil;
+    private int platformWarnings;
+    private int platformSafeUntil;
     /**
      * Varo: inventory, location, health, ... in the game while the player isn't in it (null: never left it)
      */
@@ -185,6 +187,28 @@ public class Participant {
 
     public void setStarted(boolean started) {
         this.started = started;
+    }
+
+    /**
+     * @return how often the player was warned for leaving the start platform (not saved)
+     */
+    public int getPlatformWarnings() {
+        return platformWarnings;
+    }
+
+    public void setPlatformWarnings(int platformWarnings) {
+        this.platformWarnings = platformWarnings;
+    }
+
+    /**
+     * @return the server tick until the player can't blow up on the start platform (not saved)
+     */
+    public int getPlatformSafeUntil() {
+        return platformSafeUntil;
+    }
+
+    public void setPlatformSafeUntil(int platformSafeUntil) {
+        this.platformSafeUntil = platformSafeUntil;
     }
 
     public boolean isProtected() {

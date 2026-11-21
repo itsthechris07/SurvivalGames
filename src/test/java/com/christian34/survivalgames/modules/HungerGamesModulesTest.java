@@ -452,8 +452,7 @@ class HungerGamesModulesTest extends PluginTestBase {
 
     // ---------------------------------------------------------------- start platforms
 
-    @Test
-    void leavingThePlatformTooEarlyExplodes() {
+    private void startWithExplodingPlatforms() {
         config().set("survival-games.start-countdown", 10);
         config().set("survival-games.start-platforms", "explode");
         create(4);
@@ -461,18 +460,53 @@ class HungerGamesModulesTest extends PluginTestBase {
         execute(alex, "sg join arena1");
         execute(bob, "sg join arena1");
         runUntil(GameState.STARTING);
-        Location spawn = steve.getLocation();
-        PlayerMoveEvent jump = new PlayerMoveEvent(steve, spawn, spawn.clone().add(0.3, 1, 0.3));
-        server.getPluginManager().callEvent(jump);
-        Participant participant = game.getParticipant(steve.getUniqueId());
-        assertTrue(participant.isAlive(), "jumping is fine");
+    }
+
+    private PlayerMoveEvent leave(Location spawn) {
         PlayerMoveEvent leave = new PlayerMoveEvent(steve, spawn, spawn.clone().add(2, 0, 0));
         server.getPluginManager().callEvent(leave);
+        return leave;
+    }
+
+    @Test
+    void leavingThePlatformTooEarlyExplodes() {
+        startWithExplodingPlatforms();
+        Location spawn = steve.getLocation();
+        Participant participant = game.getParticipant(steve.getUniqueId());
+        messages(steve);
+        PlayerMoveEvent early = leave(spawn);
+        assertTrue(participant.isAlive(), "right after being put onto the platform nobody blows up");
+        assertEquals(spawn.getX(), early.getTo().getX(), 0.001, "he stays on the platform");
+        assertTrue(messages(steve).isEmpty(), "no warning yet");
+
+        seconds(3);
+        PlayerMoveEvent jump = new PlayerMoveEvent(steve, spawn, spawn.clone().add(0.3, 1, 0.3));
+        server.getPluginManager().callEvent(jump);
+        assertTrue(participant.isAlive(), "jumping is fine");
+        PlayerMoveEvent warned = leave(spawn);
+        assertTrue(participant.isAlive(), "the first time is a warning");
+        assertEquals(spawn.getX(), warned.getTo().getX(), 0.001, "back onto the platform");
+        assertContains(messages(steve), "Stay on your platform until the start! Warning 1/1");
+        leave(spawn);
+        assertTrue(participant.isAlive(), "the steps the client made before the warning don't count");
+
+        seconds(2);
+        leave(spawn);
         assertContains(messages(alex), "Steve has left the platform too early!");
         assertFalse(participant.isAlive());
         assertTrue(plugin.getUser(steve).isSpectator());
         runUntil(GameState.RUNNING);
         assertEquals(2, game.getAlive().size());
+    }
+
+    @Test
+    void withoutWarningsLeavingThePlatformExplodesRightAway() {
+        config().set("survival-games.start-platform-warnings", 0);
+        startWithExplodingPlatforms();
+        Location spawn = steve.getLocation();
+        seconds(3);
+        leave(spawn);
+        assertFalse(game.getParticipant(steve.getUniqueId()).isAlive());
     }
 
 }

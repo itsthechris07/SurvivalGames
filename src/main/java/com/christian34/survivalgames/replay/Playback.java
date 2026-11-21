@@ -8,6 +8,9 @@ import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Mannequin;
@@ -23,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.IntPredicate;
 
 /**
  * A recording that is played in its own world: the viewers are spectators there and control it together (pause, speed,
@@ -31,7 +35,18 @@ import java.util.UUID;
  * @author Christian34
  */
 public final class Playback {
-    public static final List<Double> SPEEDS = List.of(0.25, 0.5, 1.0, 2.0, 4.0, 8.0);
+    /**
+     * negative: backwards
+     */
+    public static final List<Double> SPEEDS = List.of(-10.0, -5.0, -2.0, -1.0, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0);
+    /**
+     * backwards the replay jumps back every this many ticks (a jump back replays the recording up to there)
+     */
+    static final int REWIND_STEP = 5;
+    /**
+     * an event is watched from this many ticks before it
+     */
+    public static final int EVENT_LEAD = 100;
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
     private final Recording recording;
     private final Recording.Info info;
@@ -154,7 +169,9 @@ public final class Playback {
      */
     void tick() {
         age++;
-        if (!paused) {
+        if (!paused && speed < 0) {
+            rewind();
+        } else if (!paused) {
             budget += speed;
             while (budget >= 1 && tick < getLength()) {
                 budget--;
@@ -172,6 +189,22 @@ public final class Playback {
         }
         follow();
         if (age % 10 == 0) showTime();
+    }
+
+    /**
+     * backwards: a jump back every few ticks (replaying the recording every tick would be too much)
+     */
+    private void rewind() {
+        budget -= speed;
+        if (age % REWIND_STEP != 0 && budget < 20) return;
+        int target = tick - (int) budget;
+        seek(Math.max(0, target));
+        if (target <= 0) {
+            this.paused = true;
+            this.speed = 1;
+            send(I.prefixed(LangText.REPLAY_BEGINNING));
+            ReplayControls.refresh(this);
+        }
     }
 
     private void showTime() {
@@ -225,7 +258,7 @@ public final class Playback {
                 state.reset();
                 if (!live) return;
                 stage.hide(a.actor(), a.dead());
-                following.values().removeIf(actor -> actor == a.actor());
+                unfollow(actor -> actor == a.actor());
             }
             case Action.Pose a -> {
                 Stage.ActorState state = state(a.actor());
@@ -312,7 +345,8 @@ public final class Playback {
 
     public void setPaused(boolean paused) {
         // again from the beginning
-        if (!paused && tick >= getLength()) seek(0);
+        if (!paused && speed > 0 && tick >= getLength()) seek(0);
+        if (!paused && speed < 0 && tick <= 0) this.speed = 1;
         this.paused = paused;
         showTime();
     }
@@ -385,7 +419,19 @@ public final class Playback {
         if (borderSize > 0) stage.border(borderX, borderZ, borderSize, false);
         if (skyTime >= 0) stage.sky(skyTime, storm);
         int finalActors = states.length;
-        following.values().removeIf(actor -> actor >= finalActors || !states[actor].present);
+        unfollow(actor -> actor >= finalActors || !states[actor].present);
+    }
+
+    /**
+     * the viewers who watch through the eyes of these players fly on their own again
+     */
+    private void unfollow(IntPredicate actors) {
+        for (Player viewer : viewers) {
+            Integer actor = following.get(viewer.getUniqueId());
+            if (actor == null || !actors.test(actor)) continue;
+            following.remove(viewer.getUniqueId());
+            if (viewer.isOnline()) ReplayControls.fly(viewer, this);
+        }
     }
 
     // ---------------------------------------------------------------- following
@@ -412,6 +458,8 @@ public final class Playback {
             Mannequin mannequin = stage.getMannequin(actor);
             if (mannequin == null) return false;
             following.put(viewer.getUniqueId(), actor);
+            // only spectators can see through the eyes of somebody else
+            viewer.setGameMode(GameMode.SPECTATOR);
             viewer.setSpectatorTarget(mannequin);
             return true;
         }
@@ -419,10 +467,74 @@ public final class Playback {
     }
 
     /**
-     * the viewer has left the body he watched from
+     * the viewer has left the body he watched from (sneaking): he flies on his own again
      */
     void stopFollowing(Player viewer) {
-        following.remove(viewer.getUniqueId());
+        if (following.remove(viewer.getUniqueId()) == null) return;
+        // not while the game mode of the event changes
+        Bukkit.getScheduler().runTask(SurvivalGames.getInstance(), () -> {
+            if (viewer.isOnline() && viewers.contains(viewer) && !following.containsKey(viewer.getUniqueId())) {
+                ReplayControls.fly(viewer, this);
+            }
+        });
+    }
+
+    /**
+     * @return true if the viewer watches through the eyes of a player of the recording
+     */
+    public boolean isFollowing(Player viewer) {
+        return following.containsKey(viewer.getUniqueId());
+    }
+
+    /**
+     * something worth watching: a player dies
+     *
+     * @param message what everybody was told then (the kill message), null if nothing
+     */
+    public record Event(int tick, Recording.Actor actor, @Nullable Component message) {
+    }
+
+    /**
+     * @return the deaths of the recording, the first first
+     */
+    public List<Event> getEvents() {
+        List<Event> events = new ArrayList<>();
+        for (int i = 0; i < actions.size(); i++) {
+            if (!(actions.get(i) instanceof Action.Despawn despawn) || !despawn.dead()) continue;
+            if (despawn.actor() < 0 || despawn.actor() >= recording.getActors().size()) continue;
+            Recording.Actor actor = recording.getActors().get(despawn.actor());
+            events.add(new Event(despawn.tick(), actor, message(i, actor.name())));
+        }
+        return events;
+    }
+
+    /**
+     * @return the message about the player around the action (the kill message comes right before or after)
+     */
+    @Nullable
+    private Component message(int index, String name) {
+        int tick = actions.get(index).tick();
+        for (int i = Math.max(0, index - 50); i < Math.min(actions.size(), index + 50); i++) {
+            if (!(actions.get(i) instanceof Action.Message message) || Math.abs(message.tick() - tick) > 2) continue;
+            try {
+                Component component = GsonComponentSerializer.gson().deserialize(message.json());
+                if (PlainTextComponentSerializer.plainText().serialize(component).contains(name)) return component;
+            } catch (RuntimeException ex) {
+                // a message of a newer version
+            }
+        }
+        return null;
+    }
+
+    /**
+     * the viewer watches the event from a few seconds before, through the eyes of the player
+     */
+    public void watch(Player viewer, Event event) {
+        seek(Math.max(1, event.tick() - EVENT_LEAD));
+        if (speed < 0) this.speed = 1;
+        this.paused = false;
+        follow(viewer, event.actor().name());
+        showTime();
     }
 
     /**

@@ -15,17 +15,32 @@ mod is needed: the players of the recording are shown as mannequins.
 | `/sg replay list [arena]` | the newest recordings in the chat (click one to watch it) |
 | `/sg replay play <id>` | watches a recording |
 | `/sg replay pause` | pauses the replay or continues it |
-| `/sg replay speed <speed>` | `0.25`, `0.5`, `1`, `2`, `4` or `8` |
+| `/sg replay speed <speed>` | `0.25`, `0.5`, `1`, `2`, `5` or `10` – backwards: `-1`, `-2`, `-5` or `-10` |
 | `/sg replay skip <seconds>` | jumps forward, with a negative number back (`-10`) |
 | `/sg replay goto <time>` | jumps to a time: seconds (`90`) or minutes and seconds (`1:30`) |
 | `/sg replay players` | the players who are in the game at that moment – click one to watch through their eyes (sneak to stop) |
+| `/sg replay` → Deaths | the deaths of the replay – click one to watch it |
 | `/sg replay leave` (or `/sg leave`) | leaves the replay |
 | `/sg replay delete <id>` | deletes a recording (admins) |
 
 After a game everybody in it gets a message with a button to watch its replay.
 
-You are a spectator in the replay: fly around freely, your inventory and your location are saved before and given back
-when you leave. Several players can watch the same recording together – they are in the same replay and everybody
+You fly around the replay freely (nobody sees you, nothing can hurt you). Your inventory and your location are saved
+before and given back when you leave. The hotbar holds the controls – right click them:
+
+| Slot | Item | |
+|---|---|---|
+| 1 | arrow | 10 seconds back |
+| 2 | soul sand | slower – below 0.25x the replay runs backwards (-1x, -2x, -5x, -10x) |
+| 3 | dye | pause / play |
+| 4 | sugar | faster |
+| 5 | spectral arrow | 10 seconds forward |
+| 7 | skeleton skull | the deaths of the replay – click one to watch it from 5 seconds before, through the eyes of the player |
+| 8 | player head | the players who are in the game at that moment – click one to watch through their eyes |
+| 9 | barrier | leave the replay |
+
+While you watch through the eyes of a player you are a spectator (sneak to stop); when that player dies or leaves, you
+fly again. Several players can watch the same recording together – they are in the same replay and everybody
 controls it, the others are told who paused or jumped. When the last viewer leaves, the world of the replay is removed.
 
 Watching needs the permission `sg.replay` (everybody has it by default).

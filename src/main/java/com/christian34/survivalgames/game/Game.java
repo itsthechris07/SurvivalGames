@@ -28,6 +28,8 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Enemy;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.scheduler.BukkitTask;
@@ -60,6 +62,15 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  * @author Christian34
  */
 public abstract class Game {
+    /**
+     * the start item in the lobby: starts the game right away (like /sg game <arena> start)
+     */
+    public static final String START_PERMISSION = "sg.start";
+    /**
+     * start-platforms: explode - ticks the players can't blow up after being put onto their spawn point / warned
+     */
+    static final int PLATFORM_SAFE_AT_START = 60;
+    static final int PLATFORM_SAFE_AFTER_WARNING = 40;
     protected static final Set<Integer> COUNTDOWN_MESSAGES = Set.of(60, 30, 20, 10, 5, 4, 3, 2, 1);
     protected final SurvivalGames plugin;
     protected final Arena arena;
@@ -673,6 +684,10 @@ public abstract class Game {
             player.getInventory().setItem(4, Items.create(Material.CHEST, i18n(LangText.ITEM_KITS),
                     I.itemLines(LangText.ITEM_KITS_LORE), Items.KITS));
         }
+        if (player.hasPermission(START_PERMISSION) || player.hasPermission(SurvivalGames.ADMIN_PERMISSION)) {
+            player.getInventory().setItem(6, Items.create(Material.LIME_DYE, i18n(LangText.ITEM_START),
+                    I.itemLines(LangText.ITEM_START_LORE), Items.START));
+        }
         player.getInventory().setItem(8, Items.create(Material.RED_BED, i18n(LangText.ITEM_LEAVE),
                 I.itemLines(LangText.ITEM_LEAVE_LORE), Items.LEAVE));
     }
@@ -887,8 +902,12 @@ public abstract class Game {
         setState(GameState.STARTING);
         for (GamePlayer member : getPlayers()) {
             Participant participant = participants.get(member.getPlayer().getUniqueId());
-            if (participant != null) placeOnSpawn(member.getPlayer(), participant);
+            if (participant == null) continue;
+            placeOnSpawn(member.getPlayer(), participant);
+            participant.setPlatformWarnings(0);
+            participant.setPlatformSafeUntil(Bukkit.getCurrentTick() + PLATFORM_SAFE_AT_START);
         }
+        removeMonsters();
         plugin.getTrainingScores().announce(this);
         onStart();
         int seconds = Math.max(0, settings().getInt("start-countdown"));
@@ -1066,6 +1085,18 @@ public abstract class Game {
     }
 
     /**
+     * nothing waits for the players on their spawn points: the monsters of the world (from the map, its spawners or
+     * the time before the world was set up) are removed - until the game runs no new ones spawn (ProtectionListener)
+     */
+    private void removeMonsters() {
+        World world = gameWorld.getWorld();
+        if (world == null) return;
+        for (LivingEntity entity : world.getLivingEntities()) {
+            if (entity instanceof Enemy) entity.remove();
+        }
+    }
+
+    /**
      * @return true if players who leave their spawn point before the start blow up (start-platforms: explode),
      * otherwise they can't move
      */
@@ -1075,16 +1106,31 @@ public abstract class Game {
 
     /**
      * the player moves during the start countdown (start-platforms: explode): more than a block away from his spawn
-     * point he is out (jumping and turning around is fine)
+     * point he is warned (start-platform-warnings times) and stays on the platform, after that he is out (jumping and
+     * turning around is fine)
+     *
+     * @return true if the move is cancelled (the player was warned)
      */
-    public void checkPlatform(GamePlayer gamePlayer, Location to) {
+    public boolean checkPlatform(GamePlayer gamePlayer, Location to) {
         Player player = gamePlayer.getPlayer();
         Participant participant = participants.get(player.getUniqueId());
-        if (state != GameState.STARTING || participant == null || !participant.isAlive()) return;
+        if (state != GameState.STARTING || participant == null || !participant.isAlive()) return false;
         Location spawn = getSpawn(participant);
         double x = to.getX() - spawn.getX();
         double z = to.getZ() - spawn.getZ();
-        if (x * x + z * z <= 1.0) return;
+        if (x * x + z * z <= 1.0) return false;
+        // right after being put onto the platform or warned the player only stays where he is: the client may still
+        // send the steps it made before
+        if (Bukkit.getCurrentTick() < participant.getPlatformSafeUntil()) return true;
+        int warnings = Math.max(0, settings().getInt("start-platform-warnings"));
+        if (participant.getPlatformWarnings() < warnings) {
+            participant.setPlatformWarnings(participant.getPlatformWarnings() + 1);
+            participant.setPlatformSafeUntil(Bukkit.getCurrentTick() + PLATFORM_SAFE_AFTER_WARNING);
+            player.sendMessage(prefixed(LangText.PLATFORM_WARNING, participant.getPlatformWarnings(), warnings));
+            player.showTitle(Title.title(i18n(LangText.PLATFORM_WARNING_TITLE), Component.empty()));
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
+            return true;
+        }
         participant.setAlive(false);
         participant.setOut(++eliminations);
         Location location = player.getLocation();
@@ -1096,6 +1142,7 @@ public abstract class Game {
         }
         broadcast(LangText.PLATFORM_EXPLODED, player.getName());
         outOfPlay(gamePlayer, location);
+        return false;
     }
 
     /**

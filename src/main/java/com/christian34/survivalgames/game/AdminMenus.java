@@ -6,6 +6,7 @@ import com.christian34.survivalgames.arena.ArenaManager;
 import com.christian34.survivalgames.arena.Lobby;
 import com.christian34.survivalgames.commands.CommandArena;
 import com.christian34.survivalgames.lib.Menu;
+import com.christian34.survivalgames.user.GamePlayer;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import net.kyori.adventure.text.Component;
@@ -450,16 +451,37 @@ public final class AdminMenus {
             menu.button(icon(Material.WHITE_BANNER), i18n(LangText.GUI_CONTROL_TEAMS),
                     I.itemLines(LangText.GUI_CONTROL_TEAMS_LORE), clicker -> Menus.run(clicker, command + "teams"));
         }
-        if (state != GameState.LOBBY && plugin().getUser(player).getGame() == null) {
+        if (game.isSpectatable() && mayWatch(plugin().getUser(player), game)) {
             menu.button(icon(Material.ENDER_EYE), i18n(LangText.GUI_CONTROL_WATCH),
-                    I.itemLines(LangText.GUI_CONTROL_WATCH_LORE),
-                    clicker -> Menus.run(clicker, "sg spectate " + arena.getName()));
+                    I.itemLines(LangText.GUI_CONTROL_WATCH_LORE), clicker -> watch(clicker, game));
         }
         menu.button(icon(Material.BARRIER), i18n(LangText.GUI_CONTROL_STOP),
                 I.itemLines(game instanceof VaroGame ? LangText.GUI_CONTROL_STOP_VARO_LORE : LangText.GUI_CONTROL_STOP_LORE),
                 run(command + "stop", again));
         back(menu, AdminMenus::openGames);
         menu.show(player);
+    }
+
+    /**
+     * @return false if the admin plays a game himself (waiting in a lobby, watching or after the end of a round he may
+     * switch to another game)
+     */
+    private static boolean mayWatch(GamePlayer gamePlayer, Game game) {
+        Game current = gamePlayer.getGame();
+        if (current == null) return true;
+        if (current == game) return false;
+        return gamePlayer.isSpectator() || current.getState() == GameState.LOBBY || current.getState() == GameState.ENDED;
+    }
+
+    /**
+     * the admin leaves the lobby (or the game he watches) and watches the game
+     */
+    private static void watch(Player player, Game game) {
+        GamePlayer gamePlayer = plugin().getUser(player);
+        if (!mayWatch(gamePlayer, game) || !game.isSpectatable()) return;
+        Game current = gamePlayer.getGame();
+        if (current != null) current.leave(gamePlayer, Game.LeaveReason.KICKED);
+        Menus.run(player, "sg spectate " + game.getArena().getName());
     }
 
     /**

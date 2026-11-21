@@ -200,10 +200,7 @@ public class PlayerListener implements Listener {
         GamePlayer gamePlayer = plugin.getUser(e.getPlayer());
         Game game = gamePlayer.getGame();
         if (game == null || game.getState() != GameState.STARTING || gamePlayer.isSpectator()) return;
-        if (game.hasExplodingPlatforms()) {
-            game.checkPlatform(gamePlayer, e.getTo());
-            return;
-        }
+        if (game.hasExplodingPlatforms() && !game.checkPlatform(gamePlayer, e.getTo())) return;
         Location to = e.getFrom().clone();
         to.setYaw(e.getTo().getYaw());
         to.setPitch(e.getTo().getPitch());

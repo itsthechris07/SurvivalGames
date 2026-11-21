@@ -6,13 +6,17 @@ import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.VaroGame;
+import com.christian34.survivalgames.lib.Items;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Mannequin;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -305,8 +309,11 @@ class ReplayTest extends PluginTestBase {
         World replayWorld = playback.getWorld();
         assertTrue(GameWorld.isPluginWorld(replayWorld));
         assertEquals(replayWorld, viewer.getWorld());
-        assertEquals(GameMode.SPECTATOR, viewer.getGameMode());
-        assertTrue(viewer.getInventory().isEmpty());
+        // flying around with the controls in the hotbar
+        assertEquals(GameMode.ADVENTURE, viewer.getGameMode());
+        assertTrue(viewer.getAllowFlight());
+        assertFalse(viewer.getInventory().contains(Material.DIAMOND));
+        assertTrue(Items.is(viewer.getInventory().getItem(2), ReplayControls.PAUSE));
         assertContains(messages(viewer), "Replay of arena1");
         // both players stand on their spawns
         assertEquals(2, replayWorld.getEntitiesByClass(Mannequin.class).size());
@@ -357,11 +364,11 @@ class ReplayTest extends PluginTestBase {
         assertEquals(tick, playback.getTick());
 
         execute(viewer, "sg replay pause");
-        execute(viewer, "sg replay speed 4");
-        assertEquals(4, playback.getSpeed());
+        execute(viewer, "sg replay speed 5");
+        assertEquals(5, playback.getSpeed());
         tick = playback.getTick();
         seconds(1);
-        assertEquals(tick + 80, playback.getTick(), 4);
+        assertEquals(tick + 100, playback.getTick(), 5);
 
         execute(viewer, "sg replay speed 3");
         assertContains(messages(viewer), "Invalid speed");
@@ -383,6 +390,122 @@ class ReplayTest extends PluginTestBase {
         assertTrue(replays().getPlaybacks().isEmpty());
     }
 
+    /**
+     * the viewer right clicks with the item of the slot
+     */
+    private void use(PlayerMock viewer, int slot) {
+        server.getPluginManager().callEvent(new PlayerInteractEvent(viewer, org.bukkit.event.block.Action.RIGHT_CLICK_AIR,
+                viewer.getInventory().getItem(slot), null, BlockFace.SELF, EquipmentSlot.HAND));
+    }
+
+    @Test
+    void theHotbarControlsTheReplay() {
+        String id = playRound();
+        plugin.getGameManager().removeGame(game);
+        PlayerMock viewer = addPlayer("Viewer");
+        Playback playback = watch(viewer, id);
+        messages(viewer);
+
+        // faster: 2x, again 5x, slower: 2x
+        use(viewer, 3);
+        assertEquals(2, playback.getSpeed());
+        assertContains(messages(viewer), "has set the speed to 2x");
+        use(viewer, 3);
+        assertEquals(5, playback.getSpeed());
+        use(viewer, 1);
+        assertEquals(2, playback.getSpeed());
+
+        use(viewer, 2);
+        assertTrue(playback.isPaused());
+        assertEquals(Material.LIME_DYE, viewer.getInventory().getItem(2).getType(), "the item shows the state");
+        use(viewer, 2);
+        assertFalse(playback.isPaused());
+
+        execute(viewer, "sg replay goto 0");
+        use(viewer, 4);
+        assertEquals(ReplayMenus.SKIP_SECONDS * 20, playback.getTick(), 1);
+        use(viewer, 0);
+        assertEquals(0, playback.getTick(), 1);
+
+        use(viewer, 8);
+        assertNull(replays().getPlayback(viewer));
+    }
+
+    @Test
+    void theReplayRunsBackwards() {
+        String id = playRound();
+        plugin.getGameManager().removeGame(game);
+        PlayerMock viewer = addPlayer("Viewer");
+        Playback playback = watch(viewer, id);
+        execute(viewer, "sg replay goto 5");
+        assertEquals(100, playback.getTick(), 1);
+
+        execute(viewer, "sg replay speed -2");
+        seconds(1);
+        assertEquals(60, playback.getTick(), Playback.REWIND_STEP * 2);
+        // the slower speeds go backwards too
+        assertEquals(-5, playback.getNextSpeed(false));
+        assertEquals(-1, playback.getNextSpeed(true));
+
+        messages(viewer);
+        seconds(3);
+        assertEquals(0, playback.getTick());
+        assertTrue(playback.isPaused());
+        assertEquals(1, playback.getSpeed());
+        assertContains(messages(viewer), "The replay is at its beginning");
+    }
+
+    @Test
+    void theDeathsCanBeWatched() {
+        String id = playRound();
+        plugin.getGameManager().removeGame(game);
+        PlayerMock viewer = addPlayer("Viewer");
+        PlayerMock other = addPlayer("Other");
+        Playback playback = watch(viewer, id);
+        watch(other, id);
+
+        List<Playback.Event> events = playback.getEvents();
+        assertEquals(1, events.size());
+        Playback.Event death = events.getFirst();
+        assertEquals("Alex", death.actor().name());
+        assertNotNull(death.message(), "the kill message");
+        messages(other);
+
+        use(viewer, 6);
+        int slot = viewer.getOpenInventory().getTopInventory().first(Material.PLAYER_HEAD);
+        assertTrue(slot >= 0, "the death of Alex");
+        viewer.simulateInventoryClick(slot);
+        finishTasks();
+
+        assertEquals(death.tick() - Playback.EVENT_LEAD, playback.getTick(), 1);
+        assertFalse(playback.isPaused());
+        assertTrue(playback.isFollowing(viewer));
+        assertEquals(GameMode.SPECTATOR, viewer.getGameMode());
+        assertContains(messages(other), "Viewer watches the death of Alex");
+
+        // Alex dies: the viewer flies again
+        seconds(Playback.EVENT_LEAD / 20 + 1);
+        finishTasks();
+        assertFalse(playback.isFollowing(viewer));
+        assertEquals(GameMode.ADVENTURE, viewer.getGameMode());
+        assertTrue(Items.is(viewer.getInventory().getItem(6), ReplayControls.EVENTS));
+    }
+
+    @Test
+    void aReplayWithoutDeaths() {
+        begin();
+        seconds(8);
+        plugin.getGameManager().removeGame(game);
+        finishTasks();
+        PlayerMock viewer = addPlayer("Viewer");
+        watch(viewer, replays().list().getFirst().id());
+        messages(viewer);
+
+        use(viewer, 6);
+
+        assertContains(messages(viewer), "Nobody died in this replay");
+    }
+
     @Test
     void theMenusShowTheReplaysAndTheControls() {
         String id = playRound();
@@ -397,7 +520,7 @@ class ReplayTest extends PluginTestBase {
 
         Playback playback = watch(viewer, id);
         execute(viewer, "sg replay");
-        assertEquals(Material.BARRIER, viewer.getOpenInventory().getTopInventory().getItem(6).getType());
+        assertEquals(Material.BARRIER, viewer.getOpenInventory().getTopInventory().getItem(7).getType());
         viewer.closeInventory();
         execute(viewer, "sg replay players");
         assertEquals(Material.PLAYER_HEAD, viewer.getOpenInventory().getTopInventory().getItem(3).getType());

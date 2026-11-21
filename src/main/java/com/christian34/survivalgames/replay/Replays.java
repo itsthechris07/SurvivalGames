@@ -17,7 +17,6 @@ import com.destroystokyo.paper.event.player.PlayerStopSpectatingEntityEvent;
 import io.papermc.paper.event.player.PlayerArmSwingEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -49,14 +48,21 @@ import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.block.TNTPrimeEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.event.world.StructureGrowEvent;
@@ -754,11 +760,12 @@ public final class Replays implements Listener {
         if (plugin.getBuildMode().isBuilding(player)) plugin.getBuildMode().toggle(player);
         gamePlayer.getStorage().store();
         gamePlayer.getStorage().cleanPlayer();
-        player.setGameMode(GameMode.SPECTATOR);
         plugin.getEssentials().joinGame(player, true);
         viewers.put(player.getUniqueId(), playback);
         plugin.getTelemetry().used(Telemetry.Feature.REPLAY);
         playback.add(player);
+        ReplayControls.fly(player, playback);
+        plugin.updateVisibility();
         Recording.Info info = playback.getInfo();
         player.sendMessage(I.prefixed(player, LangText.REPLAY_STARTED, describe(info), Game.formatTime(info.seconds())));
         player.sendMessage(I.prefixed(player, LangText.REPLAY_CONTROLS));
@@ -787,6 +794,7 @@ public final class Replays implements Listener {
         if (playback == null) return false;
         playback.remove(player);
         plugin.getUser(player).getStorage().restore();
+        plugin.updateVisibility();
         plugin.getEssentials().leaveGame(player);
         if (player.getWorld().equals(playback.getWorld())) {
             // no saved location (e.g. a crash) - out of the world of the replay
@@ -848,6 +856,63 @@ public final class Replays implements Listener {
     public void onStopSpectating(PlayerStopSpectatingEntityEvent e) {
         Playback playback = getPlayback(e.getPlayer());
         if (playback != null && e.getSpectatorTarget().isValid()) playback.stopFollowing(e.getPlayer());
+    }
+
+    // ---------------------------------------------------------------- the viewers fly around, nothing else
+
+    /**
+     * the items of the hotbar control the replay - the viewers don't touch the world (chests, doors, ...)
+     */
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerInteract(PlayerInteractEvent e) {
+        Playback playback = getPlayback(e.getPlayer());
+        if (playback == null) return;
+        e.setCancelled(true);
+        if (e.getHand() != EquipmentSlot.HAND || e.getAction() == Action.PHYSICAL) return;
+        ReplayControls.use(e.getPlayer(), playback, e.getItem());
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerInteractEntity(PlayerInteractEntityEvent e) {
+        if (getPlayback(e.getPlayer()) != null) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerDamage(EntityDamageEvent e) {
+        if (e.getEntity() instanceof Player player && getPlayback(player) != null) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerAttack(EntityDamageByEntityEvent e) {
+        if (e.getDamager() instanceof Player player && getPlayback(player) != null) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerHunger(FoodLevelChangeEvent e) {
+        if (e.getEntity() instanceof Player player && getPlayback(player) != null) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerDrop(PlayerDropItemEvent e) {
+        if (getPlayback(e.getPlayer()) != null) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerSwap(PlayerSwapHandItemsEvent e) {
+        if (getPlayback(e.getPlayer()) != null) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerInventory(InventoryClickEvent e) {
+        if (e.getWhoClicked() instanceof Player player && getPlayback(player) != null
+                && e.getClickedInventory() == player.getInventory()) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onViewerPickup(EntityPickupItemEvent e) {
+        if (e.getEntity() instanceof Player player && getPlayback(player) != null) e.setCancelled(true);
     }
 
     // ---------------------------------------------------------------- events of the games

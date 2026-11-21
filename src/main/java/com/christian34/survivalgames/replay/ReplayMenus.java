@@ -89,6 +89,9 @@ public final class ReplayMenus {
         control(menu, playback, Material.SUGAR, i18n(LangText.GUI_REPLAY_FASTER,
                         Playback.formatSpeed(playback.getNextSpeed(true))),
                 clicker -> ReplayControls.speed(clicker, playback, playback.getNextSpeed(true)));
+        menu.button(ItemStack.of(Material.SKELETON_SKULL), i18n(LangText.GUI_REPLAY_EVENTS_OPEN), List.of(), clicker -> {
+            if (replays().getPlayback(clicker) == playback) openEvents(clicker, playback);
+        });
         menu.button(ItemStack.of(Material.PLAYER_HEAD), i18n(LangText.GUI_REPLAY_PLAYERS_OPEN), List.of(), clicker -> {
             if (replays().getPlayback(clicker) == playback) openPlayers(clicker, playback);
         });
@@ -130,6 +133,35 @@ public final class ReplayMenus {
             menu.button(head(actor), Component.text(actor.name(), color == null ? NamedTextColor.WHITE : color), lore,
                     clicker -> {
                         if (replays().getPlayback(clicker) == playback) ReplayControls.follow(clicker, playback, actor.name());
+                    });
+        }
+        menu.back(clicker -> {
+            if (replays().getPlayback(clicker) == playback) openControls(clicker, playback);
+        });
+        menu.show(player);
+    }
+
+    /**
+     * the deaths of the recording (click: watch it from a few seconds before, through the eyes of the player)
+     */
+    public static void openEvents(Player player, Playback playback) {
+        List<Playback.Event> events = playback.getEvents();
+        if (events.isEmpty()) {
+            player.sendMessage(I.prefixed(player, LangText.REPLAY_NO_EVENTS));
+            return;
+        }
+        Menu menu = new Menu(i18n(LangText.GUI_REPLAY_EVENTS));
+        for (Playback.Event event : events.subList(0, Math.min(events.size(), MAX_ENTRIES - 1))) {
+            Recording.Actor actor = event.actor();
+            NamedTextColor color = actor.color() == null ? null : NamedTextColor.NAMES.value(actor.color());
+            List<Component> lore = new ArrayList<>(I.itemLines(LangText.GUI_REPLAY_EVENT_TIME,
+                    Game.formatTime(event.tick() / 20)));
+            if (event.message() != null) lore.add(event.message().colorIfAbsent(NamedTextColor.GRAY));
+            lore.addAll(I.itemLines(LangText.GUI_REPLAY_EVENT_CLICK));
+            menu.button(head(actor), i18n(LangText.GUI_REPLAY_EVENT_DEATH,
+                            Component.text(actor.name(), color == null ? NamedTextColor.WHITE : color)), lore,
+                    clicker -> {
+                        if (replays().getPlayback(clicker) == playback) ReplayControls.watch(clicker, playback, event);
                     });
         }
         menu.back(clicker -> {

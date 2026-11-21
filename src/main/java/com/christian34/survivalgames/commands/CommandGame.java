@@ -74,7 +74,7 @@ public class CommandGame {
      *
      * @param force also with fewer players than min-players
      */
-    static void start(CommandSender sender, Game game, boolean force) {
+    public static void start(CommandSender sender, Game game, boolean force) {
         Component denial = game.checkStart(force);
         if (denial != null) {
             send(sender, LangText.CANNOT_START, denial);
