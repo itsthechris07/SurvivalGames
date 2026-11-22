@@ -8,3 +8,11 @@ updates:
       interval: "weekly"
     ignore:
       - dependency-name: "annotations"
+      # repo.alessiodp.com answers Dependabot (not Gradle) with an authentication error for artifacts it does not host,
+      # which fails the whole run; these plugin APIs are compileOnly, update them by hand
+      - dependency-name: "org.mvplugins.multiverse.core:multiverse-core"
+      - dependency-name: "org.mvplugins.multiverse.inventories:multiverse-inventories"
+      - dependency-name: "net.citizensnpcs:citizens-main"
+      - dependency-name: "de.oliver:FancyNpcs"
+      - dependency-name: "de.simonsator:spigot-party-api-for-party-and-friends"
+      - dependency-name: "de.simonsator:Party-and-Friends-MySQL-Edition-Spigot-API"
