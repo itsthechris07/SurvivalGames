@@ -1,6 +1,6 @@
 # Placeholders
 
-With [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi) (or [MiniPlaceholders](#miniplaceholders)) installed, the plugin adds these placeholders – e.g.
+With [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi) (or [MiniPlaceholders](#miniplaceholders)) installed, the plugin adds these placeholders, e.g.
 for tab lists, scoreboards of other plugins or holograms. They are about the game of the player: the one they are in,
 or a Varo they take part in while they are outside of it. Without a game they are empty.
 
@@ -58,7 +58,7 @@ These work without a game, for online players. `<stat>` is `games`, `wins`, `kil
 ## MiniPlaceholders
 
 With [MiniPlaceholders](https://modrinth.com/plugin/miniplaceholders) the same placeholders exist as MiniMessage
-tags – with arguments instead of underscores:
+tags, with arguments instead of underscores:
 
 | Tag | Like |
 |---|---|

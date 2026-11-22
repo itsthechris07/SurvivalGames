@@ -4,8 +4,8 @@
 
 Set `language` in `config.yml` and run `/sg reload`:
 
-- `en` – English (`messages.yml`)
-- `de` – German (`messages_de.yml`)
+- `en`: English (`messages.yml`)
+- `de`: German (`messages_de.yml`)
 - your own language: put a translated `messages_<language>.yml` (e.g. `messages_fr.yml`) into `plugins/SurvivalGames` and set
   `language: fr`. Texts missing in your file are English.
 
@@ -34,4 +34,4 @@ Commands in messages can be clicked:
 - `<run:"/sg team list">/sg team list</run>` runs the command
 - `<suggest:"/sg team create ">...</suggest>` puts it into the chat box (for commands that need more input)
 
-When you update the plugin, new texts are added to your file – texts you changed stay as they are.
+When you update the plugin, new texts are added to your file; texts you changed stay as they are.

@@ -1,6 +1,6 @@
 # Commands and permissions
 
-All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg help [query]` lists them in the game
+All commands start with `/sg`; `/survivalgames` and `/varo` work too. `/sg help [query]` lists them in the game
 (click to run). `<...>` is needed, `[...]` is optional.
 
 ## Players
@@ -8,7 +8,7 @@ All commands start with `/sg` – `/survivalgames` and `/varo` work too. `/sg he
 | Command | |
 |---|---|
 | `/sg` | the main menu: play, your statistics and the best players, achievements, replays, help (console: the plugin version) |
-| `/sg games` | all games in a menu – a click joins a game or watches it while it runs |
+| `/sg games` | all games in a menu; a click joins a game or watches it while it runs |
 | `/sg join [arena]` | joins a game (without: the fullest free game; on a lobby server: an arena is a server) |
 | `/sg spectate [arena]` | watches a running game |
 | `/sg leave` | leaves your game |
@@ -106,7 +106,7 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | Command | |
 |---|---|
 | `/sg kit create <name> [--permission]` | saves your inventory as [kit](survival-games.md#kits), the item in your hand is its icon (`--permission`: only for players with `sg.kit.<name>`) |
-| `/sg kit edit <kit>` | puts the kit into your empty inventory – change it and save it again with `create` |
+| `/sg kit edit <kit>` | puts the kit into your empty inventory; change it and save it again with `create` |
 | `/sg kit delete <kit>` / `list` | deletes a kit / lists the kits |
 | `/sg leaderboard create <stat> [type]` | a hologram with the top 10 of a statistic at your position (see [leaderboards](configuration.md#leaderboards)) |
 | `/sg leaderboard remove` / `list` | removes the nearest hologram (5 blocks) / lists holograms and signs |

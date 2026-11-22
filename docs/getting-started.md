@@ -2,7 +2,7 @@
 
 ## Installation
 
-The server needs Paper or Purpur 1.21.11 – 26.3 and **Java 25** – also for Paper 1.21.11, which itself still runs on
+The server needs Paper or Purpur 1.21.11 to 26.3 and **Java 25**, also for Paper 1.21.11, which itself still runs on
 Java 21 (see [requirements](index.md#requirements)).
 
 1. Download `SurvivalGames-<version>.jar` and put it into the `plugins` folder of your server.
@@ -11,12 +11,12 @@ Java 21 (see [requirements](index.md#requirements)).
 3. Choose how the server runs (`network.mode` in [`config.yml`](configuration.md)):
     - `standalone` (default): the games run on this server next to everything else. Players who aren't in a game
       aren't affected at all.
-    - `game` / `lobby`: one game per server in a network – see [Network](network.md).
+    - `game` / `lobby`: one game per server in a network, see [Network](network.md).
 
 All setup commands need the permission `sg.admin` (operators have it).
 
 !!! tip "A game in two clicks"
-    `/sg admin` → **New game**: click the game type, then where it is played – a map in `maps/`, a world of the
+    `/sg admin` → **New game**: click the game type, then where it is played: a map in `maps/`, a world of the
     server or a new world. The arena gets its name by itself and the game is created right away, players join with
     `/sg join`. Lobby, center and spawn points are optional and can be set up later (the steps below).
 
@@ -28,12 +28,12 @@ All setup commands need the permission `sg.admin` (operators have it).
 
 ## 1. The map
 
-Every arena plays on a map – a world folder that stays untouched; each game plays in a copy of it.
+Every arena plays on a map: a world folder that stays untouched; each game plays in a copy of it.
 
 - **Your own map:** put the world folder into `plugins/SurvivalGames/maps/<name>` and run `/sg arena create <name>`.
 - **A world of the server:** `/sg arena create <name> --world <world>` copies it into `maps/`.
-- **Another arena's map:** `/sg arena create <name> --map <map>` – several arenas can share one map.
-- **A generated world:** `/sg arena create <name> --generate [--seed <seed>]` – a new random world for every game
+- **Another arena's map:** `/sg arena create <name> --map <map>`; several arenas can share one map.
+- **A generated world:** `/sg arena create <name> --generate [--seed <seed>]`: a new random world for every game
   (good for Varo).
 
 The game type is Survival Games unless you add `--type varo`, `--type uhc` or `--type duels` (a [UHC](uhc.md) arena gets a generated
@@ -48,10 +48,10 @@ stand at the right place and run:
 |---|---|
 | `/sg arena <name> lobby` | where the players wait before the game (default: the [lobby world](#the-lobby-world), without one the center) |
 | `/sg arena <name> center` | the middle of the world border, the spawn circle and the deathmatch (default: the world spawn) |
-| `/sg arena <name> spawn add` | a spawn point (the middle of the block you stand on; the players look at the center) – once per player |
+| `/sg arena <name> spawn add` | a spawn point (the middle of the block you stand on; the players look at the center), once per player |
 
 If the arena already has a game, a message offers to get it ready (`/sg arena <name> edit --prepare`): the game is
-removed while you edit and created again when you save. That only works while nobody is in the game – a running round
+removed while you edit and created again when you save. That only works while nobody is in the game; a running round
 can be stopped first, a Varo only after it is over.
 
 `/sg arena save` saves the copy back into the map and teleports you back. Without spawn points the players spawn in a
@@ -67,13 +67,13 @@ More settings: `/sg arena <name> players <min> <max>`, `teamsize <size>`, `borde
 
 Usually a server has **one lobby** for all arenas: a world of its own the players wait in until their game starts.
 
-1. `/sg lobby setworld <world>` – a world of the server (it is copied into `maps/`) or a map that already is in
+1. `/sg lobby setworld <world>`: a world of the server (it is copied into `maps/`) or a map that already is in
    `maps/`.
 2. `/sg lobby edit` teleports you into a copy of it, `/sg lobby setspawn` sets where the players arrive (default: the
    spawn of the world), `/sg lobby save` saves it.
 
 All arenas without a lobby of their own use it from now on; the game itself is played in the map of the arena. An
-arena that has its own lobby (`/sg arena <name> lobby`) keeps it – `/sg arena <name> lobby remove` switches it to the
+arena that has its own lobby (`/sg arena <name> lobby`) keeps it; `/sg arena <name> lobby remove` switches it to the
 lobby world. `/sg lobby remove` removes the lobby world again.
 
 Every game gets its own copy of the lobby world, so the players of different games don't meet. The copy is
@@ -82,14 +82,14 @@ the others in their next round.
 
 ## 3. The game
 
-`/sg arena <name> creategame` creates the game of the arena – also after every restart. Players join with:
+`/sg arena <name> creategame` creates the game of the arena, also after every restart. Players join with:
 
-- `/sg join [arena]` – without an arena they join the fullest game that is waiting
-- `/sg games` (or `/sg` and "Play") – a menu with all games, a click joins one or watches it
+- `/sg join [arena]`: without an arena they join the fullest game that is waiting
+- `/sg games` (or `/sg` and "Play"): a menu with all games, a click joins one or watches it
 - a **sign** with `[sg]` in the first line and the arena in the second (only admins can create it). It shows the state
   and the players, a click joins the game (or watches it while it runs). Sneak to break it.
 - `/sg spectate [arena]` to watch a running game
-- a **join NPC** of Citizens or FancyNpcs: `/sg npc link <arena>` and a click on the NPC – see
+- a **join NPC** of Citizens or FancyNpcs: `/sg npc link <arena>` and a click on the NPC, see
   [Integrations](integrations.md#join-npcs)
 
 A round of Survival Games starts by itself once enough players are there; admins can start it right away with

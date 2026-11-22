@@ -2,17 +2,17 @@
 
 # SurvivalGames
 
-Survival Games, Varo, UHC and Duels for Paper 1.21.11 – 26.3 (and Purpur) – several games next to each other on one server, or
+Survival Games, Varo, UHC and Duels for Paper 1.21.11 to 26.3 (and Purpur): several games next to each other on one server, or
 one game per server in a network behind Velocity/BungeeCord.
 
 - **Survival Games** (the default): everybody spawns on a spawn point, loots the chests and fights; after a grace
   period and a deathmatch with a shrinking world border the last one standing wins. Every round starts with a fresh
   copy of the map.
 - **Varo**: teams play in the same world for days, every player may only play a few minutes per day and is out after
-  the first death – the last team wins. The world and the game are kept until an admin resets it.
-- **UHC**: a new world every round, no loot and no natural regeneration – the teams start at random places,
+  the first death; the last team wins. The world and the game are kept until an admin resets it.
+- **UHC**: a new world every round, no loot and no natural regeneration; the teams start at random places,
   golden heads, final heal and scenarios (cutclean, timber), the world border pushes everybody into the center.
-- **Duels**: one against one (or team against team) with the same kit – `/sg duel` waits for an opponent,
+- **Duels**: one against one (or team against team) with the same kit; `/sg duel` waits for an opponent,
   `/sg duel <player> [kit]` challenges somebody, the winner gains rating.
 
 ![Rounds or days](https://raw.githubusercontent.com/itsthechris07/SurvivalGames/main/branding/how-it-works.png)
@@ -45,15 +45,15 @@ one game per server in a network behind Velocity/BungeeCord.
 - Achievements (first win, 3 kills in a game, winning without armor, a Varo without a strike, ...) with their progress
   and rewards: `/sg achievements`
 - Seasons: `/sg season end` keeps the best players, runs their rewards and resets the rating (`/sg season`)
-- Cosmetics: kill effects, arrow trails and win effects – free, bought, unlocked with an achievement or a permission
+- Cosmetics: kill effects, arrow trails and win effects: free, bought, unlocked with an achievement or a permission
   (`/sg cosmetics`)
 - Discord: a webhook posts the start, the winners, Varo days, strikes and seasons to a channel
 - Update checker: admins read about new releases when they join
 - Anonymous statistics with [bStats](https://bstats.org/plugin/bukkit/SurvivalGames-Varo/34655) (servers, players,
-  versions, settings and how often games and features are used, no names) – turned off with `enabled: false` in
+  versions, settings and how often games and features are used, no names), turned off with `enabled: false` in
   `plugins/bStats/config.yml`
 - Replays: every round of Survival Games and every day of a Varo is recorded and can be watched again in a copy of the
-  map (`/sg replay`) – pause, speed, jumps and the view of every player, without a client mod
+  map (`/sg replay`): pause, speed, jumps and the view of every player, without a client mod
 - Rewards (money and console commands), bounties, fireworks, the inventory of the killer after a death
 - Menus instead of commands: a main menu for the players (`/sg`), all games (`/sg games`), and for admins the setup
   of the arenas, the control of the games and the settings (`/sg admin`, `/sg settings`)
@@ -69,17 +69,17 @@ one game per server in a network behind Velocity/BungeeCord.
   (Bedrock forms), TAB, EssentialsX, vanish plugins, Multiverse
 
 ## Quick start
-1. Put the jar into `plugins/` and start the server: Paper or Purpur 1.21.11 – 26.3 with **Java 25** (also for
+1. Put the jar into `plugins/` and start the server: Paper or Purpur 1.21.11 to 26.3 with **Java 25** (also for
    1.21.11).
 
 The fastest way: `/sg admin` → **New game**, click the game type and where it is played (a map, a world of the
-server or a new world) – the game is ready, players join with `/sg join`. Or step by step:
+server or a new world); the game is ready, players join with `/sg join`. Or step by step:
 
 2. Put a map into `plugins/SurvivalGames/maps/<name>` (or import a world: `/sg arena create <name> --world <world>`,
    or generate one: `--generate`) and create the arena: `/sg arena create <name>` (`--type varo` for Varo).
 3. `/sg arena <name> edit`, set `center` and `spawn add`, then `/sg arena save`. The lobby of all arenas:
    `/sg lobby setworld <world>` (or one per arena in its map: `/sg arena <name> lobby`).
-4. `/sg arena <name> creategame` – players join with `/sg join` or a sign with `[sg]` and the arena name.
+4. `/sg arena <name> creategame`; players join with `/sg join` or a sign with `[sg]` and the arena name.
 
 All commands: `/sg help` (alias `/varo`). Admin permission: `sg.admin` (operators).
 

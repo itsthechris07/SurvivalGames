@@ -23,13 +23,13 @@ For 2 vs 2 set `team-size: 2` and `max-players: 4` (and four spawn points).
 
 | Command | |
 |---|---|
-| `/sg duel` | waits for an opponent – in the duel somebody waits in already, otherwise in a free one |
+| `/sg duel` | waits for an opponent: in the duel somebody waits in already, otherwise in a free one |
 | `/sg duel <player> [kit]` | challenges a player, optionally with another kit |
 | `/sg duel accept <player>` / `deny <player>` | accepts / denies a challenge (also by clicking in the chat) |
 
 A challenge is valid for `invite-seconds` seconds. When it is accepted, both players join a free duel arena that is
-reserved for them – nobody else can join it. If one of them leaves the lobby, the duel is open for everybody again.
+reserved for them; nobody else can join it. If one of them leaves the lobby, the duel is open for everybody again.
 
 The duel begins `lobby-countdown` seconds after both players are there, they stand frozen for `start-countdown`
 seconds. After `ending-seconds` everybody leaves the arena and it is free for the next duel. Join signs and NPCs work
-like for the other game types – a sign of a duel arena is a queue for that arena.
+like for the other game types; a sign of a duel arena is a queue for that arena.

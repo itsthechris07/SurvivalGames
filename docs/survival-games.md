@@ -23,12 +23,12 @@ game and up to `map-voting.maps` - 1 other arenas of Survival Games with the sam
 draw: the arena of the game stays).
 
 - Players with the permission `sg.vote.2` ... `sg.vote.5` have 2 ... 5 votes.
-- The map of the last round can't be chosen again right away (`map-voting.block-last`) – unless it is the only one.
+- The map of the last round can't be chosen again right away (`map-voting.block-last`), unless it is the only one.
 - There is nothing to vote for with only one arena, and on a [game server](network.md) (one arena per server).
 
 ### Kits
 
-Admins save their inventory as a kit: `/sg kit create <name>` – armor and off hand included, the item in the hand
+Admins save their inventory as a kit: `/sg kit create <name>`. Armor and off hand are included, the item in the hand
 is the icon in the menu. With `--permission` only players with `sg.kit.<name>` can choose it. `/sg kit edit <kit>`
 puts a kit into your (empty) inventory to change it, `/sg kit delete <kit>` deletes it.
 
@@ -41,7 +41,7 @@ Everybody is put onto a spawn point (or into the spawn circle) with an empty inv
 **start countdown** (`start-countdown`) is over. Then the round begins.
 With `start-platforms: explode` players can move, but whoever leaves their spawn point before the end of the
 countdown is put back and warned (`start-platform-warnings` times; the first 3 seconds and 2 seconds after a warning
-they are only held back) – after that they blow up and are out (jumping
+they are only held back). After that they blow up and are out (jumping
 and looking around is fine).
 
 - **Grace period:** for `grace-period` seconds nobody can hurt the others. The time left is shown above the hotbar.
@@ -56,7 +56,7 @@ and looking around is fine).
 ## World border
 
 The arena's world border (`world-border.size` or `/sg arena <arena> border`) starts shrinking
-`world-border.shrink-after` minutes after the start – everybody is warned a minute before – down to
+`world-border.shrink-after` minutes after the start (everybody is warned a minute before) down to
 `world-border.final-size` blocks within `world-border.shrink-minutes`. Outside of it players take
 `world-border.damage` per block and second. With `shrink-after: 0` it only shrinks in the deathmatch.
 
@@ -69,12 +69,12 @@ Holding it shows the name and the distance in the action bar (`modules.tracker`)
 
 Every `modules.supply-drop.minutes` a supply drop is announced with its coordinates near the center. A column of
 sparks marks the place, `warning` seconds later a chest with the `supply` loot of [loot.yml](configuration.md#loot)
-lands there – worth a fight. Not in the deathmatch.
+lands there, worth a fight. Not in the deathmatch.
 
 ## Lightnings
 
 Nobody can hide until the end: after `reveal.minutes`, or once only `reveal.players` are left, a lightning (without
-damage) strikes where every player alive is – again every `reveal.interval` seconds. `interval: 0` turns it off; in
+damage) strikes where every player alive is, again every `reveal.interval` seconds. `interval: 0` turns it off; in
 the deathmatch there are no lightnings.
 
 ## Bounties
@@ -89,7 +89,7 @@ the game.
 
 ## Sponsors
 
-Spectators – also the players who are out – send items to the players alive: `/sg sponsor` opens the menu (the
+Spectators, also the players who are out, send items to the players alive: `/sg sponsor` opens the menu (the
 players, then the items), `/sg sponsor <player>` the items for one player. The items and their prices are in
 `modules.sponsor.items`:
 
@@ -105,8 +105,8 @@ Items with a price need an economy plugin ([Vault](integrations.md#economy)). A 
 
 ## Bets
 
-With `modules.betting` (off by default) and an economy plugin ([Vault](integrations.md#economy)) spectators – also
-the players who are out – bet on the winner: `/sg bet` shows the odds of the teams alive (click one to bet),
+With `modules.betting` (off by default) and an economy plugin ([Vault](integrations.md#economy)) spectators (also
+the players who are out) bet on the winner: `/sg bet` shows the odds of the teams alive (click one to bet),
 `/sg bet <player> <amount>` bets on the team of the player. The odds come from the [Elo ratings](configuration.md#statistics)
 of the teams alive, minus the `margin` of the house (at most `max-odds`), and stay as they were when the bet was
 placed. **Bets on the winners pay amount × odds**, the others are lost; a draw or a stopped round pays everything back.
@@ -116,7 +116,7 @@ Once only `close-at` teams are left, no more bets are taken. The players alive c
 
 In games where everybody plays alone, `modules.alliances` (off by default) lets two players (`max-size`) team up:
 `/sg ally <player>` offers an alliance, the same command of the other player (or a click on the offer) accepts it.
-Allies can't hurt each other and the [tracker](#tracker) ignores them. `/sg ally leave` breaks the alliance – everybody
+Allies can't hurt each other and the [tracker](#tracker) ignores them. `/sg ally leave` breaks the alliance; everybody
 hears about the betrayal. All alliances break once only `break-at` players are left, in the deathmatch, or when nobody
 but the allies is left.
 
@@ -141,13 +141,13 @@ points: 6 for the start rating, one more (less) for every `points-per-score` rat
 ## Reaping
 
 With `modules.reaping` (off by default) more players than `max-players` can wait in the lobby (`applicants` ×
-`max-players`). When the game starts, `max-players` of them are drawn – the others watch. Everybody has one lot, plus
+`max-players`). When the game starts, `max-players` of them are drawn; the others watch. Everybody has one lot, plus
 `missed-lots` for every reaping they weren't drawn in (until they are) and n − 1 with the permission
-`sg.reaping.lots.<n>` (2–10).
+`sg.reaping.lots.<n>` (2 to 10).
 
 ## Quells
 
-With `modules.quell` (off by default) every `every`-th round of an arena – or by `chance` (percent) – is a Quell with
+With `modules.quell` (off by default) every `every`-th round of an arena (or by `chance`, in percent) is a Quell with
 one of the `rules`. A rule changes settings of `survival-games` for that round only:
 
 ```yaml
@@ -160,7 +160,7 @@ rules:
 
 The players learn the rule in the lobby and when the game begins (its description is the message
 `quell_rule_<name>`, otherwise its name). Admins choose the rule of the round in the lobby (otherwise of the next one)
-with `/sg game <arena> quell <rule>` – also while the module is off.
+with `/sg game <arena> quell <rule>`, also while the module is off.
 
 ## Gamemaker events
 
@@ -191,11 +191,11 @@ wins. After `ending-seconds` everybody leaves the arena and the next round start
 Spectators fly around invisibly, can't touch anything and can't be seen by the players. `/sg spectate` lets everybody
 else watch a running game.
 
-- **Inventories:** who was killed gets a message with the health the killer had left – a click shows the killer's
+- **Inventories:** who was killed gets a message with the health the killer had left; a click shows the killer's
   inventory, armor, health and effects of that moment. The killer can look at the victim's inventory, and at the end
   everybody at those of the winners (`modules.inventory-view`).
 - **Fireworks** for the winners (`fireworks`).
-- **Rewards:** money and commands for kills, wins and games – see [rewards](configuration.md#rewards).
+- **Rewards:** money and commands for kills, wins and games, see [rewards](configuration.md#rewards).
 - **Rating:** every player has an Elo rating per game type, see [statistics](configuration.md#statistics).
-- **Replay:** the round has been recorded – a click on the message at the end (or `/sg replay`) plays it again in a
+- **Replay:** the round has been recorded; a click on the message at the end (or `/sg replay`) plays it again in a
   copy of the map, see [replays](replays.md).

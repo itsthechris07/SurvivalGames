@@ -4,7 +4,7 @@ A Varo runs for days in the same world. The settings are in `varo` in [`config.y
 
 ## Before the start
 
-Create the arena with `--type varo` – a generated world (`--generate`) is a good choice. The players join the game
+Create the arena with `--type varo`; a generated world (`--generate`) is a good choice. The players join the game
 (`/sg join <arena>` or a sign) and create teams with `/sg team create <name> [color]` or the team item, the others join
 with a click or `/sg team join <team>`. Admins can manage the teams with `/sg game <arena> team ...`.
 
@@ -14,7 +14,7 @@ members of a team next to each other) and the game runs. Players without a team 
 ## Playing every day
 
 Players come back to the game with `/sg join <arena>` (or the sign) and leave it with `/sg leave`. **Outside of the
-game they get their normal inventory and location back** – inside the game they continue where they left.
+game they get their normal inventory and location back**; inside the game they continue where they left.
 
 - **Play time:** every player may play `play-time` minutes per day. The time only runs while they are in the game. It
   is shown on the scoreboard, with warnings before the end; `/sg time` shows it too. When it is over, the player
@@ -24,7 +24,7 @@ game they get their normal inventory and location back** – inside the game the
 - **Play hours:** with `play-hours` the game can only be played at certain times of the day (server time), e.g.
   `[ "18:00-20:00" ]` or different ones for the days of the week: `[ "mon-fri 18:00-20:00", "sat,sun 14:00-22:00" ]`.
   Outside of them nobody can join and everybody in the game leaves it (with the same warnings as for the play time,
-  and not while an enemy is nearby). `"22:00-02:00"` ends on the next day – choose a `day-start-hour` outside of
+  and not while an enemy is nearby). `"22:00-02:00"` ends on the next day; choose a `day-start-hour` outside of
   the play hours then. Empty (default): the game can be played all day. Join signs, NPCs and the games menu show
   when a running Varo opens again (`Opens Sat 18:00`, also `%sg_opens%`); an admin who starts a Varo outside of its
   play hours gets a warning, as everybody leaves it right away. Admins change them in the game with
@@ -35,20 +35,20 @@ game they get their normal inventory and location back** – inside the game the
 ## One life
 
 The first death is the last one: the player is out. With `spectators: true` they can watch (but not while they are
-still alive in the game – no scouting). When the last player of a team is out, the team is out. The last team
+still alive in the game, no scouting). When the last player of a team is out, the team is out. The last team
 standing wins.
 
 Admins can bring a player back with `/sg game <arena> revive <player>`.
 
 ## Optional rules
 
-All of them are in `varo` in `config.yml` and off by default (except the villager) – change them there or with
+All of them are in `varo` in `config.yml` and off by default (except the villager); change them there or with
 [`/sg settings varo`](configuration.md#changing-settings-in-the-game).
 
 | Option | Rule |
 |---|---|
-| `peaceful-days` | No PvP during the first days of the game – time to farm and build. Everybody is told when the peaceful days are over. |
-| `inactive-days` | Players who haven't played for this many days in a row are out (also players who never showed up) – nobody blocks the end of the game. |
+| `peaceful-days` | No PvP during the first days of the game: time to farm and build. Everybody is told when the peaceful days are over. |
+| `inactive-days` | Players who haven't played for this many days in a row are out (also players who never showed up), so nobody blocks the end of the game. |
 | `coordinates-from-day` | From this day on the positions of all players alive are announced at the start of every day (of players outside of the game: where they left it). |
 | `offline-npc-seconds` | **No escape by leaving the server:** a villager with the name and the health of the player stands in for them for this many seconds (default: 60). Enemies can hurt it; if they kill it, the player is out and their items drop. Damage it took stays when the player comes back. Not for `/sg leave`. |
 
@@ -65,7 +65,7 @@ modules:
 ```
 
 Banned items can't be crafted, picked up or used and are taken out of the inventories; banned potions can't be brewed
-or drunk; enchantments above their limit are lowered – also on items that are already in the game.
+or drunk; enchantments above their limit are lowered, also on items that are already in the game.
 
 ## Strikes
 
@@ -84,7 +84,7 @@ lists everybody with strikes. Players see their own with `/sg strikes`, the scor
 
 ## Saved for days
 
-The game is saved in `games/<arena>.yml` and its world is kept – restarts don't change anything. `/sg game <arena>
+The game is saved in `games/<arena>.yml` and its world is kept; restarts don't change anything. `/sg game <arena>
 stop` stops it (it continues with `/sg arena <arena> creategame`).
 
 `/sg game <arena> reset --confirm` starts again from the lobby with a fresh world (everybody alive, the teams stay);
@@ -98,12 +98,12 @@ When the game begins and at the start of every day, the world and the saved game
 
 Admins make a backup at any time with `/sg game <arena> backup` (`<day>_<time>.zip`, also with `varo.backups: 0`).
 
-The backup of a day is also the world its [replay](replays.md#varo) is played in – every day of a Varo is recorded
+The backup of a day is also the world its [replay](replays.md#varo) is played in; every day of a Varo is recorded
 (`/sg replay`, while the Varo is running only for admins).
 
 `/sg game <arena> backups` lists the backups, `/sg game <arena> restore <backup> --confirm` goes back to one: everybody
 leaves the game for a moment, the world and the saved game are replaced by those of the backup and the players who
-may play join again. Everything that happened since the backup is lost – bounties stay as they are, their money
+may play join again. Everything that happened since the backup is lost; bounties stay as they are, their money
 has been taken already.
 
 By hand (server stopped): replace the world folder of the game (`sgvaro_<arena>` in the dimensions of the main world)
@@ -115,13 +115,13 @@ The extras can be turned off or used in other game types (`modules` in `config.y
 
 | Extra | How it works |
 |---|---|
-| **Backpack** | Crafted from leather around a chest with a diamond at the bottom. Right click opens it – the team shares one backpack (`type: team`) or everybody has their own (`player`). |
-| **Chest lock** | Put a sign with `[Lock]` in the first line onto a chest, barrel, furnace, ... – only your team can open and break it, hoppers and explosions leave it alone. |
+| **Backpack** | Crafted from leather around a chest with a diamond at the bottom. Right click opens it; the team shares one backpack (`type: team`) or everybody has their own (`player`). |
+| **Chest lock** | Put a sign with `[Lock]` in the first line onto a chest, barrel, furnace, ...: only your team can open and break it, hoppers and explosions leave it alone. |
 | **Gravity grenade** | Crafted from a snowball, TNT and an ender pearl. Thrown, it tears out the blocks where it lands and pulls them and nearby players into one point. |
-| **Toxic rain** | Some rains (`chance`) hurt everybody under the open sky – but never kill. |
+| **Toxic rain** | Some rains (`chance`) hurt everybody under the open sky, but never kill. |
 | **Tracker** | A compass that points at the nearest enemy, given on the spawn point (only in Survival Games by default, `modules.tracker.games`). |
 | **Supply drop** | A chest with the supply loot that lands near the center (only in Survival Games by default). |
-| **Bounty** | Players put money on an enemy, the killer gets it – see [bounties](survival-games.md#bounties). Bounties of a Varo are saved with the game. |
-| **The fallen** | A cannon shot for every player who is out, the fallen of the last day are announced when a new day begins – see [the fallen](survival-games.md#the-fallen) (off by default, `modules.fallen`). |
+| **Bounty** | Players put money on an enemy, the killer gets it, see [bounties](survival-games.md#bounties). Bounties of a Varo are saved with the game. |
+| **The fallen** | A cannon shot for every player who is out, the fallen of the last day are announced when a new day begins, see [the fallen](survival-games.md#the-fallen) (off by default, `modules.fallen`). |
 | **Inventory view** | After a kill the victim can look at the inventory of the killer (and the other way round), at the end everybody at those of the winners. |
 | **Kits**, **sponsors** | Only in Survival Games by default (`modules.kits.games`, `modules.sponsor.games`). |

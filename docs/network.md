@@ -16,8 +16,8 @@ sent to a free game server; after the game they come back.
 
 ## The proxy
 
-Add the servers to the proxy as usual. The plugin sends players with the plugin messages of the `BungeeCord` channel –
-on Velocity turn on `bungee-plugin-message-channel = true` in `velocity.toml` (the default).
+Add the servers to the proxy as usual. The plugin sends players with the plugin messages of the `BungeeCord` channel.
+On Velocity turn on `bungee-plugin-message-channel = true` in `velocity.toml` (the default).
 
 ## Game servers
 
@@ -31,12 +31,12 @@ network:
 ```
 
 - The game of the arena is created on start; there are no other games on the server.
-- Players who connect join the game right away – or watch it while it is running.
+- Players who connect join the game right away, or watch it while it is running.
 - Players who can't play are turned away **before** they connect: the lobby is full, the game is running and nobody
   may watch, they are out of the Varo or have no play time left today. Operators and players with
   `sg.network.bypass` always get in.
 - After the game, with `/sg leave` or when the play time is over, players are sent to `lobby-server`.
-- The **MOTD** of the server shows the state of the game (`SG;LOBBY;3;12;castle;survival-games`) – the lobby server
+- The **MOTD** of the server shows the state of the game (`SG;LOBBY;3;12;castle;survival-games`); the lobby server
   reads it.
 
 !!! tip "Same maps everywhere"

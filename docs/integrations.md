@@ -1,6 +1,6 @@
 # Integrations
 
-SurvivalGames works on its own. If one of these plugins is installed, it is used automatically – nothing has to be
+SurvivalGames works on its own. If one of these plugins is installed, it is used automatically; nothing has to be
 turned on.
 
 | Plugin | What it is used for |
@@ -18,8 +18,8 @@ turned on.
 
 ## Discord
 
-A [webhook](https://support.discord.com/hc/en-us/articles/228383668) posts what happens in the games to a channel –
-no bot and no extra plugin: in the settings of the channel, *Integrations > Webhooks > New Webhook*, copy its URL.
+A [webhook](https://support.discord.com/hc/en-us/articles/228383668) posts what happens in the games to a channel,
+with no bot and no extra plugin: in the settings of the channel, *Integrations > Webhooks > New Webhook*, copy its URL.
 
 ```yaml
 discord:
@@ -32,7 +32,7 @@ discord:
   avatar-url: ""
 ```
 
-Whoever has the URL can post into the channel – keep it out of `config.yml` with an
+Whoever has the URL can post into the channel; keep it out of `config.yml` with an
 [environment variable](configuration.md#secrets-in-environment-variables): `webhook-url: "${SG_DISCORD_WEBHOOK}"`.
 
 The messages are those of the game without colors (`discord_...` in `messages.yml` for the start, the kills and the
@@ -49,14 +49,14 @@ With Vault (or VaultUnlocked) and an economy plugin like EssentialsX:
 - **[Cosmetics](configuration.md#cosmetics)** and **[achievements](configuration.md#achievements):** buying effects,
   money for achievements.
 
-If the economy plugin supports the new API of VaultUnlocked, it is used – otherwise the one of Vault.
+If the economy plugin supports the new API of VaultUnlocked, it is used; otherwise the one of Vault.
 
 ## Parties
 
 `parties` in `config.yml`:
 
 - `join-together`: when the leader of a party joins a game (`/sg join`, a join sign or a join NPC), the members on
-  the same server come along – as long as there is room.
+  the same server come along, as long as there is room.
 - `same-team`: with teams, the members of a party play in the same team: in the team one of them chose, otherwise in
   a team with room for all of them.
 
@@ -86,7 +86,7 @@ sidebar of the game. Everything of TAB comes back when they leave the game.
 
 ## EssentialsX
 
-- God mode, vanish and AFK are turned off when a player joins a game – god mode and vanish come back afterwards.
+- God mode, vanish and AFK are turned off when a player joins a game; god mode and vanish come back afterwards.
 - `/god`, `/fly` and `/vanish` don't work while playing.
 - Teleports of Essentials (`/back`, `/tpa`, `/home`, ...) don't lead into the worlds of games.
 
@@ -99,5 +99,5 @@ server, party members) and can only play once they are visible again.
 
 - **Multiverse-Core** doesn't import the worlds of the games (`sg_*`, `sgvaro_*`), so it doesn't change the game mode
   there or load them after a restart.
-- **Multiverse-Inventories** doesn't swap the inventories of players who are in a game – the plugin saves and
+- **Multiverse-Inventories** doesn't swap the inventories of players who are in a game; the plugin saves and
   restores them itself.

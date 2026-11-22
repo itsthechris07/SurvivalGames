@@ -14,7 +14,7 @@ into the center. The last one standing wins, then the next round starts in a new
 ```
 
 The arena gets a generated world (a new one every round, `--seed <seed>` for always the same one). With
-`--map <map>` or `--world <world>` UHC is played on a map instead. No spawn points are needed – only a lobby (the
+`--map <map>` or `--world <world>` UHC is played on a map instead. No spawn points are needed, only a lobby (the
 [lobby world](getting-started.md#the-lobby-world) or `/sg arena uhc1 lobby`). The center of the world border is the spawn of
 the world unless the arena has its own center.
 
@@ -25,25 +25,25 @@ The lobby, countdowns, join signs, NPCs, teams, spectators, statistics and repla
 
 - **Generation:** while the players wait in the lobby, the world inside the border is generated, the center first
   (`pregenerate`). It starts with the first player in the lobby and pauses when the lobby is empty again, so a
-  waiting round nobody plays costs nothing (on a game server of a network it starts right away). A round can start before it is done – the rest is generated when somebody
+  waiting round nobody plays costs nothing (on a game server of a network it starts right away). A round can start before it is done; the rest is generated when somebody
   gets there.
 - **Scatter:** every team starts at a random place inside the world border, at least `scatter-distance` blocks away
   from the other teams (less if there is no room), on open ground: never in water or lava and never on or under a
   tree. Up to 200 random places are tried per team; if the world has no dry land there (an ocean), the team starts
   on a small stone platform at the center. The members of a team start next to each other (in a small circle around the place of the team, looking the
   same way), not inside each other. Until the start countdown is over everybody stands still.
-- **Time of day:** with `time: -1` (the default) day and night change – the round starts in the morning, however long
+- **Time of day:** with `time: -1` (the default) day and night change; the round starts in the morning, however long
   the lobby took. A time like `6000` keeps it at noon.
 - **Grace period:** no PvP for `grace-period` seconds (10 minutes by default). The time left is shown above the
   hotbar, the chat only reminds a minute and ten seconds before PvP starts.
 - **No natural regeneration:** health only comes back with golden apples, golden heads, potions and the final heal
   (`natural-regeneration: false`). Once the round has begun, the hearts of every player alive are shown in the tab
   list (`health-in-tab`).
-- **Golden heads:** a player who dies drops their head. Eight gold ingots around it make a golden head – like a golden
+- **Golden heads:** a player who dies drops their head. Eight gold ingots around it make a golden head, like a golden
   apple, but the regeneration lasts longer (`golden-heads`).
 - **Final heal:** `final-heal` minutes after the start everybody alive gets full health and food (announced a minute
-  and ten seconds before – not if it happens together with the end of the grace period, which is announced anyway).
-- **World border:** the world grows with the players – `world-border.min-size` (300) plus `world-border.per-team`
+  and ten seconds before, but not if it happens together with the end of the grace period, which is announced anyway).
+- **World border:** the world grows with the players: `world-border.min-size` (300) plus `world-border.per-team`
   (100) blocks for every team at the start, at most `world-border.size` (1000). Two teams play in 500 × 500 blocks,
   seven or more teams in 1000 × 1000. With `per-team: 0` the border always has the full `size`. It shrinks after
   `shrink-after` minutes to `final-size` blocks in `shrink-minutes` minutes.
@@ -67,7 +67,7 @@ uhc:
   scenarios: [ cutclean, timber ]
 ```
 
-The scenarios are announced when the round begins – hovering over their names in the chat explains them. Admins change
+The scenarios are announced when the round begins; hovering over their names in the chat explains them. Admins change
 them in the game with `/sg settings uhc scenarios cutclean; timber` (`-`: none).
 
 ## Settings
@@ -98,5 +98,5 @@ They can also be changed in the game: `/sg settings uhc world-border.per-team 50
 
 ## Extras
 
-The [extras](configuration.md) (`modules`) are used in UHC when `uhc` is in their `games` list – by default the
+The [extras](configuration.md) (`modules`) are used in UHC when `uhc` is in their `games` list; by default the
 inventory of the killer (`inventory-view`) and bounties. Kits, the tracker or supply drops can be added the same way.

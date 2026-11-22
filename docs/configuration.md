@@ -1,7 +1,7 @@
 # Configuration
 
 Everything is in `plugins/SurvivalGames/`. After a change run `/sg reload`. New options of an update are added to your
-files automatically – your values and comments stay.
+files automatically; your values and comments stay.
 
 ## Files of the plugin
 
@@ -25,7 +25,7 @@ files automatically – your values and comments stay.
 | `AGENTS.md`, `CLAUDE.md` | notes for [AI assistants](#configuring-with-an-ai-assistant) (written by the plugin) |
 
 !!! warning
-    Don't edit `arenas.yml` and `games/` while the server is running – use the commands.
+    Don't edit `arenas.yml` and `games/` while the server is running; use the commands.
 
 ## Most important options
 
@@ -56,8 +56,8 @@ files automatically – your values and comments stay.
 | `stats.storage` | `file` | `file` (`stats.yml`) or `mysql` (see [statistics](#statistics)) |
 | `stats.rating.games` | `[ survival-games ]` | the game types with an [Elo rating](#rating) |
 | `stats.achievements.enabled` | `true` | the players get [achievements](#achievements) |
-| `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 6 hours – admins (`sg.admin`) read it when they join |
-| `plugins/bStats/config.yml` | | anonymous statistics ([bStats](https://bstats.org)): servers, players, versions, the settings of the plugin (game types, extras, optional plugins) and how often games and features are used, without any names – `enabled: false` turns them off for all plugins |
+| `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 6 hours; admins (`sg.admin`) read it when they join |
+| `plugins/bStats/config.yml` | | anonymous statistics ([bStats](https://bstats.org)): servers, players, versions, the settings of the plugin (game types, extras, optional plugins) and how often games and features are used, without any names; `enabled: false` turns them off for all plugins |
 | `rewards.enabled` | `false` | [money](#rewards) for kills, wins and games |
 | `replays.enabled` | `true` | the games are recorded and can be watched again (see [replays](replays.md)) |
 | `replays.games` | both | the game types that are recorded |
@@ -101,12 +101,12 @@ file, the button at the top of every page copies it as Markdown, and `<page>/ind
 a page (for example [`commands/index.md`](https://itsthechris07.github.io/SurvivalGames/commands/index.md)).
 
 The files are written again on every start and `/sg reload` (an update brings the notes of its version), so changes
-in them are lost. `agent-files: false` in `config.yml` stops writing them – delete them yourself then.
+in them are lost. `agent-files: false` in `config.yml` stops writing them; delete them yourself then.
 
 ## Statistics
 
 Every game counts the games, wins, kills and deaths of the players per game type (`/sg stats`, `/sg top`, the
-[placeholders](placeholders.md#statistics)). They are saved in `stats.yml` – or in a MySQL/MariaDB database, so that
+[placeholders](placeholders.md#statistics)). They are saved in `stats.yml`, or in a MySQL/MariaDB database, so that
 all servers of a [network](network.md) share them:
 
 ```yaml
@@ -126,7 +126,7 @@ The table is created automatically. Paper ships the MySQL driver, nothing else h
 
 Every text in `config.yml` can refer to an environment variable: `${NAME}` is replaced with the value of the variable
 `NAME` when the file is loaded. That keeps the password of the database (and the [Discord webhook](integrations.md#discord))
-out of the file, so you can share `config.yml` – in a support chat, with an AI assistant, in a git repository –
+out of the file, so you can share `config.yml` (in a support chat, with an AI assistant, in a git repository)
 without giving it away. A password written directly into the file works as well.
 
 Set the variable where the server is started:
@@ -139,7 +139,7 @@ If the variable isn't set, the console warns once (with the name of the variable
 empty. The name is up to you, `SG_MYSQL_PASSWORD` is only an example.
 
 !!! tip
-    Create a database user of its own for SurvivalGames that only has rights on its database – not `root`. If the
+    Create a database user of its own for SurvivalGames that only has rights on its database, not `root`. If the
     password gets out anyway, nothing else is at risk:
 
     ```sql
@@ -149,7 +149,7 @@ empty. The name is up to you, `SG_MYSQL_PASSWORD` is only an example.
 
 ### Rating
 
-In the game types of `stats.rating.games` every player has an **Elo rating** – everybody starts with 1000. At the end
+In the game types of `stats.rating.games` every player has an **Elo rating**; everybody starts with 1000. At the end
 of a game every player is compared with every player of the other teams: who lasted longer has beaten the other one.
 Winning against players with a higher rating brings more than against weaker ones; one game changes the rating by
 `stats.rating.k-factor` at most, no matter how many players took part. `/sg top rating` lists the best, the players
@@ -157,12 +157,12 @@ see their change at the end of the game.
 
 ### Leaderboards
 
-The best players in the world, without other plugins – updated every minute:
+The best players in the world, without other plugins, updated every minute:
 
 - **Holograms:** `/sg leaderboard create <stat> [type]` puts the top 10 of a statistic (`wins`, `kills`, `games`,
   `deaths`, `rating`; of one game type or all) where you stand. `/sg leaderboard remove` removes the nearest one.
 - **Signs:** a sign with `[sgtop]` in the first line, the statistic in the second, the rank (1-10, default 1) in the
-  third and – if wanted – the game type in the fourth shows the player on that rank. A **player head** above the sign
+  third and (if wanted) the game type in the fourth shows the player on that rank. A **player head** above the sign
   (or above the block a wall sign hangs on) gets their skin. Only admins can create the signs; sneak to break them.
 
 `/sg leaderboard list` lists all of them. For holograms of other plugins use the [placeholders](placeholders.md).
@@ -192,7 +192,7 @@ another player. The names and descriptions are texts of `messages.yml` (`achieve
 Games, kills and wins count over all game types. What a player reached while they were offline (their team won a
 Varo) comes with their next join. Achievements of a statistic show how far a player is (`Veteran (37/50)`).
 
-An achievement can bring a reward – money of an economy plugin and commands of the console, also for players who are
+An achievement can bring a reward: money of an economy plugin and commands of the console, also for players who are
 offline:
 
 ```yaml
@@ -233,7 +233,7 @@ the archive) is on that server.
 
 ## Rewards
 
-With `rewards.enabled` the players get money of an economy plugin ([Vault](integrations.md#economy)) – `kill`, `win`
+With `rewards.enabled` the players get money of an economy plugin ([Vault](integrations.md#economy)): `kill`, `win`
 (every player of the winning team) and `game` (everybody who took part), `0` = nothing.
 
 `rewards.commands` runs commands of the console for the same events, also without an economy plugin and with
@@ -276,7 +276,7 @@ modules:
 
 The permission `sg.cosmetic.<name>` (`sg.cosmetic.*` for all) always unlocks a cosmetic, e.g. for a rank of a shop.
 What a player chose and bought is kept with the statistics (`stats.yml` or the table `<table>_settings`), so the
-cosmetics need `stats.enabled` – with MySQL the servers of a network share them. The names are texts of
+cosmetics need `stats.enabled`; with MySQL the servers of a network share them. The names are texts of
 `messages.yml` (`cosmetic_..._name`).
 
 ## The whole file
@@ -290,18 +290,18 @@ cosmetics need `stats.enabled` – with MySQL the servers of a network share the
 `loot.yml` decides what is in the chests, trapped chests and barrels of Survival Games. Every container gets
 `items.min` to `items.max` random items when it is opened for the first time and again after every refill.
 
-- **Tables:** `normal`, `center` and `supply` are lists of items – add as many lists of your own as you like.
+- **Tables:** `normal`, `center` and `supply` are lists of items; add as many lists of your own as you like.
   `item` is written like in `/give` (also with components: `"potion[potion_contents={potion:\"healing\"}]"`),
   `amount` is a number or a range (`1-3`), `weight` says how often the item is chosen compared to the others.
 - **`containers`** gives every kind of container its table, e.g. `barrel: food`.
 - **`center-radius`:** containers this close to the center of the arena get the `center` loot instead of the `normal`
   loot.
-- **`upgrades`** makes the loot better after refills: `2: { normal: center }` – from the 2nd refill on the containers
+- **`upgrades`** makes the loot better after refills: `2: { normal: center }`: from the 2nd refill on the containers
   with normal loot get the center loot.
 - [Supply drops](survival-games.md#supply-drops) get `supply-items.min` to `supply-items.max` items of the `supply`
   list.
 
-When the plugin is updated, new options are added to your `loot.yml` – but entries you delete from `containers` and
+When the plugin is updated, new options are added to your `loot.yml`, but entries you delete from `containers` and
 `upgrades` stay deleted.
 
 ```yaml
