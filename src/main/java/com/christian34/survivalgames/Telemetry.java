@@ -159,6 +159,10 @@ public class Telemetry {
      * System.nanoTime() of the last server tick (0: the server isn't ticking yet)
      */
     private volatile long lastTick;
+    /**
+     * the plugin is enabled completely
+     */
+    private volatile boolean started;
 
     /**
      * something the players or admins do in a game
@@ -223,11 +227,20 @@ public class Telemetry {
         this.lateLoad = late;
     }
 
+    /**
+     * the plugin is enabled: statistics, and the tags that need the arenas and the network mode
+     */
     public void start() {
         // -Dsg.offline=true: nothing is sent (tests)
         if (UpdateChecker.isOffline()) return;
         startMetrics();
-        startErrorReports();
+        this.started = true;
+        if (!Sentry.isEnabled()) return;
+        Sentry.configureScope(scope -> {
+            scope.setTag("network_mode", lower(plugin.getNetworkManager().getMode().name()));
+            scope.setTag("game_types", usedGameTypes());
+        });
+        breadcrumb("plugin", "started");
     }
 
     private void startMetrics() {
@@ -276,8 +289,12 @@ public class Telemetry {
 
     // ---------------------------------------------------------------- error reports
 
-    private void startErrorReports() {
-        if (SENTRY_DSN.isBlank() || !config().getBoolean("sentry.enabled")) return;
+    /**
+     * as early as possible (right after config.yml is loaded): errors while the arenas and games are loaded, or the
+     * plugin can't be enabled at all, are reported too
+     */
+    public void startErrorReports() {
+        if (UpdateChecker.isOffline() || SENTRY_DSN.isBlank() || !config().getBoolean("sentry.enabled")) return;
         Sentry.init(options -> {
             options.setDsn(SENTRY_DSN);
             options.setRelease("survivalgames@" + plugin.getPluginMeta().getVersion());
@@ -308,12 +325,10 @@ public class Telemetry {
         Sentry.configureScope(scope -> {
             scope.setTag("server", Bukkit.getName() + " " + Bukkit.getMinecraftVersion());
             scope.setTag("java", System.getProperty("java.version"));
-            scope.setTag("network_mode", lower(plugin.getNetworkManager().getMode().name()));
-            scope.setTag("game_types", usedGameTypes());
             scope.setTag("late_load", String.valueOf(lateLoad));
             scope.setContexts("system", systemInfo());
         });
-        breadcrumb("plugin", lateLoad ? "enabled while the server was running (/reload or a plugin manager)" : "enabled");
+        breadcrumb("plugin", lateLoad ? "enabling while the server is running (/reload or a plugin manager)" : "enabling");
         this.commandListener = new Listener() {
             @EventHandler(priority = EventPriority.MONITOR)
             public void onCommand(PlayerCommandPreprocessEvent event) {
@@ -377,6 +392,8 @@ public class Telemetry {
         Map<String, Object> gameContext = game == null ? null : gameContext(game);
         Sentry.captureException(thrown, hint, scope -> {
             scope.setLevel(level);
+            // errors while the plugin is enabled (loading arenas, games) or after
+            scope.setTag("plugin_phase", started ? "running" : "startup");
             // the numbers in the report, the groups as tags to filter by (e.g. only on full servers)
             scope.setContexts("server state", state);
             if (state.get("players_online") instanceof Integer players) scope.setTag("players", countBucket(players));

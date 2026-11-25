@@ -146,6 +146,7 @@ public class SurvivalGames extends JavaPlugin {
         this.fileManager = new FileManager();
         loadTexts();
         this.telemetry = new Telemetry(this);
+        telemetry.startErrorReports();
         this.loot = new Loot(this);
         this.stats = new StatsManager(this);
         this.discord = new Discord(this);
