@@ -599,6 +599,15 @@ replays:
 update-checker:
   enabled: true
 
+# anonymous error reports to Sentry, so bugs of SurvivalGames get fixed: only errors in the code of SurvivalGames,
+# without player names, uuids or the address of the server - set to false to send nothing
+# (the anonymous statistics of bStats are disabled in plugins/bStats/config.yml)
+sentry:
+  enabled: true
+  # attaches config.yml and loot.yml to the reports, so the error can be reproduced with the same settings;
+  # passwords, webhooks, database and server addresses, uuids and player names are removed first
+  include-config: true
+
 # writes AGENTS.md and CLAUDE.md into this folder: notes for AI assistants (Claude Code, Codex, Cursor, ...) that help
 # to configure the plugin - which files they may change, that they mustn't invent options, ... (the plugin itself
 # doesn't use any AI). false: the files are not written (delete them yourself)

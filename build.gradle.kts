@@ -71,8 +71,9 @@ dependencies {
     implementation("org.incendo:cloud-annotations:2.1.0")
     implementation("org.incendo:cloud-paper:2.0.1")
     implementation("org.incendo:cloud-minecraft-extras:2.0.1")
-    // anonymous statistics (bstats.org), see Telemetry
+    // anonymous statistics (bstats.org) and error reports (sentry.io), see Telemetry
     implementation("org.bstats:bstats-bukkit:3.2.1")
+    implementation("io.sentry:sentry:8.65.0")
 
     // tests run the plugin against a mocked Paper server
     testImplementation("io.papermc.paper:paper-api:26.3.build.244-stable")
@@ -198,6 +199,7 @@ tasks {
         relocate("io.leangen.geantyref", "com.christian34.survivalgames.libs.geantyref")
         // bStats refuses to start unless relocated
         relocate("org.bstats", "com.christian34.survivalgames.libs.bstats")
+        relocate("io.sentry", "com.christian34.survivalgames.libs.sentry")
     }
 }
 

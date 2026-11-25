@@ -49,6 +49,7 @@ nav:
       - Configuration: configuration.md
       - Messages and languages: customization.md
       - Placeholders: placeholders.md
+      - Privacy: privacy.md
   - FAQ and troubleshooting: faq.md
 
 plugins:

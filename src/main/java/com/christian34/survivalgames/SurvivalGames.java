@@ -235,6 +235,8 @@ public class SurvivalGames extends JavaPlugin {
         if (stats != null) stats.stop();
         // the end of the games is still posted
         if (discord != null) discord.close();
+        // last: errors while stopping are still reported
+        if (telemetry != null) telemetry.stop();
         users.clear();
     }
 

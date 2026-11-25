@@ -57,6 +57,8 @@ files automatically; your values and comments stay.
 | `stats.rating.games` | `[ survival-games ]` | the game types with an [Elo rating](#rating) |
 | `stats.achievements.enabled` | `true` | the players get [achievements](#achievements) |
 | `update-checker.enabled` | `true` | looks for new releases on GitHub when the server starts and every 6 hours; admins (`sg.admin`) read it when they join |
+| `sentry.enabled` | `true` | anonymous error reports of SurvivalGames to Sentry, see [Privacy](privacy.md) |
+| `sentry.include-config` | `true` | the reports contain `config.yml` and `loot.yml` without passwords, webhooks and addresses |
 | `plugins/bStats/config.yml` | | anonymous statistics ([bStats](https://bstats.org)): servers, players, versions, the settings of the plugin (game types, extras, optional plugins) and how often games and features are used, without any names; `enabled: false` turns them off for all plugins |
 | `rewards.enabled` | `false` | [money](#rewards) for kills, wins and games |
 | `replays.enabled` | `true` | the games are recorded and can be watched again (see [replays](replays.md)) |

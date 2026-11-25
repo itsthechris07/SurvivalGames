@@ -593,6 +593,17 @@ public class CommandSurvivalGames {
         }
     }
 
+    @Command(ROOT + " debug sentry")
+    @CommandDescription("command_debug_sentry")
+    @Permission(ADMIN)
+    public void debugSentryCmd(CommandSender sender) {
+        // waits up to 5 seconds for Sentry, not on the main thread
+        Bukkit.getScheduler().runTaskAsynchronously(plugin(), () -> {
+            boolean sent = plugin().getTelemetry().sendTestReport();
+            sender.sendMessage(I.prefixed(sender, sent ? LangText.SENTRY_REPORT_SENT : LangText.SENTRY_DISABLED));
+        });
+    }
+
     private static Component debugLine(String key, String value) {
         return Component.text(key + ": ", NamedTextColor.GRAY).append(Component.text(value, NamedTextColor.WHITE));
     }

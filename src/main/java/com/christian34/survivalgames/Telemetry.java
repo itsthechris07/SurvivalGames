@@ -8,6 +8,12 @@ import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.UhcGame;
 import com.christian34.survivalgames.game.VaroGame;
+import com.christian34.survivalgames.files.PluginFile;
+import io.sentry.Attachment;
+import io.sentry.Hint;
+import io.sentry.Sentry;
+import io.sentry.SentryEvent;
+import io.sentry.protocol.SentryException;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.AdvancedPie;
 import org.bstats.charts.DrilldownPie;
@@ -15,20 +21,36 @@ import org.bstats.charts.SimplePie;
 import org.bstats.charts.SingleLineChart;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.regex.Pattern;
 
 /**
  * Anonymous statistics (bStats, opt-out for all plugins in plugins/bStats/config.yml): the number of servers and
  * players, the server and Java version, a few settings of the plugin and how often its features are used. No names
  * (players, arenas, kits, teams) are sent.
+ * <p>
+ * Anonymous error reports (Sentry, opt-out with sentry.enabled in config.yml): only exceptions with SurvivalGames in
+ * their stack trace, no server name, no player names or uuids (replaced), no user data; the Sentry project must not
+ * store IP addresses (project settings - Security &amp; Privacy). Unless sentry.include-config is false, config.yml
+ * and loot.yml are attached (secrets, addresses and player names removed), so the error can be reproduced.
  *
  * @author Christian34
  */
@@ -37,6 +59,29 @@ public class Telemetry {
      * the plugin on bstats.org, 0: nothing is sent
      */
     static final int BSTATS_ID = 34655;
+    /**
+     * the Sentry project (region US, Sentry is certified under the EU-U.S. Data Privacy Framework), empty: no error reports
+     */
+    static final String SENTRY_DSN = "https://94c990dbad599fc5faab85f2c906f94e@o393387.ingest.us.sentry.io/4512493446103040";
+    /**
+     * at most this many error reports per server start (a broken loop mustn't send thousands)
+     */
+    static final int MAX_REPORTS = 25;
+    static final String PACKAGE = "com.christian34.survivalgames.";
+    private static final Pattern UUID_PATTERN = Pattern.compile(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+    /**
+     * settings whose values never leave the server (database login, webhooks, addresses of servers)
+     */
+    private static final Pattern SECRET_KEY = Pattern.compile(
+            "(?i)(.+-)?(password|secret|token|webhook|url|address|host|user|username|ip)(-.+)?");
+    /**
+     * values that look like an address (jdbc:mysql://..., https://..., 1.2.3.4, localhost, play.example.com:25565)
+     * whatever their key is
+     */
+    private static final Pattern SECRET_VALUE = Pattern.compile(
+            "(?is).*(://|\\b\\d{1,3}(\\.\\d{1,3}){3}\\b|\\blocalhost\\b|\\b[a-z0-9-]+(\\.[a-z0-9-]+)+:\\d{2,5}\\b).*");
+    static final String REDACTED = "<redacted>";
     /**
      * the optional plugins (softdepend in plugin.yml)
      */
@@ -60,6 +105,12 @@ public class Telemetry {
     private final Map<String, AtomicInteger> uhcDurations = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> features = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> joins = new ConcurrentHashMap<>();
+    /**
+     * the signatures of the errors reported since the server started
+     */
+    private final Set<String> reported = new HashSet<>();
+    @Nullable
+    private Handler handler;
 
     /**
      * something the players or admins do in a game
@@ -118,7 +169,13 @@ public class Telemetry {
 
     public void start() {
         // -Dsg.offline=true: nothing is sent (tests)
-        if (UpdateChecker.isOffline() || BSTATS_ID <= 0) return;
+        if (UpdateChecker.isOffline()) return;
+        startMetrics();
+        startErrorReports();
+    }
+
+    private void startMetrics() {
+        if (BSTATS_ID <= 0) return;
         Metrics metrics = new Metrics(plugin, BSTATS_ID);
         // the setup of the server
         metrics.addCustomChart(new SimplePie("network_mode", () -> lower(plugin.getNetworkManager().getMode().name())));
@@ -159,6 +216,198 @@ public class Telemetry {
         metrics.addCustomChart(new AdvancedPie("uhc_duration", () -> counts(uhcDurations)));
         metrics.addCustomChart(new AdvancedPie("feature_usage", () -> counts(features)));
         metrics.addCustomChart(new AdvancedPie("join_methods", () -> counts(joins)));
+    }
+
+    // ---------------------------------------------------------------- error reports
+
+    private void startErrorReports() {
+        if (SENTRY_DSN.isBlank() || !config().getBoolean("sentry.enabled")) return;
+        Sentry.init(options -> {
+            options.setDsn(SENTRY_DSN);
+            options.setRelease("survivalgames@" + plugin.getPluginMeta().getVersion());
+            options.setEnvironment("production");
+            // no data about the server or its players (personal data is off by default: nothing of DataCollection
+            // is enabled here)
+            options.setAttachServerName(false);
+            options.setServerName(null);
+            options.setMaxBreadcrumbs(0);
+            // only what this plugin reports, not the errors of other plugins
+            options.setEnableUncaughtExceptionHandler(false);
+            options.setEnableShutdownHook(false);
+            options.setEnableExternalConfiguration(false);
+            options.setSendClientReports(false);
+            options.setBeforeSend((event, hint) -> minimize(event));
+            // -Dsg.sentry.debug=true: Sentry logs what it sends and what the server answers
+            options.setDebug(Boolean.getBoolean("sg.sentry.debug"));
+        });
+        Sentry.configureScope(scope -> {
+            scope.setTag("server", Bukkit.getName() + " " + Bukkit.getMinecraftVersion());
+            scope.setTag("java", System.getProperty("java.version"));
+            scope.setTag("network_mode", lower(plugin.getNetworkManager().getMode().name()));
+            scope.setTag("game_types", usedGameTypes());
+        });
+        // errors of the plugin are logged by the server (event handlers, tasks) or the plugin itself (Debug)
+        this.handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (shouldReport(record)) report(record.getThrown());
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        Bukkit.getLogger().addHandler(handler);
+        // the same error from both loggers is only reported once (signature)
+        plugin.getLogger().addHandler(handler);
+        Debug.info("Anonymous error reports are sent to Sentry to find bugs (disable: sentry.enabled in config.yml)");
+    }
+
+    /**
+     * @return true if the record is an error of the plugin that hasn't been reported yet (Debug.warn with an exception)
+     */
+    boolean shouldReport(LogRecord record) {
+        Throwable thrown = record.getThrown();
+        if (thrown == null || record.getLevel().intValue() < Level.WARNING.intValue() || !isOwnError(thrown)) return false;
+        // every error once, and not too many
+        String signature = signature(thrown);
+        synchronized (reported) {
+            return reported.size() < MAX_REPORTS && reported.add(signature);
+        }
+    }
+
+    /**
+     * sends the error with the settings of the server (config.yml, loot.yml) unless sentry.include-config is false
+     */
+    private void report(Throwable thrown) {
+        Hint hint = new Hint();
+        if (config().getBoolean("sentry.include-config")) {
+            attach(hint, "config.yml", plugin.getFileManager().getConfigFile());
+            attach(hint, "loot.yml", plugin.getFileManager().getLootFile());
+        }
+        Sentry.captureException(thrown, hint);
+    }
+
+    private static void attach(Hint hint, String name, @Nullable PluginFile file) {
+        if (file == null) return;
+        try {
+            byte[] content = redact(file.getData()).getBytes(StandardCharsets.UTF_8);
+            hint.addAttachment(new Attachment(content, name, "text/yaml"));
+        } catch (RuntimeException exception) {
+            // the report itself is more important than the settings
+            Debug.info("Couldn't attach " + name + " to the error report: " + exception);
+        }
+    }
+
+    /**
+     * @return the settings as YAML without comments, without passwords, webhooks, addresses, uuids and the names of
+     * online players
+     */
+    static String redact(ConfigurationSection data) {
+        YamlConfiguration copy = new YamlConfiguration();
+        for (String key : data.getKeys(true)) {
+            Object value = data.get(key);
+            if (value instanceof ConfigurationSection) continue;
+            copy.set(key, redact(key, value));
+        }
+        return copy.saveToString();
+    }
+
+    private static Object redact(String key, Object value) {
+        if (value instanceof String text) {
+            if (text.isBlank()) return text;
+            return SECRET_KEY.matcher(key.substring(key.lastIndexOf('.') + 1)).matches()
+                    || SECRET_VALUE.matcher(text).matches() ? REDACTED : anonymize(text);
+        }
+        if (value instanceof List<?> list) {
+            List<Object> values = new ArrayList<>();
+            for (Object element : list) values.add(redact(key, element));
+            return values;
+        }
+        // the entries of a list of sections (network.servers: name + address)
+        if (value instanceof Map<?, ?> map) {
+            Map<Object, Object> values = new LinkedHashMap<>();
+            map.forEach((entryKey, entry) -> values.put(entryKey, redact(String.valueOf(entryKey), entry)));
+            return values;
+        }
+        return value;
+    }
+
+    /**
+     * @return true if SurvivalGames is in the stack trace (not its bundled libraries)
+     */
+    static boolean isOwnError(Throwable thrown) {
+        for (Throwable cause = thrown; cause != null; cause = cause.getCause()) {
+            for (StackTraceElement element : cause.getStackTrace()) {
+                String className = element.getClassName();
+                if (className.startsWith(PACKAGE) && !className.startsWith(PACKAGE + "libs.")) return true;
+            }
+            if (cause.getCause() == cause) break;
+        }
+        return false;
+    }
+
+    /**
+     * @return the type and the first line of the plugin in the stack trace
+     */
+    static String signature(Throwable thrown) {
+        for (StackTraceElement element : thrown.getStackTrace()) {
+            if (element.getClassName().startsWith(PACKAGE)) return thrown.getClass().getName() + "@" + element;
+        }
+        return thrown.getClass().getName();
+    }
+
+    /**
+     * removes everything that could identify the server or its players
+     */
+    SentryEvent minimize(SentryEvent event) {
+        event.setUser(null);
+        event.setServerName(null);
+        if (event.getExceptions() != null) {
+            for (SentryException exception : event.getExceptions()) {
+                if (exception.getValue() != null) exception.setValue(anonymize(exception.getValue()));
+            }
+        }
+        if (event.getMessage() != null && event.getMessage().getFormatted() != null) {
+            event.getMessage().setFormatted(anonymize(event.getMessage().getFormatted()));
+        }
+        return event;
+    }
+
+    /**
+     * @return the text without uuids and names of online players
+     */
+    static String anonymize(String text) {
+        String result = UUID_PATTERN.matcher(text).replaceAll("<uuid>");
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            result = result.replace(player.getName(), "<player>");
+        }
+        return result;
+    }
+
+    /**
+     * /sg debug sentry: checks that error reports arrive
+     *
+     * @return false if error reports are disabled
+     */
+    public boolean sendTestReport() {
+        if (!Sentry.isEnabled()) return false;
+        report(new IllegalStateException("Test report of /sg debug sentry"));
+        Sentry.flush(5000);
+        return true;
+    }
+
+    public void stop() {
+        if (handler != null) {
+            Bukkit.getLogger().removeHandler(handler);
+            plugin.getLogger().removeHandler(handler);
+            handler = null;
+        }
+        if (Sentry.isEnabled()) Sentry.close();
     }
 
     // ---------------------------------------------------------------- events

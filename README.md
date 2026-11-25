@@ -52,6 +52,9 @@ one game per server in a network behind Velocity/BungeeCord.
 - Anonymous statistics with [bStats](https://bstats.org/plugin/bukkit/SurvivalGames-Varo/34655) (servers, players,
   versions, settings and how often games and features are used, no names), turned off with `enabled: false` in
   `plugins/bStats/config.yml`
+- Anonymous error reports to [Sentry](https://sentry.io) (only errors of SurvivalGames, without player names or the
+  address of the server), turned off with `sentry.enabled: false`; see
+  [Privacy](https://itsthechris07.github.io/SurvivalGames/privacy/)
 - Replays: every round of Survival Games and every day of a Varo is recorded and can be watched again in a copy of the
   map (`/sg replay`): pause, speed, jumps and the view of every player, without a client mod
 - Rewards (money and console commands), bounties, fireworks, the inventory of the killer after a death

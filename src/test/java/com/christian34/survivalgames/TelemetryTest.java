@@ -3,15 +3,26 @@ package com.christian34.survivalgames;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameType;
+import io.sentry.SentryEvent;
+import io.sentry.protocol.Message;
+import io.sentry.protocol.SentryException;
+import io.sentry.protocol.User;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The anonymous statistics of bStats: what the charts get.
+ * The anonymous statistics of bStats: what the charts get. Error reports only contain errors of SurvivalGames and
+ * nothing about the server or its players.
  *
  * @author Christian34
  */
@@ -102,6 +113,145 @@ class TelemetryTest extends PluginTestBase {
         assertEquals("1-3 days", Telemetry.dayBucket(1));
         assertEquals("8-14 days", Telemetry.dayBucket(14));
         assertEquals("30+ min", Telemetry.minuteBucket(30));
+    }
+
+    // ---------------------------------------------------------------- error reports
+
+    private static Throwable thrownAt(String className) {
+        RuntimeException exception = new RuntimeException("test");
+        exception.setStackTrace(new StackTraceElement[]{
+                new StackTraceElement(className, "run", "Test.java", 1),
+                new StackTraceElement("org.bukkit.Server", "tick", "Server.java", 2)});
+        return exception;
+    }
+
+    @Test
+    void testsSendNothing() {
+        assertTrue(UpdateChecker.isOffline(), "the tests must not send statistics or error reports");
+    }
+
+    @Test
+    void onlyOwnErrorsAreReported() {
+        assertTrue(Telemetry.isOwnError(thrownAt("com.christian34.survivalgames.game.Game")));
+        assertFalse(Telemetry.isOwnError(thrownAt("com.example.OtherPlugin")));
+        assertFalse(Telemetry.isOwnError(thrownAt("com.christian34.survivalgames.libs.cloud.CommandManager")),
+                "errors of the bundled libraries alone aren't ours");
+        // the cause counts too
+        RuntimeException wrapped = new RuntimeException("wrapper", thrownAt("com.christian34.survivalgames.game.Game"));
+        wrapped.setStackTrace(new StackTraceElement[]{new StackTraceElement("org.bukkit.Server", "tick", "Server.java", 1)});
+        assertTrue(Telemetry.isOwnError(wrapped));
+    }
+
+    @Test
+    void sameErrorHasSameSignature() {
+        Throwable first = thrownAt("com.christian34.survivalgames.game.Game");
+        Throwable second = thrownAt("com.christian34.survivalgames.game.Game");
+        assertEquals(Telemetry.signature(first), Telemetry.signature(second));
+        assertNotEquals(Telemetry.signature(first), Telemetry.signature(thrownAt("com.christian34.survivalgames.game.VaroGame")));
+    }
+
+    @Test
+    void playersAndUuidsAreRemoved() {
+        PlayerMock steve = addPlayer("Steve");
+        String text = "Couldn't teleport Steve (" + steve.getUniqueId() + ")";
+        assertEquals("Couldn't teleport <player> (<uuid>)", Telemetry.anonymize(text));
+    }
+
+    @Test
+    void eventsAreMinimized() {
+        PlayerMock steve = addPlayer("Steve");
+        SentryEvent event = new SentryEvent();
+        User user = new User();
+        user.setIpAddress("1.2.3.4");
+        event.setUser(user);
+        event.setServerName("my-server.example.com");
+        SentryException exception = new SentryException();
+        exception.setValue("Steve has no team");
+        event.setExceptions(List.of(exception));
+        Message message = new Message();
+        message.setFormatted("player " + steve.getUniqueId());
+        event.setMessage(message);
+
+        SentryEvent minimized = new Telemetry(plugin).minimize(event);
+        assertNull(minimized.getUser());
+        assertNull(minimized.getServerName());
+        assertEquals("<player> has no team", minimized.getExceptions().getFirst().getValue());
+        assertEquals("player <uuid>", minimized.getMessage().getFormatted());
+    }
+
+    @Test
+    void debugErrorsReachTheReportHandler() {
+        // Telemetry listens on the plugin's logger, Debug must log there (printStackTrace would bypass it)
+        List<LogRecord> records = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        plugin.getLogger().addHandler(handler);
+        try {
+            Debug.warn("Couldn't do something", new IllegalStateException("test"));
+            Debug.warn("Expected problem");
+        } finally {
+            plugin.getLogger().removeHandler(handler);
+        }
+        assertEquals(2, records.size());
+        Telemetry telemetry = new Telemetry(plugin);
+        assertTrue(telemetry.shouldReport(records.get(0)));
+        assertFalse(telemetry.shouldReport(records.get(0)), "every error is reported once");
+        assertFalse(telemetry.shouldReport(records.get(1)), "warnings without an exception aren't reported");
+    }
+
+    @Test
+    void attachedConfigHasNoSecrets() {
+        PlayerMock steve = addPlayer("Steve");
+        YamlConfiguration data = new YamlConfiguration();
+        data.set("stats.mysql.url", "jdbc:mysql://db.example.com:3306/minecraft");
+        data.set("stats.mysql.user", "minecraft");
+        data.set("stats.mysql.password", "hunter2");
+        data.set("discord.webhook-url", "https://discord.com/api/webhooks/1/abc");
+        data.set("discord.username", "");
+        data.set("network.servers.sg1.address", "10.0.0.5:25566");
+        data.set("network.lobby", "play.example.com:25565");
+        data.set("varo.play-time", 15);
+        data.set("varo.strikes", List.of("warning", "Steve was here"));
+        data.set("language", "de");
+        data.set("modules.equip.enabled", true);
+        data.set("owner", steve.getUniqueId().toString());
+
+        YamlConfiguration redacted = YamlConfiguration.loadConfiguration(new StringReader(Telemetry.redact(data)));
+        for (String key : List.of("stats.mysql.url", "stats.mysql.user", "stats.mysql.password", "discord.webhook-url",
+                "network.servers.sg1.address")) {
+            assertEquals(Telemetry.REDACTED, redacted.getString(key), key);
+        }
+        assertEquals(Telemetry.REDACTED, redacted.getString("network.lobby"), "addresses under any key");
+        assertEquals("", redacted.getString("discord.username"), "empty values show that nothing is set");
+        assertEquals(15, redacted.getInt("varo.play-time"));
+        assertEquals(List.of("warning", "<player> was here"), redacted.getStringList("varo.strikes"));
+        assertEquals("de", redacted.getString("language"));
+        assertTrue(redacted.getBoolean("modules.equip.enabled"));
+        assertEquals("<uuid>", redacted.getString("owner"));
+    }
+
+    @Test
+    void defaultConfigHasNoSecretsLeft() {
+        String redacted = Telemetry.redact(plugin.getFileManager().getConfigFile().getData());
+        assertFalse(redacted.contains("localhost"), redacted);
+        assertTrue(redacted.contains("sentry:"), "the settings are there");
+    }
+
+    @Test
+    void testsDontStartSentry() {
+        assertFalse(plugin.getTelemetry().sendTestReport(), "/sg debug sentry sends nothing in the tests");
     }
 
 }

@@ -124,6 +124,7 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | `/sg season end [--confirm]` | ends the [season](configuration.md#seasons): keeps the best players, runs their rewards and resets the statistics |
 | `/sg reload` | reloads `config.yml`, `loot.yml` and the messages |
 | `/sg debug` | debug information |
+| `/sg debug sentry` | sends a test error report to Sentry (see [Privacy](privacy.md)) |
 
 ## Permissions
 
