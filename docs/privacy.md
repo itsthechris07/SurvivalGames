@@ -33,7 +33,8 @@ To understand how an error came about, a report also contains:
 - the system: operating system, CPU cores, Java vendor and version, maximum memory.
 
 If the code of SurvivalGames blocks the server thread for a second or longer (`sentry.lag-threshold`), a report shows
-where it hangs, with the same information.
+where it hangs, with the same information and how much of that time the server spent in SurvivalGames and in garbage
+collection. Stalls that are mostly caused by other plugins, the server or a lack of memory are not reported.
 
 `/sg report <text>` sends your description of a problem with the same information and links it to the last error
 report of the server.

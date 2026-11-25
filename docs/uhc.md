@@ -16,7 +16,9 @@ into the center. The last one standing wins, then the next round starts in a new
 The arena gets a generated world (a new one every round, `--seed <seed>` for always the same one). With
 `--map <map>` or `--world <world>` UHC is played on a map instead. No spawn points are needed, only a lobby (the
 [lobby world](getting-started.md#the-lobby-world) or `/sg arena uhc1 lobby`). The center of the world border is the spawn of
-the world unless the arena has its own center.
+the world unless the arena has its own center. The plugin chooses the spawn of a generated world (the land closest to
+0,0, by its biomes) instead of the server, whose search generates chunks while the server waits: so a new round doesn't
+freeze the server for seconds.
 
 The lobby, countdowns, join signs, NPCs, teams, spectators, statistics and replays work like in
 [Survival Games](survival-games.md).

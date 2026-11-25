@@ -140,6 +140,14 @@ public class Telemetry {
      * a lag report is sent at the latest after the server thread is blocked this long
      */
     static final long LAG_REPORT_AFTER = 10_000;
+    /**
+     * the server thread is sampled from this many milliseconds of a stall on (a stall of 1 s gets about 8 samples)
+     */
+    static final long SAMPLE_AFTER = 200;
+    /**
+     * at most this many samples of one stall
+     */
+    static final int MAX_SAMPLES = 100;
     private static final Pattern SG_COMMAND = Pattern.compile("(?is)/?(survivalgames:)?(sg|survivalgames|varo)(\\s+(\\S+).*)?");
     private final AtomicInteger lagReports = new AtomicInteger();
     /**
@@ -238,7 +246,6 @@ public class Telemetry {
         if (!Sentry.isEnabled()) return;
         Sentry.configureScope(scope -> {
             scope.setTag("network_mode", lower(plugin.getNetworkManager().getMode().name()));
-            scope.setTag("game_types", usedGameTypes());
         });
         breadcrumb("plugin", "started");
     }
@@ -380,11 +387,15 @@ public class Telemetry {
      * sends the error with the settings of the server (config.yml, loot.yml) unless sentry.include-config is false
      */
     private void report(Throwable thrown) {
-        report(thrown, SentryLevel.ERROR, CURRENT_GAME.get());
+        report(thrown, SentryLevel.ERROR, CURRENT_GAME.get(), null);
     }
 
-    private void report(Throwable thrown, SentryLevel level, @Nullable Game game) {
+    /**
+     * @param lag details of a blocked server thread (null: an error)
+     */
+    private void report(Throwable thrown, SentryLevel level, @Nullable Game game, @Nullable Map<String, Object> lag) {
         Hint hint = settings();
+        String gameTypes = gameTypesNow();
         Map<String, Object> state = serverState();
         Map<String, Object> games = gamesContext();
         Map<String, Object> server = serverInfo();
@@ -394,6 +405,9 @@ public class Telemetry {
             scope.setLevel(level);
             // errors while the plugin is enabled (loading arenas, games) or after
             scope.setTag("plugin_phase", started ? "running" : "startup");
+            // now, not when the server started (arenas are created later)
+            scope.setTag("game_types", gameTypes);
+            if (lag != null) scope.setContexts("lag", lag);
             // the numbers in the report, the groups as tags to filter by (e.g. only on full servers)
             scope.setContexts("server state", state);
             if (state.get("players_online") instanceof Integer players) scope.setTag("players", countBucket(players));
@@ -421,6 +435,17 @@ public class Telemetry {
             attach(hint, "loot.yml", plugin.getFileManager().getLootFile());
         }
         return hint;
+    }
+
+    /**
+     * @return the game types the server has arenas for, "unknown" while the arenas are loaded
+     */
+    private String gameTypesNow() {
+        try {
+            return plugin.getArenaManager() == null ? "unknown" : usedGameTypes();
+        } catch (RuntimeException exception) {
+            return "unknown";
+        }
     }
 
     /**
@@ -606,9 +631,12 @@ public class Telemetry {
     }
 
     private void watch(Thread main, long threshold) {
+        // the server thread is sampled every 100 ms while it is blocked, so the report shows where it spent the time
+        long sampleAfter = Math.min(SAMPLE_AFTER, threshold / 2);
         long stalledTick = 0;
         long blocked = 0;
-        StackTraceElement[] sample = null;
+        long gcBefore = 0;
+        List<StackTraceElement[]> samples = new ArrayList<>();
         boolean sent = false;
         while (!Thread.currentThread().isInterrupted()) {
             try {
@@ -619,48 +647,110 @@ public class Telemetry {
             long last = lastTick;
             if (last == 0 || Bukkit.isStopping()) continue;
             long millis = (System.nanoTime() - last) / 1_000_000;
-            if (millis >= threshold) {
+            if (millis >= sampleAfter) {
                 if (stalledTick != last) {
                     // a new stall
                     stalledTick = last;
-                    sample = null;
+                    samples.clear();
                     sent = false;
+                    gcBefore = gcMillis();
                 }
                 blocked = millis;
-                // the first moment the plugin is in the stack (a freeze caused by others isn't reported)
-                if (sample == null) {
-                    StackTraceElement[] stack = main.getStackTrace();
-                    if (hasOwnFrame(stack)) sample = stack;
-                }
-                if (sample != null && !sent && millis >= LAG_REPORT_AFTER) {
+                if (samples.size() < MAX_SAMPLES) samples.add(main.getStackTrace());
+                if (!sent && millis >= LAG_REPORT_AFTER) {
                     sent = true;
-                    reportLag(sample, millis, true);
+                    reportLag(samples, millis, gcMillis() - gcBefore, true);
                 }
             } else if (stalledTick != 0) {
-                if (sample != null && !sent) reportLag(sample, blocked, false);
+                if (!sent && blocked >= threshold) reportLag(samples, blocked, gcMillis() - gcBefore, false);
                 stalledTick = 0;
-                sample = null;
+                samples.clear();
             }
         }
     }
 
-    static boolean hasOwnFrame(StackTraceElement[] stack) {
-        for (StackTraceElement element : stack) {
-            String className = element.getClassName();
-            if (className.startsWith(PACKAGE) && !className.startsWith(PACKAGE + "libs.")) return true;
+    /**
+     * @return the time the garbage collectors have needed since the JVM started
+     */
+    private static long gcMillis() {
+        long millis = 0;
+        for (var collector : ManagementFactory.getGarbageCollectorMXBeans()) {
+            millis += Math.max(0, collector.getCollectionTime());
         }
-        return false;
+        return millis;
     }
 
-    private void reportLag(StackTraceElement[] stack, long millis, boolean stillBlocked) {
-        ServerThreadBlocked lag = new ServerThreadBlocked(millis, stillBlocked, stack);
+    /**
+     * where the server thread was blocked by the plugin
+     *
+     * @param stack    a sample at that place
+     * @param frame    the topmost line of the plugin
+     * @param samples  all samples of the stall
+     * @param inPlugin the samples with the plugin in the stack
+     * @param atFrame  the samples at that line
+     */
+    record LagCulprit(StackTraceElement[] stack, String frame, int samples, int inPlugin, int atFrame) {
+    }
+
+    /**
+     * @return the line of the plugin the server thread spent most samples in, null if the plugin isn't in at least
+     * half of the samples (another plugin, the server itself, or a pause of the JVM)
+     */
+    @Nullable
+    static LagCulprit culprit(List<StackTraceElement[]> samples) {
+        Map<String, List<StackTraceElement[]>> byFrame = new LinkedHashMap<>();
+        int inPlugin = 0;
+        for (StackTraceElement[] stack : samples) {
+            StackTraceElement frame = ownFrame(stack);
+            if (frame == null) continue;
+            inPlugin++;
+            byFrame.computeIfAbsent(frame.toString(), key -> new ArrayList<>()).add(stack);
+        }
+        if (inPlugin == 0 || inPlugin * 2 < samples.size()) return null;
+        Map.Entry<String, List<StackTraceElement[]>> most = null;
+        for (Map.Entry<String, List<StackTraceElement[]>> entry : byFrame.entrySet()) {
+            if (most == null || entry.getValue().size() > most.getValue().size()) most = entry;
+        }
+        return new LagCulprit(most.getValue().getFirst(), most.getKey(), samples.size(), inPlugin,
+                most.getValue().size());
+    }
+
+    /**
+     * @return the topmost line of the plugin in the stack (not its bundled libraries)
+     */
+    @Nullable
+    private static StackTraceElement ownFrame(StackTraceElement[] stack) {
+        for (StackTraceElement element : stack) {
+            String className = element.getClassName();
+            if (className.startsWith(PACKAGE) && !className.startsWith(PACKAGE + "libs.")) return element;
+        }
+        return null;
+    }
+
+    static boolean hasOwnFrame(StackTraceElement[] stack) {
+        return ownFrame(stack) != null;
+    }
+
+    private void reportLag(List<StackTraceElement[]> samples, long millis, long gcMillis, boolean stillBlocked) {
+        LagCulprit culprit = culprit(samples);
+        // the JVM mostly collected garbage (too little memory): not caused by the plugin
+        if (culprit == null || gcMillis * 2 >= millis) return;
+        ServerThreadBlocked lag = new ServerThreadBlocked(millis, stillBlocked, culprit.stack());
         String signature = signature(lag);
         synchronized (reported) {
             if (lagReports.get() >= MAX_LAG_REPORTS || !reported.add(signature)) return;
         }
         lagReports.incrementAndGet();
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("blocked_ms", millis);
+        details.put("still_blocked", stillBlocked);
+        details.put("gc_ms", gcMillis);
+        details.put("samples", culprit.samples());
+        details.put("samples_in_plugin", culprit.inPlugin());
+        details.put("samples_at_line", culprit.atFrame());
+        details.put("line", culprit.frame());
         try {
-            report(lag, SentryLevel.WARNING, null);
+            report(lag, SentryLevel.WARNING, null, details);
         } catch (RuntimeException exception) {
             Debug.info("Couldn't report the lag: " + exception);
         }
@@ -694,7 +784,9 @@ public class Telemetry {
         Map<String, Object> games = gamesContext();
         Map<String, Object> server = serverInfo();
         Map<String, Object> plugins = pluginsContext();
+        String gameTypes = gameTypesNow();
         Sentry.feedback().capture(feedback, hint, scope -> {
+            scope.setTag("game_types", gameTypes);
             scope.setContexts("server state", state);
             scope.setContexts("games", games);
             scope.setContexts("server", server);

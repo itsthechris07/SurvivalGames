@@ -138,7 +138,8 @@ public class GameWorld {
     public World load() {
         if (world != null) return world;
         File worldFolder = getWorldFolder();
-        if (!exists() && !prepared) {
+        boolean fresh = !exists() && !prepared;
+        if (fresh) {
             FileManager.deleteDirectory(worldFolder);
             if (map != null && !copyMap(getMapData(map), worldFolder)) {
                 FileManager.deleteDirectory(worldFolder);
@@ -147,11 +148,15 @@ public class GameWorld {
         }
         WorldCreator creator = new WorldCreator(NamespacedKey.minecraft(worldName));
         if (seed != null) creator.seed(seed);
+        // a new generated world: the plugin chooses the spawn, the search of the server blocks it for seconds
+        VanillaGenerator generator = fresh && map == null ? new VanillaGenerator() : null;
+        if (generator != null) creator.generator(generator);
         World created = creator.createWorld();
         if (created == null) {
             if (!kept) FileManager.deleteDirectory(worldFolder);
             throw new IllegalStateException("Couldn't load world " + worldName + " (see the log above)");
         }
+        if (generator != null) generator.fixHeight(created);
         created.setAutoSave(kept);
         this.world = created;
         return created;

@@ -345,4 +345,34 @@ class TelemetryTest extends PluginTestBase {
         assertTrue(Telemetry.signature(lag).endsWith("Game.tick(Game.java:1)"));
     }
 
+    @Test
+    void lagsNameTheLineWithMostSamples() {
+        StackTraceElement server = new StackTraceElement("net.minecraft.server.MinecraftServer", "tick", "M.java", 1);
+        StackTraceElement tick = new StackTraceElement(Telemetry.PACKAGE + "game.Game", "tick", "Game.java", 1);
+        StackTraceElement load = new StackTraceElement(Telemetry.PACKAGE + "arena.GameWorld", "load", "GameWorld.java", 150);
+        StackTraceElement world = new StackTraceElement("org.bukkit.Bukkit", "createWorld", "Bukkit.java", 1);
+        List<StackTraceElement[]> samples = List.of(
+                new StackTraceElement[]{tick, server},
+                new StackTraceElement[]{world, load, server},
+                new StackTraceElement[]{world, load, server},
+                new StackTraceElement[]{server});
+        Telemetry.LagCulprit culprit = Telemetry.culprit(samples);
+        assertNotNull(culprit);
+        assertEquals(load.toString(), culprit.frame());
+        assertEquals(4, culprit.samples());
+        assertEquals(3, culprit.inPlugin());
+        assertEquals(2, culprit.atFrame());
+        assertSame(samples.get(1), culprit.stack());
+    }
+
+    @Test
+    void lagsMostlyOutsideThePluginAreNotReported() {
+        StackTraceElement server = new StackTraceElement("net.minecraft.server.MinecraftServer", "tick", "M.java", 1);
+        StackTraceElement member = new StackTraceElement(Telemetry.PACKAGE + "game.Game", "isMember", "Game.java", 274);
+        // e.g. the JVM linking a lambda for a moment during a long garbage collection
+        assertNull(Telemetry.culprit(List.of(new StackTraceElement[]{member, server}, new StackTraceElement[]{server},
+                new StackTraceElement[]{server})));
+        assertNull(Telemetry.culprit(List.of()));
+    }
+
 }
