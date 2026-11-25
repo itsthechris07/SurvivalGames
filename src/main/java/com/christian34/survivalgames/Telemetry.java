@@ -13,18 +13,31 @@ import io.sentry.Attachment;
 import io.sentry.Hint;
 import io.sentry.Sentry;
 import io.sentry.SentryEvent;
+import io.sentry.SentryLevel;
+import io.sentry.protocol.Feedback;
 import io.sentry.protocol.SentryException;
+import io.sentry.protocol.SentryId;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.AdvancedPie;
 import org.bstats.charts.DrilldownPie;
 import org.bstats.charts.SimplePie;
 import org.bstats.charts.SingleLineChart;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.server.ServerCommandEvent;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,8 +48,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -109,8 +124,41 @@ public class Telemetry {
      * the signatures of the errors reported since the server started
      */
     private final Set<String> reported = new HashSet<>();
+    /**
+     * the game whose tick is running on this thread (its error gets the game as context)
+     */
+    private static final ThreadLocal<Game> CURRENT_GAME = new ThreadLocal<>();
+    /**
+     * the last events of the plugin in an error report
+     */
+    static final int MAX_BREADCRUMBS = 30;
+    /**
+     * at most this many lag reports per server start (they are less important than errors)
+     */
+    static final int MAX_LAG_REPORTS = 5;
+    /**
+     * a lag report is sent at the latest after the server thread is blocked this long
+     */
+    static final long LAG_REPORT_AFTER = 10_000;
+    private static final Pattern SG_COMMAND = Pattern.compile("(?is)/?(survivalgames:)?(sg|survivalgames|varo)(\\s+(\\S+).*)?");
+    private final AtomicInteger lagReports = new AtomicInteger();
+    /**
+     * the plugin was loaded while the server was already running (/reload, PlugMan): a common cause of odd errors
+     */
+    private final boolean lateLoad;
+    private final long enabledAt = System.currentTimeMillis();
     @Nullable
     private Handler handler;
+    @Nullable
+    private Listener commandListener;
+    @Nullable
+    private BukkitTask tickTask;
+    @Nullable
+    private Thread watchdog;
+    /**
+     * System.nanoTime() of the last server tick (0: the server isn't ticking yet)
+     */
+    private volatile long lastTick;
 
     /**
      * something the players or admins do in a game
@@ -165,6 +213,14 @@ public class Telemetry {
 
     public Telemetry(SurvivalGames plugin) {
         this.plugin = plugin;
+        boolean late;
+        try {
+            // plugins are enabled before the first tick when the server starts
+            late = Bukkit.getCurrentTick() > 0;
+        } catch (RuntimeException exception) {
+            late = false;
+        }
+        this.lateLoad = late;
     }
 
     public void start() {
@@ -230,7 +286,14 @@ public class Telemetry {
             // is enabled here)
             options.setAttachServerName(false);
             options.setServerName(null);
-            options.setMaxBreadcrumbs(0);
+            // the last events of the plugin (games, eliminations, commands without arguments), without player names
+            options.setMaxBreadcrumbs(MAX_BREADCRUMBS);
+            options.setBeforeBreadcrumb((breadcrumb, hint) -> {
+                if (breadcrumb.getMessage() != null) breadcrumb.setMessage(anonymize(breadcrumb.getMessage()));
+                return breadcrumb;
+            });
+            options.addInAppInclude("com.christian34.survivalgames");
+            options.addInAppExclude(PACKAGE + "libs");
             // only what this plugin reports, not the errors of other plugins
             options.setEnableUncaughtExceptionHandler(false);
             options.setEnableShutdownHook(false);
@@ -239,13 +302,31 @@ public class Telemetry {
             options.setBeforeSend((event, hint) -> minimize(event));
             // -Dsg.sentry.debug=true: Sentry logs what it sends and what the server answers
             options.setDebug(Boolean.getBoolean("sg.sentry.debug"));
-        });
+            // global: the tags and breadcrumbs of the main thread are in the reports of every thread (async tasks,
+            // the watchdog); this copy of Sentry is relocated and only used by this plugin
+        }, true);
         Sentry.configureScope(scope -> {
             scope.setTag("server", Bukkit.getName() + " " + Bukkit.getMinecraftVersion());
             scope.setTag("java", System.getProperty("java.version"));
             scope.setTag("network_mode", lower(plugin.getNetworkManager().getMode().name()));
             scope.setTag("game_types", usedGameTypes());
+            scope.setTag("late_load", String.valueOf(lateLoad));
+            scope.setContexts("system", systemInfo());
         });
+        breadcrumb("plugin", lateLoad ? "enabled while the server was running (/reload or a plugin manager)" : "enabled");
+        this.commandListener = new Listener() {
+            @EventHandler(priority = EventPriority.MONITOR)
+            public void onCommand(PlayerCommandPreprocessEvent event) {
+                commandUsed(event.getMessage());
+            }
+
+            @EventHandler(priority = EventPriority.MONITOR)
+            public void onCommand(ServerCommandEvent event) {
+                commandUsed(event.getCommand());
+            }
+        };
+        Bukkit.getPluginManager().registerEvents(commandListener, plugin);
+        startWatchdog();
         // errors of the plugin are logged by the server (event handlers, tasks) or the plugin itself (Debug)
         this.handler = new Handler() {
             @Override
@@ -284,12 +365,385 @@ public class Telemetry {
      * sends the error with the settings of the server (config.yml, loot.yml) unless sentry.include-config is false
      */
     private void report(Throwable thrown) {
+        report(thrown, SentryLevel.ERROR, CURRENT_GAME.get());
+    }
+
+    private void report(Throwable thrown, SentryLevel level, @Nullable Game game) {
+        Hint hint = settings();
+        Map<String, Object> state = serverState();
+        Map<String, Object> games = gamesContext();
+        Map<String, Object> server = serverInfo();
+        Map<String, Object> plugins = pluginsContext();
+        Map<String, Object> gameContext = game == null ? null : gameContext(game);
+        Sentry.captureException(thrown, hint, scope -> {
+            scope.setLevel(level);
+            // the numbers in the report, the groups as tags to filter by (e.g. only on full servers)
+            scope.setContexts("server state", state);
+            if (state.get("players_online") instanceof Integer players) scope.setTag("players", countBucket(players));
+            if (state.get("running_games") instanceof Integer running) scope.setTag("running_games", countBucket(running));
+            if (state.get("tps") instanceof Double tps) scope.setTag("tps", tpsBucket(tps));
+            scope.setContexts("games", games);
+            scope.setContexts("server", server);
+            scope.setContexts("plugins", plugins);
+            if (gameContext != null) {
+                // the game whose tick failed
+                scope.setContexts("game", gameContext);
+                scope.setTag("game_type", game.getType().getKey());
+                scope.setTag("game_state", String.valueOf(gameContext.get("phase")));
+            }
+        });
+    }
+
+    /**
+     * @return config.yml and loot.yml as attachments, unless sentry.include-config is false
+     */
+    private Hint settings() {
         Hint hint = new Hint();
         if (config().getBoolean("sentry.include-config")) {
             attach(hint, "config.yml", plugin.getFileManager().getConfigFile());
             attach(hint, "loot.yml", plugin.getFileManager().getLootFile());
         }
-        Sentry.captureException(thrown, hint);
+        return hint;
+    }
+
+    /**
+     * runs the action (logging an error) with the game as context of the error report
+     */
+    public static void inGame(Game game, Runnable action) {
+        Game previous = CURRENT_GAME.get();
+        CURRENT_GAME.set(game);
+        try {
+            action.run();
+        } finally {
+            if (previous == null) CURRENT_GAME.remove();
+            else CURRENT_GAME.set(previous);
+        }
+    }
+
+    @Nullable
+    static Game currentGame() {
+        return CURRENT_GAME.get();
+    }
+
+    /**
+     * @return the game in detail: type, phase, time, players, teams (no player names)
+     */
+    static Map<String, Object> gameContext(Game game) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        put(context, "type", () -> game.getType().getKey());
+        put(context, "arena", () -> game.getArena().getName());
+        put(context, "phase", () -> phase(game));
+        put(context, "countdown", game::getCountdown);
+        put(context, "running_seconds", game::getRunningSeconds);
+        if (game instanceof VaroGame varo) put(context, "varo_day", varo::getDay);
+        put(context, "participants", () -> game.getParticipants().size());
+        put(context, "alive", () -> game.getAlive().size());
+        put(context, "players", () -> game.getPlayers().size());
+        put(context, "spectators", () -> game.getSpectators().size());
+        put(context, "teams", () -> game.getTeams().getTeams().size());
+        put(context, "alive_teams", () -> game.getAliveTeams().size());
+        put(context, "team_size", () -> game.getArena().getTeamSize());
+        put(context, "spawns", () -> game.getArena().getSpawnCount());
+        return context;
+    }
+
+    /**
+     * @return every game in one line (at most 20)
+     */
+    Map<String, Object> gamesContext() {
+        Map<String, Object> context = new TreeMap<>();
+        put(context, "count", () -> plugin.getGameManager().getGames().size());
+        try {
+            plugin.getGameManager().getGames().stream().limit(20).forEach(game -> {
+                Map<String, Object> details = gameContext(game);
+                context.put(details.get("type") + " " + details.get("arena"), details.get("phase") + ", "
+                        + details.get("running_seconds") + " s"
+                        + (details.containsKey("varo_day") ? ", day " + details.get("varo_day") : "")
+                        + ", " + details.get("alive") + "/" + details.get("participants") + " alive, "
+                        + details.get("spectators") + " spectators, team size " + details.get("team_size"));
+            });
+        } catch (RuntimeException exception) {
+            // a game list changed by another thread
+        }
+        return context;
+    }
+
+    private static String phase(Game game) {
+        return game instanceof SurvivalGame survivalGame && survivalGame.isDeathmatch()
+                && game.getState() == GameState.RUNNING ? "deathmatch" : lower(game.getState().name());
+    }
+
+    /**
+     * @return the other plugins and their versions (conflicts, outdated dependencies)
+     */
+    static Map<String, Object> pluginsContext() {
+        Map<String, Object> context = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        try {
+            for (Plugin other : Bukkit.getPluginManager().getPlugins()) {
+                String version = other.getPluginMeta().getVersion();
+                context.put(other.getName(), other.isEnabled() ? version : version + " (disabled)");
+            }
+        } catch (RuntimeException exception) {
+            // not every server implements the plugin meta
+        }
+        return context;
+    }
+
+    /**
+     * @return the exact build of the server, its settings that matter for errors and how long it has been running
+     */
+    Map<String, Object> serverInfo() {
+        Map<String, Object> context = new LinkedHashMap<>();
+        put(context, "version", Bukkit::getVersion);
+        put(context, "bukkit_version", Bukkit::getBukkitVersion);
+        put(context, "late_load", () -> lateLoad);
+        put(context, "uptime_minutes", () -> ManagementFactory.getRuntimeMXBean().getUptime() / 60_000);
+        put(context, "plugin_uptime_minutes", () -> (System.currentTimeMillis() - enabledAt) / 60_000);
+        put(context, "online_mode", Bukkit::getOnlineMode);
+        put(context, "max_players", Bukkit::getMaxPlayers);
+        put(context, "view_distance", Bukkit::getViewDistance);
+        put(context, "simulation_distance", Bukkit::getSimulationDistance);
+        put(context, "language", () -> config().getString("language"));
+        put(context, "stats_storage", () -> config().getBoolean("stats.enabled")
+                ? lower(config().getString("stats.storage")) : "disabled");
+        return context;
+    }
+
+    /**
+     * @return the machine: operating system, CPU cores, Java
+     */
+    static Map<String, Object> systemInfo() {
+        Map<String, Object> context = new LinkedHashMap<>();
+        put(context, "os", () -> System.getProperty("os.name") + " " + System.getProperty("os.version"));
+        put(context, "arch", () -> System.getProperty("os.arch"));
+        put(context, "cpu_cores", () -> Runtime.getRuntime().availableProcessors());
+        // the version is in the tag java (Sentry would remove "25.0.5.1" here as an IP address)
+        put(context, "java_vendor", () -> System.getProperty("java.vendor"));
+        put(context, "java_vm", () -> System.getProperty("java.vm.name"));
+        put(context, "memory_max_mb", () -> Runtime.getRuntime().maxMemory() / (1024 * 1024));
+        return context;
+    }
+
+    // ---------------------------------------------------------------- breadcrumbs
+
+    /**
+     * remembers an event for the next error report (nothing if error reports are disabled)
+     *
+     * @param category e.g. game, command, feature
+     */
+    public void breadcrumb(String category, String message) {
+        if (!Sentry.isEnabled()) return;
+        try {
+            Sentry.addBreadcrumb(message, category);
+        } catch (RuntimeException exception) {
+            // never more important than what the plugin does
+        }
+    }
+
+    /**
+     * a game changed its state
+     */
+    public void gameState(Game game, GameState state) {
+        breadcrumb("game", game.getType().getKey() + " '" + game.getArena().getName() + "': " + lower(state.name()));
+    }
+
+    /**
+     * a participant is out
+     */
+    public void eliminated(Game game) {
+        breadcrumb("game", game.getType().getKey() + " '" + game.getArena().getName() + "': a player is out, "
+                + game.getAlive().size() + " alive");
+    }
+
+    /**
+     * a command of the plugin: only its first word (e.g. "sg join"), never the arguments
+     */
+    void commandUsed(String line) {
+        String command = sgCommand(line);
+        if (command != null) breadcrumb("command", command);
+    }
+
+    @Nullable
+    static String sgCommand(String line) {
+        var matcher = SG_COMMAND.matcher(line.trim());
+        if (!matcher.matches()) return null;
+        String sub = matcher.group(4);
+        return sub == null ? "sg" : "sg " + sub.toLowerCase(Locale.ROOT);
+    }
+
+    // ---------------------------------------------------------------- lag watchdog
+
+    /**
+     * a separate thread notices when the server thread is blocked (sentry.lag-threshold milliseconds) by the code of
+     * the plugin, and reports where it hangs (lag spikes, freezes); 0 turns it off
+     */
+    private void startWatchdog() {
+        long threshold = config().getInt("sentry.lag-threshold");
+        if (threshold <= 0 || !Bukkit.isPrimaryThread()) return;
+        Thread main = Thread.currentThread();
+        this.tickTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> lastTick = System.nanoTime(), 1, 1);
+        Thread thread = new Thread(() -> watch(main, threshold), "SurvivalGames Watchdog");
+        thread.setDaemon(true);
+        thread.start();
+        this.watchdog = thread;
+    }
+
+    private void watch(Thread main, long threshold) {
+        long stalledTick = 0;
+        long blocked = 0;
+        StackTraceElement[] sample = null;
+        boolean sent = false;
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException exception) {
+                return;
+            }
+            long last = lastTick;
+            if (last == 0 || Bukkit.isStopping()) continue;
+            long millis = (System.nanoTime() - last) / 1_000_000;
+            if (millis >= threshold) {
+                if (stalledTick != last) {
+                    // a new stall
+                    stalledTick = last;
+                    sample = null;
+                    sent = false;
+                }
+                blocked = millis;
+                // the first moment the plugin is in the stack (a freeze caused by others isn't reported)
+                if (sample == null) {
+                    StackTraceElement[] stack = main.getStackTrace();
+                    if (hasOwnFrame(stack)) sample = stack;
+                }
+                if (sample != null && !sent && millis >= LAG_REPORT_AFTER) {
+                    sent = true;
+                    reportLag(sample, millis, true);
+                }
+            } else if (stalledTick != 0) {
+                if (sample != null && !sent) reportLag(sample, blocked, false);
+                stalledTick = 0;
+                sample = null;
+            }
+        }
+    }
+
+    static boolean hasOwnFrame(StackTraceElement[] stack) {
+        for (StackTraceElement element : stack) {
+            String className = element.getClassName();
+            if (className.startsWith(PACKAGE) && !className.startsWith(PACKAGE + "libs.")) return true;
+        }
+        return false;
+    }
+
+    private void reportLag(StackTraceElement[] stack, long millis, boolean stillBlocked) {
+        ServerThreadBlocked lag = new ServerThreadBlocked(millis, stillBlocked, stack);
+        String signature = signature(lag);
+        synchronized (reported) {
+            if (lagReports.get() >= MAX_LAG_REPORTS || !reported.add(signature)) return;
+        }
+        lagReports.incrementAndGet();
+        try {
+            report(lag, SentryLevel.WARNING, null);
+        } catch (RuntimeException exception) {
+            Debug.info("Couldn't report the lag: " + exception);
+        }
+    }
+
+    /**
+     * the server thread was blocked by the plugin, the stack trace shows where
+     */
+    static class ServerThreadBlocked extends RuntimeException {
+        ServerThreadBlocked(long millis, boolean stillBlocked, StackTraceElement[] stack) {
+            super("The server thread was blocked for " + millis + " ms" + (stillBlocked ? " (and still is)" : ""),
+                    null, false, true);
+            setStackTrace(stack);
+        }
+    }
+
+    // ---------------------------------------------------------------- feedback
+
+    /**
+     * /sg report: a description of a problem from an admin, linked to the last error report
+     *
+     * @return false if error reports are disabled
+     */
+    public boolean sendFeedback(String text) {
+        if (!Sentry.isEnabled()) return false;
+        Feedback feedback = new Feedback(anonymize(text));
+        SentryId lastError = Sentry.getLastEventId();
+        if (lastError != null && !SentryId.EMPTY_ID.equals(lastError)) feedback.setAssociatedEventId(lastError);
+        Hint hint = settings();
+        Map<String, Object> state = serverState();
+        Map<String, Object> games = gamesContext();
+        Map<String, Object> server = serverInfo();
+        Map<String, Object> plugins = pluginsContext();
+        Sentry.feedback().capture(feedback, hint, scope -> {
+            scope.setContexts("server state", state);
+            scope.setContexts("games", games);
+            scope.setContexts("server", server);
+            scope.setContexts("plugins", plugins);
+        });
+        Sentry.flush(5000);
+        return true;
+    }
+
+    /**
+     * @return the load of the server when the error happened: players, games, TPS/MSPT, memory, worlds (numbers only,
+     * every value on its own, so one that can't be read doesn't cost the others)
+     */
+    Map<String, Object> serverState() {
+        Map<String, Object> state = new LinkedHashMap<>();
+        put(state, "players_online", () -> Bukkit.getOnlinePlayers().size());
+        put(state, "players_in_games", () -> plugin.getGameManager().getGames().stream()
+                .mapToInt(game -> game.getPlayers().size()).sum());
+        put(state, "spectators", () -> plugin.getGameManager().getGames().stream()
+                .mapToInt(game -> game.getSpectators().size()).sum());
+        put(state, "running_games", () -> (int) plugin.getGameManager().getGames().stream()
+                .filter(game -> game.getState() == GameState.RUNNING).count());
+        put(state, "games", () -> {
+            // e.g. "survival-games running": 2, "survival-games deathmatch": 1, "varo lobby": 1
+            Map<String, Integer> games = new TreeMap<>();
+            for (Game game : plugin.getGameManager().getGames()) {
+                games.merge(game.getType().getKey() + " " + phase(game), 1, Integer::sum);
+            }
+            return games;
+        });
+        put(state, "tps", () -> Math.round(Bukkit.getTPS()[0] * 10) / 10.0);
+        put(state, "mspt", () -> Math.round(Bukkit.getAverageTickTime() * 10) / 10.0);
+        Runtime runtime = Runtime.getRuntime();
+        put(state, "memory_used_mb", () -> (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024));
+        put(state, "memory_max_mb", () -> runtime.maxMemory() / (1024 * 1024));
+        put(state, "worlds", () -> Bukkit.getWorlds().size());
+        put(state, "loaded_chunks", () -> Bukkit.getWorlds().stream().mapToInt(World::getChunkCount).sum());
+        put(state, "entities", () -> Bukkit.getWorlds().stream().mapToInt(World::getEntityCount).sum());
+        put(state, "plugins", () -> Bukkit.getPluginManager().getPlugins().length);
+        return state;
+    }
+
+    private static void put(Map<String, Object> state, String key, Supplier<Object> value) {
+        try {
+            state.put(key, value.get());
+        } catch (RuntimeException exception) {
+            // e.g. a game list changed by another thread, or a server without the method
+        }
+    }
+
+    static String countBucket(int amount) {
+        if (amount <= 0) return "0";
+        if (amount <= 5) return "1-5";
+        if (amount <= 10) return "6-10";
+        if (amount <= 25) return "11-25";
+        if (amount <= 50) return "26-50";
+        if (amount <= 100) return "51-100";
+        return "100+";
+    }
+
+    static String tpsBucket(double tps) {
+        if (tps >= 19.5) return "19.5+";
+        if (tps >= 18) return "18-19.5";
+        if (tps >= 15) return "15-18";
+        if (tps >= 10) return "10-15";
+        return "< 10";
     }
 
     private static void attach(Hint hint, String name, @Nullable PluginFile file) {
@@ -402,6 +856,18 @@ public class Telemetry {
     }
 
     public void stop() {
+        if (watchdog != null) {
+            watchdog.interrupt();
+            watchdog = null;
+        }
+        if (tickTask != null) {
+            tickTask.cancel();
+            tickTask = null;
+        }
+        if (commandListener != null) {
+            HandlerList.unregisterAll(commandListener);
+            commandListener = null;
+        }
         if (handler != null) {
             Bukkit.getLogger().removeHandler(handler);
             plugin.getLogger().removeHandler(handler);
@@ -431,10 +897,12 @@ public class Telemetry {
 
     public void used(Feature feature) {
         count(features, feature.label);
+        breadcrumb("feature", feature.label);
     }
 
     public void joined(Join join) {
         count(joins, join.label);
+        breadcrumb("join", "a player joined a game (" + join.label + ")");
     }
 
     private static void count(Map<String, AtomicInteger> counters, String key) {

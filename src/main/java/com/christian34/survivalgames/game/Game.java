@@ -189,6 +189,7 @@ public abstract class Game {
 
     protected void setState(GameState state) {
         this.state = state;
+        plugin.getTelemetry().gameState(this, state);
     }
 
     public boolean isStopped() {
@@ -1259,7 +1260,7 @@ public abstract class Game {
                 plugin.getAlliances().check(this);
             }
         } catch (RuntimeException ex) {
-            Debug.warn("Error in the game of arena '" + arena.getName() + "'", ex);
+            Telemetry.inGame(this, () -> Debug.warn("Error in the game of arena '" + arena.getName() + "'", ex));
         }
     }
 
@@ -1335,6 +1336,7 @@ public abstract class Game {
         if (state != GameState.RUNNING || !participant.isAlive()) return;
         participant.setAlive(false);
         participant.setOut(++eliminations);
+        plugin.getTelemetry().eliminated(this);
         plugin.getStats().add(participant.getUuid(), participant.getName(), getType(), Stat.DEATHS);
         if (killer != null && killer != participant) {
             killer.addKill();

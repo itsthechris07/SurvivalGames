@@ -705,6 +705,7 @@ update_available: '<gray>Eine neue Version von SurvivalGames ist verfügbar: <re
 update_outdated: '<red>Verpasste Updates: <yellow>{0}<red>, das erste ist vor <yellow>{1} <red>Tagen erschienen - bitte aktualisieren!'
 sentry_report_sent: '<green>Ein Testfehler wurde an Sentry gesendet.'
 sentry_disabled: '<red>Fehlerberichte sind deaktiviert (sentry.enabled in der config.yml).'
+sentry_feedback_sent: '<green>Danke! Dein Bericht wurde an den Entwickler von SurvivalGames gesendet, zusammen mit dem letzten Fehler.'
 update_download: '<yellow>[Download]'
 update_download_hover: "<gray>Release auf GitHub öffnen\n<white>{0}"
 
@@ -839,6 +840,7 @@ command_build: 'schaltet den Baumodus ein oder aus'
 command_reload: 'lädt config.yml, loot.yml und die Nachrichten neu'
 command_debug: 'zeigt Debug-Informationen'
 command_debug_sentry: 'sendet einen Test-Fehlerbericht an Sentry'
+command_report: 'meldet ein Problem an den Entwickler (mit dem letzten Fehler)'
 command_team: 'öffnet das Team-Menü'
 command_team_list: 'listet alle Teams deines Spiels mit ihren Spielern auf'
 command_team_create: 'erstellt ein Team und tritt ihm bei'

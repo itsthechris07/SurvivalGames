@@ -250,6 +250,7 @@ public class SurvivalGames extends JavaPlugin {
      * (re)loads config.yml and the messages
      */
     public void reload() {
+        if (telemetry != null) telemetry.breadcrumb("plugin", "reload");
         fileManager.reloadConfig();
         loadTexts();
         stats.reload();

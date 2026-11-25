@@ -125,6 +125,7 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | `/sg reload` | reloads `config.yml`, `loot.yml` and the messages |
 | `/sg debug` | debug information |
 | `/sg debug sentry` | sends a test error report to Sentry (see [Privacy](privacy.md)) |
+| `/sg report <text>` | reports a problem to the developer, together with the last error and the state of the server (see [Privacy](privacy.md)) |
 
 ## Permissions
 

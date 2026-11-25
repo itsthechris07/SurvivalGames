@@ -250,8 +250,99 @@ class TelemetryTest extends PluginTestBase {
     }
 
     @Test
+    void reportsContainTheServerState() {
+        addPlayer("Steve");
+        addPlayer("Alex");
+        createGame("arena1", GameType.SURVIVAL_GAMES, 4);
+        Map<String, Object> state = plugin.getTelemetry().serverState();
+        assertEquals(2, state.get("players_online"));
+        assertEquals(0, state.get("running_games"));
+        assertEquals(Map.of("survival-games lobby", 1), state.get("games"));
+        assertTrue((Long) state.get("memory_max_mb") > 0);
+        assertTrue(state.containsKey("worlds"));
+    }
+
+    @Test
+    void stateIsGroupedForTags() {
+        assertEquals("0", Telemetry.countBucket(0));
+        assertEquals("1-5", Telemetry.countBucket(5));
+        assertEquals("11-25", Telemetry.countBucket(24));
+        assertEquals("100+", Telemetry.countBucket(150));
+        assertEquals("19.5+", Telemetry.tpsBucket(20.0));
+        assertEquals("15-18", Telemetry.tpsBucket(16.3));
+        assertEquals("< 10", Telemetry.tpsBucket(4.2));
+    }
+
+    @Test
     void testsDontStartSentry() {
         assertFalse(plugin.getTelemetry().sendTestReport(), "/sg debug sentry sends nothing in the tests");
+        assertFalse(plugin.getTelemetry().sendFeedback("The game doesn't start"), "/sg report neither");
+        // breadcrumbs without Sentry are ignored
+        plugin.getTelemetry().breadcrumb("test", "nothing happens");
+    }
+
+    @Test
+    void reportsContainTheGame() {
+        addPlayer("Steve");
+        Game game = createGame("arena1", GameType.SURVIVAL_GAMES, 4);
+        Map<String, Object> context = Telemetry.gameContext(game);
+        assertEquals("survival-games", context.get("type"));
+        assertEquals("arena1", context.get("arena"));
+        assertEquals("lobby", context.get("phase"));
+        assertEquals(0, context.get("running_seconds"));
+        assertTrue(context.containsKey("participants"));
+        assertTrue(context.containsKey("team_size"));
+        Map<String, Object> games = plugin.getTelemetry().gamesContext();
+        assertEquals(1, games.get("count"));
+        assertTrue(String.valueOf(games.get("survival-games arena1")).startsWith("lobby, 0 s"),
+                String.valueOf(games));
+    }
+
+    @Test
+    void errorsInAGameKnowTheGame() {
+        Game game = createGame("arena1", GameType.SURVIVAL_GAMES, 4);
+        List<Game> seen = new ArrayList<>();
+        Telemetry.inGame(game, () -> {
+            // the report handler runs on the same thread
+            seen.add(Telemetry.currentGame());
+            Telemetry.inGame(game, () -> { });
+            seen.add(Telemetry.currentGame());
+        });
+        assertEquals(List.of(game, game), seen);
+        assertNull(Telemetry.currentGame());
+    }
+
+    @Test
+    void reportsContainServerPluginsAndSystem() {
+        Map<String, Object> server = plugin.getTelemetry().serverInfo();
+        assertEquals(false, server.get("late_load"));
+        assertTrue(server.containsKey("version"));
+        assertTrue(server.containsKey("uptime_minutes"));
+        assertTrue(Telemetry.pluginsContext().containsKey("SurvivalGames"));
+        Map<String, Object> system = Telemetry.systemInfo();
+        assertTrue((Integer) system.get("cpu_cores") > 0);
+        assertEquals(System.getProperty("java.vendor"), system.get("java_vendor"));
+    }
+
+    @Test
+    void commandsWithoutArguments() {
+        assertEquals("sg join", Telemetry.sgCommand("/sg join arena1 Steve"));
+        assertEquals("sg admin", Telemetry.sgCommand("/survivalgames:SG ADMIN"));
+        assertEquals("sg", Telemetry.sgCommand("varo"));
+        assertNull(Telemetry.sgCommand("/sgx"));
+        assertNull(Telemetry.sgCommand("/msg Steve hi"));
+    }
+
+    @Test
+    void lagsAreOnlyReportedInOwnCode() {
+        StackTraceElement own = new StackTraceElement(Telemetry.PACKAGE + "game.Game", "tick", "Game.java", 1);
+        StackTraceElement library = new StackTraceElement(Telemetry.PACKAGE + "libs.sentry.Sentry", "x", "S.java", 1);
+        StackTraceElement server = new StackTraceElement("net.minecraft.server.MinecraftServer", "tick", "M.java", 1);
+        assertTrue(Telemetry.hasOwnFrame(new StackTraceElement[]{server, own}));
+        assertFalse(Telemetry.hasOwnFrame(new StackTraceElement[]{server, library}));
+        var lag = new Telemetry.ServerThreadBlocked(1500, false, new StackTraceElement[]{own, server});
+        assertEquals("The server thread was blocked for 1500 ms", lag.getMessage());
+        assertTrue(Telemetry.signature(lag).endsWith("Game.tick(Game.java:1)"));
     }
 
 }

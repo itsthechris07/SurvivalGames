@@ -597,10 +597,29 @@ public class CommandSurvivalGames {
     @CommandDescription("command_debug_sentry")
     @Permission(ADMIN)
     public void debugSentryCmd(CommandSender sender) {
+        // -Dsg.sentry.lag-test=true: blocks the server thread for 1.5 seconds to test the lag reports
+        if (Boolean.getBoolean("sg.sentry.lag-test")) {
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            }
+        }
         // waits up to 5 seconds for Sentry, not on the main thread
         Bukkit.getScheduler().runTaskAsynchronously(plugin(), () -> {
             boolean sent = plugin().getTelemetry().sendTestReport();
             sender.sendMessage(I.prefixed(sender, sent ? LangText.SENTRY_REPORT_SENT : LangText.SENTRY_DISABLED));
+        });
+    }
+
+    @Command(ROOT + " report <text>")
+    @CommandDescription("command_report")
+    @Permission(ADMIN)
+    public void reportCmd(CommandSender sender, @Argument("text") @Greedy String text) {
+        // waits up to 5 seconds for Sentry, not on the main thread
+        Bukkit.getScheduler().runTaskAsynchronously(plugin(), () -> {
+            boolean sent = plugin().getTelemetry().sendFeedback(text);
+            sender.sendMessage(I.prefixed(sender, sent ? LangText.SENTRY_FEEDBACK_SENT : LangText.SENTRY_DISABLED));
         });
     }
 

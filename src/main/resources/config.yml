@@ -607,6 +607,8 @@ sentry:
   # attaches config.yml and loot.yml to the reports, so the error can be reproduced with the same settings;
   # passwords, webhooks, database and server addresses, uuids and player names are removed first
   include-config: true
+  # reports where the plugin blocks the server thread for this many milliseconds (lag spikes, freezes), 0: off
+  lag-threshold: 1000
 
 # writes AGENTS.md and CLAUDE.md into this folder: notes for AI assistants (Claude Code, Codex, Cursor, ...) that help
 # to configure the plugin - which files they may change, that they mustn't invent options, ... (the plugin itself
