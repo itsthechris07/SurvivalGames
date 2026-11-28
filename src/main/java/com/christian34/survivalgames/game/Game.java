@@ -6,6 +6,7 @@ import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.arena.Lobby;
+import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.Items;
@@ -625,29 +626,52 @@ public abstract class Game {
     @Nullable
     private World loadLobbyWorld() {
         if (lobbyWorld != null && lobbyWorld.getWorld() != null) return lobbyWorld.getWorld();
-        if (stopped || state != GameState.LOBBY || !arena.usesLobbyWorld()) return null;
+        if (!needsLobbyWorld()) return null;
+        GameWorld copy = lobbyWorld != null ? lobbyWorld : createLobbyCopy();
+        this.lobbyWorld = copy;
         try {
-            String name = gameWorld.getWorldName();
-            GameWorld copy = plugin.getArenaManager().getLobby().createWorld(name.substring(name.indexOf('_') + 1));
-            this.lobbyWorld = copy;
+            // waits for the copy if it isn't done yet
             World world = copy.load();
             Lobby.setup(world);
             return world;
         } catch (RuntimeException ex) {
+            this.lobbyWorld = null;
             Debug.warn("Couldn't load the lobby world for the game of arena '" + arena.getName() + "'", ex);
             return null;
         }
     }
 
+    private boolean needsLobbyWorld() {
+        return !stopped && state == GameState.LOBBY && arena.usesLobbyWorld();
+    }
+
+    private GameWorld createLobbyCopy() {
+        String name = gameWorld.getWorldName();
+        return plugin.getArenaManager().getLobby().createWorld(name.substring(name.indexOf('_') + 1));
+    }
+
     /**
      * the lobby world or the lobby of the arena has changed: a waiting game loads its copy again - unless players are
-     * in it, they keep the old one until the game begins
+     * in it, they keep the old one until the game begins. The copy is made in the background and loaded once it is
+     * there.
      */
     public void reloadLobby() {
         World world = lobbyWorld == null ? null : lobbyWorld.getWorld();
         if (world != null && !world.getPlayers().isEmpty()) return;
         closeLobby();
-        loadLobbyWorld();
+        if (!needsLobbyWorld()) return;
+        GameWorld copy = createLobbyCopy();
+        this.lobbyWorld = copy;
+        copy.prepare().whenComplete((done, failure) -> FileJobs.onServerThread(() -> {
+            // closed meanwhile (the game has begun or stopped, the lobby has changed again) or loaded by a join
+            if (lobbyWorld != copy || copy.getWorld() != null) return;
+            if (failure != null) {
+                this.lobbyWorld = null;
+                Debug.warn("Couldn't copy the lobby world for the game of arena '" + arena.getName() + "'", failure);
+                return;
+            }
+            loadLobbyWorld();
+        }));
     }
 
     /**
@@ -1154,6 +1178,8 @@ public abstract class Game {
         runningSeconds = 0;
         setState(GameState.RUNNING);
         closeLobby();
+        // the next round gets a fresh copy of the map, made while this one is running
+        if (this instanceof SurvivalGame) plugin.getGameManager().prepareWorld(arena);
         // the level showed the countdown
         for (GamePlayer member : members) {
             member.getPlayer().setLevel(0);

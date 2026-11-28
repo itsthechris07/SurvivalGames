@@ -128,6 +128,7 @@ public class ArenaManager {
      * removes the arena from arenas.yml and deletes a saved Varo with its world (the map stays in maps/)
      */
     public void delete(Arena arena) {
+        plugin.getGameManager().discardPrepared(arena);
         arena.createWorld(arena.getName(), true).delete();
         File game = VaroGame.getFile(arena);
         if (game.isFile() && !game.delete()) Debug.warn("Couldn't delete " + game);
@@ -143,6 +144,121 @@ public class ArenaManager {
         File[] folders = FileManager.getMapsFolder().listFiles(File::isDirectory);
         if (folders == null) return List.of();
         return Arrays.stream(folders).map(File::getName).sorted().toList();
+    }
+
+    // ---------------------------------------------------------------- size of the maps
+
+    /**
+     * the sizes of the maps (bytes) with the time they were measured: walking through a big map takes a moment
+     */
+    private final Map<File, long[]> sizes = new HashMap<>();
+    private static final long SIZE_CACHE_MILLIS = 60_000;
+    /**
+     * a map that hasn't been copied yet: bigger ones take about a second or more (a slow disk, a virus scanner)
+     */
+    private static final long LARGE_MAP_MB = 50;
+
+    /**
+     * @return the size of the map (bytes, measured at most once a minute)
+     */
+    public long getMapSize(File map) {
+        long[] cached = sizes.get(map);
+        long now = System.currentTimeMillis();
+        if (cached != null && now - cached[1] < SIZE_CACHE_MILLIS) return cached[0];
+        long size = MapTrimmer.size(map);
+        sizes.put(map, new long[]{size, now});
+        return size;
+    }
+
+    /**
+     * @return the size of the map in MB if copying it takes long (every game copies it), else -1 - measured by its
+     * last copy, a map that hasn't been copied yet by its size
+     */
+    public long getLargeMapSize(@Nullable File map) {
+        if (map == null || !map.isDirectory()) return -1;
+        long megabytes = getMapSize(map) / (1024 * 1024);
+        Long millis = GameWorld.getCopyMillis(map);
+        boolean slow = millis != null ? millis >= GameWorld.SLOW_COPY_MILLIS : megabytes > LARGE_MAP_MB;
+        return slow ? Math.max(1, megabytes) : -1;
+    }
+
+    /**
+     * @return the arenas whose games are played on the map
+     */
+    public List<Arena> getArenasOf(File map) {
+        return getArenas().stream().filter(arena -> map.equals(arena.getMapFolder())).toList();
+    }
+
+    /**
+     * @return true if the map is the lobby world
+     */
+    public boolean isLobbyMap(File map) {
+        String name = lobby.getMapName();
+        return name != null && map.equals(new File(FileManager.getMapsFolder(), name));
+    }
+
+    /**
+     * @return the chunks the games on the map need: inside the world border of every arena that uses it and the view
+     * distance around it - null: the whole map is needed (the lobby world, an arena without a border or center)
+     */
+    @Nullable
+    public List<MapTrimmer.Area> getUsedAreas(File map) {
+        if (isLobbyMap(map)) return null;
+        World main = Bukkit.getWorlds().getFirst();
+        int margin = getTrimMargin();
+        List<MapTrimmer.Area> areas = new ArrayList<>();
+        for (Arena arena : getArenasOf(map)) {
+            int size = arena.getBorderSize();
+            if (size <= 0 || !arena.hasCenter()) return null;
+            Location center = arena.getCenter(main);
+            areas.add(MapTrimmer.Area.around(center.getX(), center.getZ(), size, margin));
+        }
+        return areas.isEmpty() ? null : areas;
+    }
+
+    /**
+     * @return the chunks kept around the world border: what the players see beyond it, and the chunks the server loads
+     * around them
+     */
+    public static int getTrimMargin() {
+        return Math.max(Bukkit.getViewDistance(), Bukkit.getSimulationDistance()) + 3;
+    }
+
+    /**
+     * the maps that are checked or trimmed right now
+     */
+    private final Set<File> trimming = new HashSet<>();
+
+    public boolean isTrimming(@Nullable File map) {
+        return map != null && trimming.contains(map);
+    }
+
+    public void setTrimming(File map, boolean running) {
+        if (running) {
+            trimming.add(map);
+        } else {
+            trimming.remove(map);
+        }
+    }
+
+    /**
+     * @return true if a copy of the map is edited right now (an arena that uses it or the lobby world)
+     */
+    public boolean isEdited(File map) {
+        if (isLobbyMap(map) && lobbyEdit != null) return true;
+        return getArenasOf(map).stream().anyMatch(arena -> editWorlds.containsKey(key(arena.getName())));
+    }
+
+    /**
+     * the map has been changed (trimmed): the copies made for the next games are made again
+     */
+    public void mapChanged(File map) {
+        sizes.remove(map);
+        GameWorld.forgetCopyMillis(map);
+        for (Arena arena : getArenasOf(map)) {
+            plugin.getGameManager().discardPrepared(arena);
+        }
+        if (isLobbyMap(map)) lobbyChanged();
     }
 
     /**
@@ -329,6 +445,10 @@ public class ArenaManager {
             editWorld.world.unload();
         } else if (!editWorld.world.closeAndSaveToMap()) {
             Debug.warn("The changes of the map of arena '" + arena.getName() + "' couldn't be saved");
+        } else {
+            // the copies made before the changes
+            File map = arena.getMapFolder();
+            if (map != null) mapChanged(map);
         }
     }
 

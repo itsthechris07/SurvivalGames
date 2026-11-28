@@ -72,7 +72,7 @@ public class VaroGame extends Game {
     private boolean open = true;
 
     public VaroGame(SurvivalGames plugin, Arena arena) {
-        super(plugin, arena, arena.createWorld(arena.getName(), true));
+        super(plugin, arena, plugin.getGameManager().takeWorld(arena));
         this.file = getFile(arena);
         load();
     }

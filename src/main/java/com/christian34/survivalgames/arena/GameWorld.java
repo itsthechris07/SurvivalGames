@@ -1,16 +1,29 @@
 package com.christian34.survivalgames.arena;
 
 import com.christian34.survivalgames.Debug;
+import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.files.FileManager;
 import org.bukkit.Bukkit;
+import org.bukkit.HeightMap;
+import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
+import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.generator.WorldInfo;
+import org.bukkit.util.BlockVector;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The world of a game: a copy of the map of the arena (or a generated world), loaded as its own world.
@@ -22,6 +35,9 @@ import java.util.Set;
  * Temporary worlds (a round of Survival Games, the copy an admin edits) start with {@link #TEMP_PREFIX} and are
  * deleted when they are closed and on the next start after a crash. The world of a Varo is kept
  * ({@link #KEPT_PREFIX}) until the game is reset - it runs for days.
+ * <p>
+ * The map is copied off the server thread ({@link #prepare()}, a big map takes seconds), only loading the copy happens
+ * on it.
  *
  * @author Christian34
  */
@@ -32,7 +48,16 @@ public class GameWorld {
      * files and folders of a (pre 26.1) world save that don't belong into a dimension folder
      */
     private static final Set<String> SKIPPED_FILES = Set.of("level.dat", "level.dat_old", "uid.dat", "session.lock",
-            "DIM-1", "DIM1", "dimensions", "playerdata", "players", "advancements", "stats", "datapacks");
+            "DIM-1", "DIM1", "dimensions", "playerdata", "players", "advancements", "stats", "datapacks",
+            MapTrimmer.MARKER);
+    /**
+     * a copy that takes longer is reported in the console (with the hint to trim the map)
+     */
+    public static final long SLOW_COPY_MILLIS = 2000;
+    /**
+     * how long the last copy of every map took (ms) - the disk and virus scanners decide that, not the size alone
+     */
+    private static final Map<File, Long> COPY_MILLIS = new ConcurrentHashMap<>();
     private static final String METADATA_FILE = "data/paper/metadata.dat";
     @Nullable
     private static File dimensionsFolder;
@@ -43,6 +68,11 @@ public class GameWorld {
     private final String worldName;
     private final boolean kept;
     private boolean prepared;
+    /**
+     * the copy of the map that is made off the server thread, null: not started (or the copy has been deleted)
+     */
+    @Nullable
+    private CompletableFuture<Void> copy;
     @Nullable
     private World world;
 
@@ -109,7 +139,7 @@ public class GameWorld {
     /**
      * the folder with the world data of the map: the map itself, or the overworld of a world saved with 26.1+
      */
-    private static File getMapData(File map) {
+    public static File getMapData(File map) {
         File overworld = new File(map, "dimensions/minecraft/overworld");
         return overworld.isDirectory() ? overworld : map;
     }
@@ -133,26 +163,108 @@ public class GameWorld {
     }
 
     /**
-     * loads the world: a kept world as it is, otherwise a fresh copy of the map (or a newly generated world)
+     * @return true if the map has to be copied before the world can be loaded
+     */
+    private boolean needsCopy() {
+        return map != null && world == null && !prepared && !exists();
+    }
+
+    /**
+     * copies the map off the server thread (if the world needs a copy), {@link #load()} waits for it
+     *
+     * @return completes when the copy has been made (exceptionally if it failed)
+     */
+    public CompletableFuture<Void> prepare() {
+        if (copy != null) return copy;
+        if (!needsCopy()) return CompletableFuture.completedFuture(null);
+        File source = map;
+        File from = getMapData(source);
+        File to = getWorldFolder();
+        // copied under another name first: a copy that is interrupted (the server stops) isn't taken for the world of a
+        // Varo, it is deleted on the next start like all temporary worlds
+        File temp = new File(to.getParentFile(), TEMP_PREFIX + "copy_" + worldName);
+        this.copy = FileJobs.run(() -> {
+            long started = System.currentTimeMillis();
+            FileManager.deleteDirectory(temp);
+            if (!copyMap(from, temp)) {
+                FileManager.deleteDirectory(temp);
+                throw new IllegalStateException("Couldn't copy map " + source + " to " + temp);
+            }
+            FileManager.deleteDirectory(to);
+            // renaming fails if another program (a virus scanner) has a file open right now
+            if (!temp.renameTo(to) && !FileManager.copyFolder(temp, to)) {
+                FileManager.deleteDirectory(temp);
+                FileManager.deleteDirectory(to);
+                throw new IllegalStateException("Couldn't move " + temp + " to " + to);
+            }
+            FileManager.deleteDirectory(temp);
+            long millis = System.currentTimeMillis() - started;
+            COPY_MILLIS.put(source, millis);
+            if (millis >= SLOW_COPY_MILLIS) {
+                Debug.warn("Copying map '" + source.getName() + "' (" + MapTrimmer.size(from) / (1024 * 1024)
+                        + " MB) took " + millis / 100 / 10.0 + " s - /sg map trim " + source.getName()
+                        + " can make it smaller");
+            }
+        }, to, source);
+        return copy;
+    }
+
+    /**
+     * @return how long the last copy of the map took (ms), null: it hasn't been copied since the server started
+     */
+    @Nullable
+    public static Long getCopyMillis(File map) {
+        return COPY_MILLIS.get(map);
+    }
+
+    /**
+     * the map has changed (trimmed): the time of its last copy doesn't say anything anymore
+     */
+    public static void forgetCopyMillis(File map) {
+        COPY_MILLIS.remove(map);
+    }
+
+    /**
+     * @return true while the map is copied
+     */
+    public boolean isPreparing() {
+        return copy != null && !copy.isDone();
+    }
+
+    /**
+     * loads the world: a kept world as it is, otherwise a fresh copy of the map (or a newly generated world) - waits
+     * for the copy if it is made right now
      */
     public World load() {
         if (world != null) return world;
         File worldFolder = getWorldFolder();
         boolean fresh = !exists() && !prepared;
-        if (fresh) {
+        if (fresh && map == null) {
+            FileJobs.await(worldFolder);
             FileManager.deleteDirectory(worldFolder);
-            if (map != null && !copyMap(getMapData(map), worldFolder)) {
-                FileManager.deleteDirectory(worldFolder);
-                throw new IllegalStateException("Couldn't copy map " + map + " to " + worldFolder);
+        } else if (fresh || copy != null) {
+            try {
+                prepare().join();
+            } catch (CompletionException ex) {
+                this.copy = null;
+                throw ex.getCause() instanceof RuntimeException cause ? cause : new IllegalStateException(ex.getCause());
             }
         }
         WorldCreator creator = new WorldCreator(NamespacedKey.minecraft(worldName));
         if (seed != null) creator.seed(seed);
-        // a new generated world: the plugin chooses the spawn, the search of the server blocks it for seconds
-        VanillaGenerator generator = fresh && map == null ? new VanillaGenerator() : null;
-        if (generator != null) creator.generator(generator);
+        // a new world (also a copy: its level.dat isn't copied) - the plugin chooses the spawn, the search of the server
+        // generates chunks on the server thread and blocks it for seconds
+        VanillaGenerator generator = null;
+        if (MapTrimmer.isVoid(map)) {
+            // a trimmed map: the chunks that have been removed stay empty
+            creator.generator(new VoidGenerator(readSpawn(map)));
+        } else if (fresh) {
+            generator = map == null ? new VanillaGenerator() : VanillaGenerator.at(readSpawn(map));
+            creator.generator(generator);
+        }
         World created = creator.createWorld();
         if (created == null) {
+            this.copy = null;
             if (!kept) FileManager.deleteDirectory(worldFolder);
             throw new IllegalStateException("Couldn't load world " + worldName + " (see the log above)");
         }
@@ -160,6 +272,87 @@ public class GameWorld {
         created.setAutoSave(kept);
         this.world = created;
         return created;
+    }
+
+    /**
+     * the chunks that aren't in a trimmed map: nothing but air
+     */
+    private static final class VoidGenerator extends ChunkGenerator {
+        @Nullable
+        private final BlockVector spawn;
+
+        private VoidGenerator(@Nullable BlockVector spawn) {
+            this.spawn = spawn;
+        }
+
+        @Override
+        public Location getFixedSpawnLocation(@NotNull World world, @NotNull Random random) {
+            // no search for a spawn on the server thread
+            if (spawn == null) return new Location(world, 0.5, unknownHeight(world), 0.5);
+            return new Location(world, spawn.getBlockX() + 0.5, spawn.getBlockY(), spawn.getBlockZ() + 0.5);
+        }
+    }
+
+    /**
+     * @return the height of a spawn that isn't known yet (the copy of a map without level.dat): no map has its spawn at
+     * the bottom of the world
+     */
+    static int unknownHeight(WorldInfo world) {
+        return world.getMinHeight();
+    }
+
+    /**
+     * the spawn of the world (if the arena or lobby has none): without level.dat in the map its height is found now -
+     * only then its chunk is loaded
+     */
+    public static Location getSpawn(World world) {
+        Location spawn = world.getSpawnLocation();
+        if (spawn.getBlockY() > unknownHeight(world)) return spawn;
+        try {
+            int y = world.getHighestBlockYAt(spawn.getBlockX(), spawn.getBlockZ(), HeightMap.MOTION_BLOCKING_NO_LEAVES);
+            // nothing there (a void map): the old default
+            y = y <= unknownHeight(world) ? 64 : y + 1;
+            world.setSpawnLocation(spawn.getBlockX(), y, spawn.getBlockZ());
+        } catch (RuntimeException ex) {
+            Debug.info("Couldn't find the spawn of world " + world.getName() + ": " + ex);
+        }
+        return world.getSpawnLocation();
+    }
+
+    /**
+     * @return the spawn of the map from its level.dat (null if it has none)
+     */
+    @Nullable
+    static BlockVector readSpawn(@Nullable File map) {
+        if (map == null) return null;
+        File file = new File(map, "level.dat");
+        if (!file.isFile()) return null;
+        try {
+            Map<String, Object> root = RegionFile.readNbt(file);
+            if (root == null || !(root.get("Data") instanceof Map<?, ?> data)) return null;
+            // since 1.21.9: spawn.pos, before SpawnX/Y/Z
+            if (data.get("spawn") instanceof Map<?, ?> spawn && spawn.get("pos") instanceof int[] pos && pos.length == 3) {
+                return new BlockVector(pos[0], pos[1], pos[2]);
+            }
+            if (data.get("SpawnX") instanceof Integer x && data.get("SpawnY") instanceof Integer y
+                    && data.get("SpawnZ") instanceof Integer z) {
+                return new BlockVector(x, y, z);
+            }
+        } catch (IOException | RuntimeException ex) {
+            Debug.info("Couldn't read the spawn of map " + map.getName() + ": " + ex);
+        }
+        return null;
+    }
+
+    /**
+     * the copy that is made right now (or has been made) isn't needed: it is deleted once it is done
+     */
+    private void discardCopy() {
+        if (copy == null) return;
+        this.copy = null;
+        if (kept) return;
+        File folder = getWorldFolder();
+        FileJobs.run(() -> FileManager.deleteDirectory(folder), folder);
     }
 
     private static boolean copyMap(File from, File to) {
@@ -183,7 +376,10 @@ public class GameWorld {
      * @return false if the world couldn't be unloaded (it stays loaded)
      */
     public boolean unload() {
-        if (world == null) return true;
+        if (world == null) {
+            discardCopy();
+            return true;
+        }
         if (!world.getPlayers().isEmpty()) {
             Debug.warn("Can't unload world '" + worldName + "', there are still players in it");
             return false;
@@ -193,6 +389,7 @@ public class GameWorld {
             return false;
         }
         this.world = null;
+        this.copy = null;
         if (!kept) FileManager.deleteDirectory(getWorldFolder());
         return true;
     }
@@ -205,6 +402,8 @@ public class GameWorld {
             Bukkit.unloadWorld(world, false);
             this.world = null;
         }
+        this.copy = null;
+        FileJobs.await(getWorldFolder());
         FileManager.deleteDirectory(getWorldFolder());
     }
 
@@ -220,7 +419,10 @@ public class GameWorld {
             return false;
         }
         this.world = null;
+        this.copy = null;
         File worldFolder = getWorldFolder();
+        // no copy of the map is made while it is saved
+        FileJobs.await(map);
         if (!copyMap(worldFolder, getMapData(map))) {
             Debug.warn("Couldn't save world '" + worldName + "' to " + map + " - the copy is kept in " + worldFolder);
             return false;
@@ -236,6 +438,13 @@ public class GameWorld {
 
     public String getWorldName() {
         return worldName;
+    }
+
+    /**
+     * @return true if the world stays when the game is unloaded (Varo)
+     */
+    public boolean isKept() {
+        return kept;
     }
 
 }

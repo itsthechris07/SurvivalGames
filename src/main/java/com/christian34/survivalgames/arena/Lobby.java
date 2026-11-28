@@ -59,7 +59,7 @@ public class Lobby {
      */
     public Location getSpawn(World world) {
         Location spawn = Arena.deserialize(file.getData().get("spawn"), world);
-        return spawn != null ? spawn : world.getSpawnLocation();
+        return spawn != null ? spawn : GameWorld.getSpawn(world);
     }
 
     /**

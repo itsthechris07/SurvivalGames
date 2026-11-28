@@ -36,6 +36,25 @@ Every arena plays on a map: a world folder that stays untouched; each game plays
 - **A generated world:** `/sg arena create <name> --generate [--seed <seed>]`: a new random world for every game
   (good for Varo).
 
+### Big maps
+
+Every game copies its map (and the [lobby world](#the-lobby-world)) before it opens. The copy is made in the
+background, so the server doesn't lag, but a big map still takes a while and its copies fill the disk. A map that
+takes long to copy (or is bigger than 50 MB before its first copy) gets a note in `/sg arena <name> info` and
+`/sg admin`. `/sg map list` shows all maps with their size.
+
+`/sg map trim <map>` makes a map smaller. It first shows what it would remove, `--confirm` removes it:
+
+- chunks with nothing but air (a void map is often mostly empty chunks),
+- chunks the server has only begun to generate (players never see them),
+- chunks far outside the world border of all arenas that use the map (the border plus the view distance around it
+  are kept). A map without a border, and the lobby world, keep all of their chunks with blocks.
+
+The region files that change are saved in `plugins/SurvivalGames/backups/maps/` first: to undo it, unzip the backup
+into the folder of the map (where its `region` folder is). Once empty chunks have been removed, the copies of the
+map keep the chunks that aren't in it empty instead of generating terrain there (`sg-map.yml` in the map). If you make
+a world border bigger after trimming, the area beyond it is generated anew.
+
 The game type is Survival Games unless you add `--type varo`, `--type uhc` or `--type duels` (a [UHC](uhc.md) arena gets a generated
 world). You can change it later with `/sg arena <name> type` or the button "Game type" of the arena in `/sg admin`.
 

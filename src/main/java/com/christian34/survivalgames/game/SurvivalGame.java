@@ -28,7 +28,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
 
@@ -86,8 +85,7 @@ public class SurvivalGame extends Game {
     private ConfigurationSection quellSettings;
 
     public SurvivalGame(SurvivalGames plugin, Arena arena) {
-        super(plugin, arena, arena.createWorld(arena.getName() + "_"
-                + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)), false));
+        super(plugin, arena, plugin.getGameManager().takeWorld(arena));
         setQuell(plugin.getQuell().nextRound(arena));
         if (MapVoting.isEnabled(plugin, arena)) {
             this.mapVoting = new MapVoting(plugin, this);

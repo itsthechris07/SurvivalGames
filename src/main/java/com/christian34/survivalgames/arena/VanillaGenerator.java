@@ -7,6 +7,7 @@ import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
+import org.bukkit.util.BlockVector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +20,10 @@ import java.util.Random;
  * thread until it finds a suitable block, which blocks the server for a few seconds (a new UHC game). Here the spawn
  * is chosen by the biomes (they come from the noise, no chunk is generated): the land closest to 0,0. Its height is
  * set once the chunk has been generated in the background ({@link #fixHeight(World)}).
+ * <p>
+ * The copy of a map is a new world for the server too (its level.dat isn't copied): it gets the spawn of the map
+ * ({@link #at(BlockVector)}), so the server doesn't search one next to the map. No chunk is loaded for it: without
+ * level.dat its height is found once it is needed ({@link GameWorld#getSpawn(World)}).
  *
  * @author Christian34
  */
@@ -30,6 +35,26 @@ class VanillaGenerator extends ChunkGenerator {
     private static final int MAX_DISTANCE = 1024;
     @Nullable
     private Location spawn;
+    /**
+     * the spawn of the map, null: chosen by the biomes
+     */
+    @Nullable
+    private final BlockVector fixed;
+
+    VanillaGenerator() {
+        this(null);
+    }
+
+    private VanillaGenerator(@Nullable BlockVector fixed) {
+        this.fixed = fixed;
+    }
+
+    /**
+     * @param spawn the spawn of the map (from its level.dat), null: 0,0 (its height is found once it is needed)
+     */
+    static VanillaGenerator at(@Nullable BlockVector spawn) {
+        return new VanillaGenerator(spawn == null ? new BlockVector(0, Integer.MIN_VALUE, 0) : spawn);
+    }
 
     @Override
     public boolean shouldGenerateNoise() {
@@ -63,6 +88,10 @@ class VanillaGenerator extends ChunkGenerator {
 
     @Override
     public Location getFixedSpawnLocation(@NotNull World world, @NotNull Random random) {
+        if (fixed != null) {
+            int y = fixed.getBlockY() == Integer.MIN_VALUE ? GameWorld.unknownHeight(world) : fixed.getBlockY();
+            return new Location(world, fixed.getBlockX() + 0.5, y, fixed.getBlockZ() + 0.5);
+        }
         int y = world.getSeaLevel() + 1;
         int[] land = findLand(world);
         this.spawn = new Location(world, land[0] + 0.5, y, land[1] + 0.5);

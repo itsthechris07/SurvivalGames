@@ -111,6 +111,7 @@ public class CommandManager {
         annotationParser.parse(new CommandTeam());
         annotationParser.parse(new CommandGame());
         annotationParser.parse(new CommandArena());
+        annotationParser.parse(new CommandMap());
         annotationParser.parse(new CommandNpc());
         annotationParser.parse(new CommandKit());
         annotationParser.parse(new CommandLeaderboard());

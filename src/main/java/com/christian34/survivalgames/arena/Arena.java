@@ -285,7 +285,7 @@ public class Arena {
         Location center = deserialize(file().getData().get(path("center")), world);
         if (center != null) return center;
         List<Location> spawns = getSpawns(world);
-        if (spawns.isEmpty()) return world.getSpawnLocation();
+        if (spawns.isEmpty()) return GameWorld.getSpawn(world);
         double x = 0;
         double z = 0;
         for (Location spawn : spawns) {
@@ -293,6 +293,13 @@ public class Arena {
             z += spawn.getZ();
         }
         return new Location(world, x / spawns.size(), spawns.getFirst().getY(), z / spawns.size());
+    }
+
+    /**
+     * @return true if the center is known without a world: set, or the middle of the spawn points
+     */
+    public boolean hasCenter() {
+        return file().getData().isSet(path("center")) || getSpawnCount() > 0;
     }
 
     public void setCenter(Location location) {
@@ -340,6 +347,15 @@ public class Arena {
         int max = getInt("max-players", 1);
         if (getSpawnCount() > 0 && getSpawnCount() < max) {
             warnings.add(I.i18n(LangText.SETUP_FEW_SPAWNS, getSpawnCount(), max));
+        }
+        // every game copies them
+        ArenaManager arenas = plugin.getArenaManager();
+        long size = arenas.getLargeMapSize(getMapFolder());
+        if (size > 0) warnings.add(I.i18n(LangText.SETUP_LARGE_MAP, getMapName(), size));
+        String lobby = arenas.getLobby().getMapName();
+        if (lobby != null && usesLobbyWorld()) {
+            long lobbySize = arenas.getLargeMapSize(new File(FileManager.getMapsFolder(), lobby));
+            if (lobbySize > 0) warnings.add(I.i18n(LangText.SETUP_LARGE_LOBBY, lobby, lobbySize));
         }
         return warnings;
     }

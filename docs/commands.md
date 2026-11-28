@@ -66,6 +66,8 @@ In every menu the arrow at the bottom left goes back to the menu before (submenu
 | `/sg lobby setworld <world>` | sets the lobby world of all arenas (a map of `maps/` or a world of the server, which is imported) |
 | `/sg lobby edit` / `setspawn` / `save` | teleports you into a copy of the lobby world / sets its spawn / saves it |
 | `/sg lobby remove` | removes the lobby world (the map stays in `maps/`) |
+| `/sg map list` | lists the maps in `maps/` with their size and the arenas that use them |
+| `/sg map trim <map> [--confirm]` | makes a map smaller: removes empty chunks and the chunks outside the world border (see [Big maps](getting-started.md#big-maps)) |
 | `/sg arena <arena> spawn add` | adds a spawn point at your position |
 | `/sg arena <arena> spawn list` / `tp <number>` / `remove <number>` | the spawn points |
 | `/sg arena <arena> spawn clear --confirm` | deletes all spawn points |

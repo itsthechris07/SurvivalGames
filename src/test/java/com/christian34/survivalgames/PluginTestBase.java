@@ -2,6 +2,7 @@ package com.christian34.survivalgames;
 
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
+import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.commands.CommandManager;
 import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.files.FileManager;
@@ -61,6 +62,8 @@ public abstract class PluginTestBase {
         this.world = server.addSimpleWorld("world");
         // MockBukkit doesn't store worlds in folders
         GameWorld.setDimensionsFolder(new File(worlds, "minecraft"));
+        // the maps are copied right away (on a server: in the background)
+        FileJobs.setExecutor(Runnable::run);
         this.plugin = MockBukkit.load(SurvivalGames.class);
         this.commands = new TestCommandManager();
         this.plugin.setCommandManager(new CommandManager(commands));
@@ -70,6 +73,7 @@ public abstract class PluginTestBase {
     void tearDownServer() {
         MockBukkit.unmock();
         GameWorld.setDimensionsFolder(null);
+        FileJobs.setExecutor(null);
     }
 
     protected ConfigFile config() {

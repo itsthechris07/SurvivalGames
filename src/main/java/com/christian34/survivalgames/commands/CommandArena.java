@@ -1,8 +1,10 @@
 package com.christian34.survivalgames.commands;
 
+import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.ArenaManager;
+import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.game.GameType;
@@ -24,9 +26,11 @@ import org.incendo.cloud.annotations.suggestion.Suggestions;
 import org.incendo.cloud.context.CommandContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import static com.christian34.survivalgames.commands.CommandSurvivalGames.ADMIN;
 import static com.christian34.survivalgames.commands.CommandSurvivalGames.ROOT;
@@ -143,6 +147,7 @@ public class CommandArena {
         }
         Arena arena = arenas().create(name, type, generate, seed);
         if (!generate && !map.equals(name)) plugin().getFileManager().getArenasFile().set(name + ".map", map);
+        if (!generate) CommandMap.warnIfLarge(sender, map);
         return arena;
     }
 
@@ -219,6 +224,10 @@ public class CommandArena {
         if (!checkFree(player)) return;
         if (!arena.isPlayable()) {
             arena.getMissingSetup().forEach(missing -> player.sendMessage(I.prefixed(player, missing)));
+            return;
+        }
+        if (arenas().isTrimming(arena.getMapFolder())) {
+            send(player, LangText.MAP_TRIM_BUSY, arena.getMapName());
             return;
         }
         Game game = plugin().getGameManager().getGame(arena);
@@ -411,6 +420,7 @@ public class CommandArena {
         }
         arenas().setLobbyMap(map);
         send(sender, LangText.LOBBY_WORLD_SET, map);
+        CommandMap.warnIfLarge(sender, map);
     }
 
     @Command(LOBBY + " remove")
@@ -430,6 +440,11 @@ public class CommandArena {
         if (!checkFree(player)) return;
         if (!arenas().getLobby().isSet()) {
             send(player, LangText.LOBBY_WORLD_MISSING);
+            return;
+        }
+        String map = arenas().getLobby().getMapName();
+        if (map != null && arenas().isTrimming(new File(FileManager.getMapsFolder(), map))) {
+            send(player, LangText.MAP_TRIM_BUSY, map);
             return;
         }
         try {
@@ -507,6 +522,8 @@ public class CommandArena {
             return;
         }
         arena.setType(type);
+        // a copy made for the old type
+        plugin().getGameManager().discardPrepared(arena);
         send(sender, LangText.TYPE_SET, i18n(type.getDisplayName()));
     }
 
@@ -536,13 +553,21 @@ public class CommandArena {
             arena.getMissingSetup().forEach(missing -> sender.sendMessage(I.prefixed(sender, missing)));
             return;
         }
-        try {
-            plugin().getGameManager().createGame(arena);
-        } catch (RuntimeException ex) {
-            send(sender, LangText.WORLD_LOAD_FAILED, arena.getName());
+        if (plugin().getGameManager().isCreating(arena)) {
+            send(sender, LangText.GAME_PREPARING, arena.getName());
             return;
         }
-        send(sender, LangText.GAME_CREATED, arena.getName());
+        // the map is copied in the background, the server doesn't wait for it
+        CompletableFuture<Game> game = plugin().getGameManager().createGameLater(arena);
+        if (!game.isDone()) send(sender, LangText.GAME_PREPARING, arena.getName());
+        game.whenComplete((created, failure) -> {
+            if (failure == null) {
+                send(sender, LangText.GAME_CREATED, arena.getName());
+                return;
+            }
+            Debug.warn("Couldn't create the game of arena '" + arena.getName() + "'", failure);
+            send(sender, LangText.WORLD_LOAD_FAILED, arena.getName());
+        });
     }
 
     @Command(ONE_ARENA + " creategame")

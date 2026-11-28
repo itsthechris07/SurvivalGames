@@ -4,6 +4,8 @@ import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
+import com.christian34.survivalgames.arena.GameWorld;
+import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.integrations.VanishSupport;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -21,19 +23,34 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The games of the arenas (at most one per arena). Arenas with auto-game get their game when the server starts, a
  * Varo also gets it back if it was running (games/&lt;arena&gt;.yml). A round of Survival Games is followed by the next
  * one.
+ * <p>
+ * The map of a game is copied off the server thread: before the first game of an arena is created
+ * ({@link #createGameLater(Arena)}), and for the next round while a round is running ({@link #prepareWorld(Arena)}).
  *
  * @author Christian34
  */
 public class GameManager {
     private final SurvivalGames plugin;
     private final Map<String, Game> games = new ConcurrentHashMap<>();
+    /**
+     * the worlds of the next games (copies of their maps, made in the background), by arena
+     */
+    private final Map<String, GameWorld> prepared = new HashMap<>();
+    /**
+     * the arenas whose game is created as soon as their map has been copied
+     */
+    private final Set<String> creating = new HashSet<>();
     @Nullable
     private String lastPlayed;
 
@@ -58,12 +75,91 @@ public class GameManager {
                         + arena.getMissingSetup().stream().map(I::plain).toList());
                 continue;
             }
-            try {
-                createGame(arena);
-            } catch (RuntimeException ex) {
+            createGameLater(arena).exceptionally(ex -> {
                 Debug.warn("Couldn't create the game of arena '" + arena.getName() + "'", ex);
-            }
+                return null;
+            });
         }
+    }
+
+    // ---------------------------------------------------------------- worlds
+
+    /**
+     * @return a new world for a game of the arena (a Varo keeps its world, a round of Survival Games gets a new copy)
+     */
+    private static GameWorld newWorld(Arena arena) {
+        if (arena.getType() == GameType.VARO) return arena.createWorld(arena.getName(), true);
+        return arena.createWorld(arena.getName() + "_"
+                + Integer.toHexString(ThreadLocalRandom.current().nextInt(0x1000, 0x10000)), false);
+    }
+
+    /**
+     * @return the world for the next game of the arena: the copy made in the background, otherwise a new one (copied
+     * when the game loads it)
+     */
+    GameWorld takeWorld(Arena arena) {
+        GameWorld world = prepared.remove(key(arena));
+        if (world != null && world.isKept() == (arena.getType() == GameType.VARO)) return world;
+        if (world != null) world.unload();
+        return newWorld(arena);
+    }
+
+    /**
+     * copies the map of the arena for its next game in the background (once)
+     *
+     * @return completes when the copy is there (exceptionally if it failed)
+     */
+    public CompletableFuture<Void> prepareWorld(Arena arena) {
+        if (arena.isGenerated()) return CompletableFuture.completedFuture(null);
+        GameWorld world = prepared.computeIfAbsent(key(arena), key -> newWorld(arena));
+        return world.prepare();
+    }
+
+    /**
+     * the map has changed (saved after editing, trimmed) or the arena is gone: the copies made before are deleted
+     */
+    public void discardPrepared(Arena arena) {
+        GameWorld world = prepared.remove(key(arena));
+        if (world != null) world.unload();
+    }
+
+    /**
+     * @return true while the game of the arena waits for the copy of its map
+     */
+    public boolean isCreating(Arena arena) {
+        return creating.contains(key(arena));
+    }
+
+    /**
+     * creates the game of the arena once its map has been copied in the background (right away if no copy is needed)
+     *
+     * @return the new game (or the one another way has created meanwhile), completes exceptionally if it couldn't be
+     * created
+     */
+    public CompletableFuture<Game> createGameLater(Arena arena) {
+        CompletableFuture<Game> result = new CompletableFuture<>();
+        String key = key(arena);
+        creating.add(key);
+        prepareWorld(arena).whenComplete((done, failure) -> FileJobs.onServerThread(() -> {
+            creating.remove(key);
+            Game game = getGame(arena);
+            if (game != null) {
+                result.complete(game);
+            } else if (failure != null) {
+                discardPrepared(arena);
+                result.completeExceptionally(failure);
+            } else if (plugin.getArenaManager().get(arena.getName()) != arena || !arena.isPlayable()) {
+                discardPrepared(arena);
+                result.completeExceptionally(new IllegalStateException("arena " + arena.getName() + " has changed"));
+            } else {
+                try {
+                    result.complete(createGame(arena));
+                } catch (RuntimeException ex) {
+                    result.completeExceptionally(ex);
+                }
+            }
+        }));
+        return result;
     }
 
     /**
@@ -77,7 +173,7 @@ public class GameManager {
             case DUELS -> new DuelsGame(plugin, arena);
         };
         games.put(key(arena), game);
-        // the copy of the lobby world isn't loaded while the first player joins
+        // the copy of the lobby world is made now, not while the first player joins
         game.reloadLobby();
         return game;
     }
@@ -343,6 +439,10 @@ public class GameManager {
         for (Game game : new ArrayList<>(games.values())) {
             removeGame(game);
         }
+        for (GameWorld world : prepared.values()) {
+            world.unload();
+        }
+        prepared.clear();
     }
 
 }

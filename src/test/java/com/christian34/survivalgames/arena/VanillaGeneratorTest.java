@@ -4,9 +4,16 @@ import com.christian34.survivalgames.PluginTestBase;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
+import org.bukkit.util.BlockVector;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Random;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author Christian34
  */
 class VanillaGeneratorTest extends PluginTestBase {
+    @TempDir
+    File temp;
 
     @Test
     void vanillaGeneration() {
@@ -64,6 +73,81 @@ class VanillaGeneratorTest extends PluginTestBase {
         assertNotNull(spawn);
         assertEquals(0, spawn.getBlockX());
         assertEquals(0, spawn.getBlockZ());
+    }
+
+    @Test
+    void theCopyOfAMapSpawnsWhereTheMapDoes() throws IOException {
+        World world = server.addSimpleWorld("copy");
+        Location spawn = VanillaGenerator.at(new BlockVector(-209, 45, 67)).getFixedSpawnLocation(world, new Random());
+        assertNotNull(spawn);
+        assertEquals(-209, spawn.getBlockX());
+        assertEquals(45, spawn.getBlockY());
+        assertEquals(67, spawn.getBlockZ());
+        // a map without level.dat: 0,0 - no chunk is loaded for its height until the spawn is needed
+        spawn = VanillaGenerator.at(null).getFixedSpawnLocation(world, new Random());
+        assertNotNull(spawn);
+        assertEquals(0, spawn.getBlockX());
+        assertEquals(world.getMinHeight(), spawn.getBlockY());
+    }
+
+    @Test
+    void theHeightOfTheSpawnIsFoundOnceItIsNeeded() {
+        World world = server.addSimpleWorld("unknown");
+        world.setSpawnLocation(3, world.getMinHeight(), 5);
+        world.getBlockAt(3, 80, 5).setType(org.bukkit.Material.STONE);
+        Location spawn = GameWorld.getSpawn(world);
+        assertEquals(81, spawn.getBlockY());
+        assertEquals(3, spawn.getBlockX());
+        assertEquals(81, world.getSpawnLocation().getBlockY());
+        // a known spawn stays as it is
+        world.setSpawnLocation(3, 40, 5);
+        assertEquals(40, GameWorld.getSpawn(world).getBlockY());
+    }
+
+    @Test
+    void readsTheSpawnOfAMap() throws IOException {
+        File map = new File(temp, "map");
+        assertTrue(map.mkdirs());
+        assertNull(GameWorld.readSpawn(map));
+        // since 1.21.9
+        levelDat(map, out -> {
+            out.writeByte(10);
+            out.writeUTF("spawn");
+            out.writeByte(11);
+            out.writeUTF("pos");
+            out.writeInt(3);
+            out.writeInt(-209);
+            out.writeInt(45);
+            out.writeInt(67);
+            out.writeByte(0);
+        });
+        assertEquals(new BlockVector(-209, 45, 67), GameWorld.readSpawn(map));
+        // before
+        levelDat(map, out -> {
+            for (String axis : new String[]{"X", "Y", "Z"}) {
+                out.writeByte(3);
+                out.writeUTF("Spawn" + axis);
+                out.writeInt(axis.equals("Y") ? 70 : 12);
+            }
+        });
+        assertEquals(new BlockVector(12, 70, 12), GameWorld.readSpawn(map));
+    }
+
+    private interface Tags {
+        void write(DataOutputStream out) throws IOException;
+    }
+
+    private static void levelDat(File map, Tags tags) throws IOException {
+        try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(
+                Files.newOutputStream(new File(map, "level.dat").toPath())))) {
+            out.writeByte(10);
+            out.writeUTF("");
+            out.writeByte(10);
+            out.writeUTF("Data");
+            tags.write(out);
+            out.writeByte(0);
+            out.writeByte(0);
+        }
     }
 
 }
