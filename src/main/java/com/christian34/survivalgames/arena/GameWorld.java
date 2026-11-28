@@ -225,24 +225,17 @@ public class GameWorld {
     }
 
     /**
-     * @return true while the map is copied
-     */
-    public boolean isPreparing() {
-        return copy != null && !copy.isDone();
-    }
-
-    /**
      * loads the world: a kept world as it is, otherwise a fresh copy of the map (or a newly generated world) - waits
      * for the copy if it is made right now
      */
     public World load() {
         if (world != null) return world;
         File worldFolder = getWorldFolder();
-        boolean fresh = !exists() && !prepared;
+        boolean fresh = isNew();
         if (fresh && map == null) {
             FileJobs.await(worldFolder);
             FileManager.deleteDirectory(worldFolder);
-        } else if (fresh || copy != null) {
+        } else if (fresh) {
             try {
                 prepare().join();
             } catch (CompletionException ex) {
@@ -252,26 +245,40 @@ public class GameWorld {
         }
         WorldCreator creator = new WorldCreator(NamespacedKey.minecraft(worldName));
         if (seed != null) creator.seed(seed);
-        // a new world (also a copy: its level.dat isn't copied) - the plugin chooses the spawn, the search of the server
-        // generates chunks on the server thread and blocks it for seconds
-        VanillaGenerator generator = null;
-        if (MapTrimmer.isVoid(map)) {
-            // a trimmed map: the chunks that have been removed stay empty
-            creator.generator(new VoidGenerator(readSpawn(map)));
-        } else if (fresh) {
-            generator = map == null ? new VanillaGenerator() : VanillaGenerator.at(readSpawn(map));
-            creator.generator(generator);
-        }
+        ChunkGenerator generator = generator();
+        if (generator != null) creator.generator(generator);
         World created = creator.createWorld();
         if (created == null) {
             this.copy = null;
             if (!kept) FileManager.deleteDirectory(worldFolder);
             throw new IllegalStateException("Couldn't load world " + worldName + " (see the log above)");
         }
-        if (generator != null) generator.fixHeight(created);
+        if (generator instanceof VanillaGenerator vanilla) vanilla.fixHeight(created);
         created.setAutoSave(kept);
         this.world = created;
         return created;
+    }
+
+    /**
+     * @return true if the world is new for the server: generated, or copied (also in the background, its level.dat
+     * isn't copied)
+     */
+    private boolean isNew() {
+        return copy != null || !exists() && !prepared;
+    }
+
+    /**
+     * a new world gets a generator that chooses its spawn: the search of the server generates chunks on the server
+     * thread and blocks it for seconds
+     *
+     * @return the generator of the world, null: the one of the server
+     */
+    @Nullable
+    ChunkGenerator generator() {
+        // a trimmed map: the chunks that have been removed stay empty
+        if (MapTrimmer.isVoid(map)) return new VoidGenerator(readSpawn(map));
+        if (!isNew()) return null;
+        return map == null ? new VanillaGenerator() : VanillaGenerator.at(readSpawn(map));
     }
 
     /**

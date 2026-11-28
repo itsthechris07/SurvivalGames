@@ -144,7 +144,7 @@ public class CommandMap {
         }
         send(sender, LangText.MAP_TRIM_RESULT, name, megabytes(result.size()), result.chunks(), result.empty(),
                 result.outside(), megabytes(result.removed()));
-        if (result.empty() > 0) send(sender, LangText.MAP_TRIM_VOID_NOTE);
+        if (result.voided()) send(sender, LangText.MAP_TRIM_VOID_NOTE);
         if (areas != null && result.outside() > 0) {
             send(sender, LangText.MAP_TRIM_BORDER_NOTE, ArenaManager.getTrimMargin());
         }

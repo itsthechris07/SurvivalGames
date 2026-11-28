@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.christian34.survivalgames"
-version = "1.4.2"
+version = "1.5.0"
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)

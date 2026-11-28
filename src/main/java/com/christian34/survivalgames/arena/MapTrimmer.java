@@ -87,8 +87,9 @@ public final class MapTrimmer {
      * @param outside removed chunks outside the areas
      * @param size    the size of the map before (bytes)
      * @param removed the bytes that are (or would be) removed
+     * @param voided  true if chunks with nothing but air are removed: the copies keep the missing chunks empty
      */
-    public record Result(int chunks, int empty, int outside, long size, long removed) {
+    public record Result(int chunks, int empty, int outside, long size, long removed, boolean voided) {
         public int total() {
             return empty + outside;
         }
@@ -208,7 +209,7 @@ public final class MapTrimmer {
             if (zip != null) zip.close();
         }
         if (zip != null && air) writeMarker(map);
-        return new Result(chunks, empty, outside, size, removed);
+        return new Result(chunks, empty, outside, size, removed, air);
     }
 
     /**

@@ -175,6 +175,7 @@ class MapsTest extends PluginTestBase {
         MapTrimmer.Result result = MapTrimmer.analyse(map, null);
         assertEquals(4, result.chunks());
         assertEquals(2, result.empty());
+        assertTrue(result.voided());
         assertEquals(0, result.outside());
         assertTrue(result.removed() > 0);
         // nothing has changed
@@ -219,6 +220,7 @@ class MapsTest extends PluginTestBase {
                 2, withStatus("minecraft:noise", "minecraft:stone", "minecraft:air")));
         MapTrimmer.Result result = MapTrimmer.trim(map, null, new File(temp, "valley.zip"));
         assertEquals(2, result.empty());
+        assertFalse(result.voided());
         assertEquals(Set.of(0), RegionFile.read(region(map, "region", 0, 0)).keySet());
         // the terrain next to the map is generated as before
         assertFalse(MapTrimmer.isVoid(map));

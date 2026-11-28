@@ -133,6 +133,20 @@ class VanillaGeneratorTest extends PluginTestBase {
         assertEquals(new BlockVector(12, 70, 12), GameWorld.readSpawn(map));
     }
 
+    @Test
+    void aCopyOfAMapDoesntLetTheServerSearchASpawn() throws IOException {
+        File map = new File(temp, "valley");
+        assertTrue(new File(map, "region").mkdirs());
+        // a Varo: its world is kept - after the copy in the background it exists already, but is new for the server
+        GameWorld varo = new GameWorld(map, null, "valley", true);
+        varo.prepare().join();
+        assertTrue(varo.exists());
+        assertInstanceOf(VanillaGenerator.class, varo.generator());
+        // after a restart the server knows its spawn
+        assertNull(new GameWorld(map, null, "valley", true).generator());
+        assertInstanceOf(VanillaGenerator.class, new GameWorld(map, null, "round", false).generator());
+    }
+
     private interface Tags {
         void write(DataOutputStream out) throws IOException;
     }

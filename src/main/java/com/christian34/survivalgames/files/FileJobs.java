@@ -85,14 +85,6 @@ public final class FileJobs {
     }
 
     /**
-     * @return true while a job on the folder is waiting or running
-     */
-    public static boolean isBusy(File folder) {
-        CompletableFuture<Void> last = LAST.get(key(folder));
-        return last != null && !last.isDone();
-    }
-
-    /**
      * waits until the jobs on the folder are done (before the server thread changes it itself)
      */
     public static void await(File folder) {
