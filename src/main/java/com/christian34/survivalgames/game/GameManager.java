@@ -1,8 +1,8 @@
 package com.christian34.survivalgames.game;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.files.FileJobs;
@@ -43,6 +43,12 @@ import java.util.concurrent.ThreadLocalRandom;
 public class GameManager {
     private final SurvivalGames plugin;
     private final Map<String, Game> games = new ConcurrentHashMap<>();
+    /**
+     * the games sorted by the name of their arena (asked for every second by signs, NPCs and the modules), null: sorted
+     * again on the next call
+     */
+    @Nullable
+    private volatile List<Game> sorted;
     /**
      * the worlds of the next games (copies of their maps, made in the background), by arena
      */
@@ -173,6 +179,7 @@ public class GameManager {
             case DUELS -> new DuelsGame(plugin, arena);
         };
         games.put(key(arena), game);
+        this.sorted = null;
         // the copy of the lobby world is made now, not while the first player joins
         game.reloadLobby();
         return game;
@@ -191,8 +198,13 @@ public class GameManager {
     }
 
     public List<Game> getGames() {
-        return games.values().stream().sorted(Comparator.comparing(game -> game.getArena().getName(),
-                String.CASE_INSENSITIVE_ORDER)).toList();
+        List<Game> list = sorted;
+        if (list == null) {
+            list = games.values().stream().sorted(Comparator.comparing(game -> game.getArena().getName(),
+                    String.CASE_INSENSITIVE_ORDER)).toList();
+            this.sorted = list;
+        }
+        return list;
     }
 
     @Nullable
@@ -236,6 +248,7 @@ public class GameManager {
      */
     public void removeGame(Game game) {
         games.remove(key(game.getArena()), game);
+        this.sorted = null;
         game.stop();
     }
 
@@ -247,7 +260,7 @@ public class GameManager {
     public void stopGame(Game game, boolean nextRound) {
         game.broadcast(LangText.GAME_STOPPED);
         removeGame(game);
-        if (nextRound && game instanceof SurvivalGame && game.getArena().isPlayable()) createGame(game.getArena());
+        if (nextRound && game instanceof RoundGame && game.getArena().isPlayable()) createGame(game.getArena());
     }
 
     /**
@@ -393,7 +406,7 @@ public class GameManager {
                 if (game.getState() != GameState.LOBBY || !game.isJoinable()) break;
                 if (game.getJoinDenial(follower.getPlayer().getUniqueId()) != null) continue;
                 if (game.join(follower)) {
-                    plugin.getTelemetry().joined(Telemetry.Join.PARTY);
+                    plugin.getUsageStats().joined(UsageStats.Join.PARTY);
                     follower.getPlayer().sendMessage(I.prefixed(follower.getPlayer(), LangText.JOINED_WITH_PARTY, player.getName()));
                 }
             }

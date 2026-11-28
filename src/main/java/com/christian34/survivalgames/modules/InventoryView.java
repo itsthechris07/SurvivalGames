@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -39,13 +39,12 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class InventoryView implements Listener {
+public class InventoryView extends GameModule implements Listener {
     public static final String MODULE = "inventory-view";
     /**
      * the copies can be opened for 10 minutes
      */
     private static final long KEEP_MILLIS = 10 * 60 * 1000L;
-    private final SurvivalGames plugin;
     private final Map<String, Snapshot> snapshots = new ConcurrentHashMap<>();
 
     /**
@@ -75,14 +74,14 @@ public class InventoryView implements Listener {
     }
 
     public InventoryView(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
     }
 
     /**
      * the victim gets the inventory of the killer, the killer the one of his victim
      */
     public void onKill(Game game, Player victim, Player killer) {
-        if (!plugin.isModuleEnabled(MODULE, game)) return;
+        if (!isEnabled(game)) return;
         Snapshot killerSnapshot = Snapshot.of(killer);
         victim.sendMessage(I.prefixed(victim, LangText.INVENTORY_VIEW_KILLER, killer.getName(),
                 formatHearts(killer.getHealth()), save(killerSnapshot)));
@@ -93,7 +92,7 @@ public class InventoryView implements Listener {
      * everybody in the game gets the inventories of the winners who are in the game
      */
     public void onEnd(Game game, Collection<Player> winners) {
-        if (!plugin.isModuleEnabled(MODULE, game)) return;
+        if (!isEnabled(game)) return;
         for (Player winner : winners) {
             Component message = game.prefixed(LangText.INVENTORY_VIEW_WINNER, winner.getName(), save(Snapshot.of(winner)));
             game.getMembers().forEach(member -> member.getPlayer().sendMessage(message));
@@ -120,7 +119,7 @@ public class InventoryView implements Listener {
         Snapshot snapshot = snapshots.get(id);
         if (snapshot == null || snapshot.time() + KEEP_MILLIS < System.currentTimeMillis()) return false;
         viewer.openInventory(new View(snapshot).getInventory());
-        plugin.getTelemetry().used(Telemetry.Feature.INVENTORY_VIEW);
+        plugin.getUsageStats().used(UsageStats.Feature.INVENTORY_VIEW);
         return true;
     }
 

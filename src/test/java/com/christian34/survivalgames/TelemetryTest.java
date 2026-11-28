@@ -30,16 +30,16 @@ class TelemetryTest extends PluginTestBase {
 
     @Test
     void playerCountsAreGrouped() {
-        assertEquals("2", Telemetry.playerBucket(2));
-        assertEquals("3-4", Telemetry.playerBucket(3));
-        assertEquals("5-8", Telemetry.playerBucket(8));
-        assertEquals("9-16", Telemetry.playerBucket(9));
-        assertEquals("17-24", Telemetry.playerBucket(24));
-        assertEquals("25+", Telemetry.playerBucket(100));
-        assertEquals("0", Telemetry.bucket(0));
-        assertEquals("3", Telemetry.bucket(3));
-        assertEquals("4-10", Telemetry.bucket(10));
-        assertEquals("10+", Telemetry.bucket(11));
+        assertEquals("2", UsageStats.playerBucket(2));
+        assertEquals("3-4", UsageStats.playerBucket(3));
+        assertEquals("5-8", UsageStats.playerBucket(8));
+        assertEquals("9-16", UsageStats.playerBucket(9));
+        assertEquals("17-24", UsageStats.playerBucket(24));
+        assertEquals("25+", UsageStats.playerBucket(100));
+        assertEquals("0", UsageStats.bucket(0));
+        assertEquals("3", UsageStats.bucket(3));
+        assertEquals("4-10", UsageStats.bucket(10));
+        assertEquals("10+", UsageStats.bucket(11));
     }
 
     @Test
@@ -47,7 +47,7 @@ class TelemetryTest extends PluginTestBase {
         createArena("arena1", GameType.SURVIVAL_GAMES, 4);
         createArena("arena2", GameType.SURVIVAL_GAMES, 4);
         createArena("varo1", GameType.VARO, 4);
-        assertEquals(Map.of("survival-games", 2, "varo", 1), plugin.getTelemetry().arenaTypes());
+        assertEquals(Map.of("survival-games", 2, "varo", 1), plugin.getUsageStats().arenaTypes());
     }
 
     @Test
@@ -65,22 +65,22 @@ class TelemetryTest extends PluginTestBase {
             server.getScheduler().performOneTick();
         }
         assertEquals(GameState.RUNNING, game.getState());
-        assertTrue(plugin.getTelemetry().counts(Telemetry.Chart.GAME_TYPES).isEmpty(), "the game isn't over yet");
+        assertTrue(plugin.getUsageStats().counts(UsageStats.Chart.GAME_TYPES).isEmpty(), "the game isn't over yet");
 
         alex.setKiller(steve);
         alex.setHealth(0);
         assertEquals(GameState.ENDED, game.getState());
-        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().counts(Telemetry.Chart.GAME_TYPES));
-        assertEquals(Map.of("2", 1), plugin.getTelemetry().counts(Telemetry.Chart.GAME_SIZES));
-        assertEquals(Map.of("survival-games", 1), plugin.getTelemetry().counts(Telemetry.Chart.GAME_TYPES), "the counts stay after a submission");
-        assertEquals(Map.of("< 5 min", 1), plugin.getTelemetry().counts(Telemetry.Chart.DURATIONS));
-        assertEquals(Map.of("before the deathmatch", 1), plugin.getTelemetry().counts(Telemetry.Chart.ENDINGS));
-        assertEquals(Map.of("command or menu", 2), plugin.getTelemetry().counts(Telemetry.Chart.JOINS));
+        assertEquals(Map.of("survival-games", 1), plugin.getUsageStats().counts(UsageStats.Chart.GAME_TYPES));
+        assertEquals(Map.of("2", 1), plugin.getUsageStats().counts(UsageStats.Chart.GAME_SIZES));
+        assertEquals(Map.of("survival-games", 1), plugin.getUsageStats().counts(UsageStats.Chart.GAME_TYPES), "the counts stay after a submission");
+        assertEquals(Map.of("< 5 min", 1), plugin.getUsageStats().counts(UsageStats.Chart.DURATIONS));
+        assertEquals(Map.of("before the deathmatch", 1), plugin.getUsageStats().counts(UsageStats.Chart.ENDINGS));
+        assertEquals(Map.of("command or menu", 2), plugin.getUsageStats().counts(UsageStats.Chart.JOINS));
     }
 
     @Test
     void theSetupOfTheServerIsDescribed() {
-        Telemetry telemetry = plugin.getTelemetry();
+        UsageStats telemetry = plugin.getUsageStats();
         assertEquals("none", telemetry.usedGameTypes());
         assertTrue(telemetry.varoRules().isEmpty(), "no Varo on this server");
         createArena("arena1", GameType.SURVIVAL_GAMES, 4);
@@ -105,14 +105,14 @@ class TelemetryTest extends PluginTestBase {
 
     @Test
     void usedFeaturesAreCounted() {
-        Telemetry telemetry = plugin.getTelemetry();
-        telemetry.used(Telemetry.Feature.KIT);
-        telemetry.used(Telemetry.Feature.KIT);
-        telemetry.used(Telemetry.Feature.REPLAY);
-        assertEquals(Map.of("kit chosen", 2, "replay watched", 1), telemetry.counts(Telemetry.Chart.FEATURES));
-        assertEquals("1-3 days", Telemetry.dayBucket(1));
-        assertEquals("8-14 days", Telemetry.dayBucket(14));
-        assertEquals("30+ min", Telemetry.minuteBucket(30));
+        UsageStats telemetry = plugin.getUsageStats();
+        telemetry.used(UsageStats.Feature.KIT);
+        telemetry.used(UsageStats.Feature.KIT);
+        telemetry.used(UsageStats.Feature.REPLAY);
+        assertEquals(Map.of("kit chosen", 2, "replay watched", 1), telemetry.counts(UsageStats.Chart.FEATURES));
+        assertEquals("1-3 days", UsageStats.dayBucket(1));
+        assertEquals("8-14 days", UsageStats.dayBucket(14));
+        assertEquals("30+ min", UsageStats.minuteBucket(30));
     }
 
     // ---------------------------------------------------------------- error reports
@@ -338,9 +338,9 @@ class TelemetryTest extends PluginTestBase {
         StackTraceElement own = new StackTraceElement(Telemetry.PACKAGE + "game.Game", "tick", "Game.java", 1);
         StackTraceElement library = new StackTraceElement(Telemetry.PACKAGE + "libs.sentry.Sentry", "x", "S.java", 1);
         StackTraceElement server = new StackTraceElement("net.minecraft.server.MinecraftServer", "tick", "M.java", 1);
-        assertTrue(Telemetry.hasOwnFrame(new StackTraceElement[]{server, own}));
-        assertFalse(Telemetry.hasOwnFrame(new StackTraceElement[]{server, library}));
-        var lag = new Telemetry.ServerThreadBlocked(1500, false, new StackTraceElement[]{own, server});
+        assertTrue(LagWatchdog.hasOwnFrame(new StackTraceElement[]{server, own}));
+        assertFalse(LagWatchdog.hasOwnFrame(new StackTraceElement[]{server, library}));
+        var lag = new LagWatchdog.ServerThreadBlocked(1500, false, new StackTraceElement[]{own, server});
         assertEquals("The server thread was blocked for 1500 ms", lag.getMessage());
         assertTrue(Telemetry.signature(lag).endsWith("Game.tick(Game.java:1)"));
     }
@@ -356,7 +356,7 @@ class TelemetryTest extends PluginTestBase {
                 new StackTraceElement[]{world, load, server},
                 new StackTraceElement[]{world, load, server},
                 new StackTraceElement[]{server});
-        Telemetry.LagCulprit culprit = Telemetry.culprit(samples);
+        LagWatchdog.LagCulprit culprit = LagWatchdog.culprit(samples);
         assertNotNull(culprit);
         assertEquals(load.toString(), culprit.frame());
         assertEquals(4, culprit.samples());
@@ -370,9 +370,9 @@ class TelemetryTest extends PluginTestBase {
         StackTraceElement server = new StackTraceElement("net.minecraft.server.MinecraftServer", "tick", "M.java", 1);
         StackTraceElement member = new StackTraceElement(Telemetry.PACKAGE + "game.Game", "isMember", "Game.java", 274);
         // e.g. the JVM linking a lambda for a moment during a long garbage collection
-        assertNull(Telemetry.culprit(List.of(new StackTraceElement[]{member, server}, new StackTraceElement[]{server},
+        assertNull(LagWatchdog.culprit(List.of(new StackTraceElement[]{member, server}, new StackTraceElement[]{server},
                 new StackTraceElement[]{server})));
-        assertNull(Telemetry.culprit(List.of()));
+        assertNull(LagWatchdog.culprit(List.of()));
     }
 
 }

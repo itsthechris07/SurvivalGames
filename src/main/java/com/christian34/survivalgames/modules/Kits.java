@@ -1,8 +1,8 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
@@ -35,14 +35,13 @@ import java.util.regex.Pattern;
  *
  * @author Christian34
  */
-public class Kits {
+public class Kits extends GameModule {
     public static final String MODULE = "kits";
     public static final Pattern NAME = Pattern.compile("[A-Za-z0-9_-]{1,16}");
     /**
      * the inventory (36), the armor (4) and the second hand
      */
     private static final int SLOTS = 41;
-    private final SurvivalGames plugin;
     private final File file;
     private final Map<String, Kit> kits = new LinkedHashMap<>();
 
@@ -61,7 +60,7 @@ public class Kits {
     }
 
     public Kits(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
         this.file = new File(FileManager.getPluginFolder(), "kits.yml");
         load();
     }
@@ -150,8 +149,9 @@ public class Kits {
     /**
      * @return true if the players of the game choose kits (the module is on and there are kits)
      */
+    @Override
     public boolean isUsed(@Nullable Game game) {
-        return game != null && !kits.isEmpty() && plugin.isModuleEnabled(MODULE, game);
+        return game != null && !kits.isEmpty() && isEnabled(game);
     }
 
     /**
@@ -169,7 +169,7 @@ public class Kits {
             return;
         }
         participant.setKit(kit == null ? null : kit.name());
-        if (kit != null) plugin.getTelemetry().used(Telemetry.Feature.KIT);
+        if (kit != null) plugin.getUsageStats().used(UsageStats.Feature.KIT);
         player.sendMessage(kit == null ? I.prefixed(player, LangText.KIT_NONE_CHOSEN) : I.prefixed(player, LangText.KIT_CHOSEN, kit.name()));
     }
 

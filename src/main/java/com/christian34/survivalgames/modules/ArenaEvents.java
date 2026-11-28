@@ -1,18 +1,16 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Participant;
-import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Mob;
@@ -24,9 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
-import java.util.WeakHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -41,10 +37,8 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * @author Christian34
  */
-public class ArenaEvents {
+public class ArenaEvents extends GameModule {
     public static final String MODULE = "arena-events";
-    private final SurvivalGames plugin;
-    private final Map<Game, State> states = new WeakHashMap<>();
 
     public enum Event {
         POISON_WATER(LangText.ARENA_EVENT_POISON_WATER),
@@ -87,13 +81,7 @@ public class ArenaEvents {
     }
 
     public ArenaEvents(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     /**
@@ -101,22 +89,18 @@ public class ArenaEvents {
      */
     @Nullable
     public Event getEvent(Game game) {
-        State state = states.get(game);
+        State state = game.getModuleData(this, State.class);
         return state == null || state.event == null || game.getRunningSeconds() < state.begins ? null : state.event;
     }
 
     /**
      * every second of a running game
      */
+    @Override
     public void tick(Game game) {
-        if (game.isStopped() || game.getState() != GameState.RUNNING || !plugin.isModuleEnabled(MODULE, game)) {
-            State state = states.remove(game);
-            if (state != null) clearMobs(state);
-            return;
-        }
-        State state = states.computeIfAbsent(game, key -> new State());
+        State state = game.getModuleData(this, State.class, State::new);
         int seconds = game.getRunningSeconds();
-        boolean paused = game instanceof SurvivalGame sg && (sg.isGracePeriod() || sg.isDeathmatch());
+        boolean paused = !game.isPvpAllowed() || game.isFinalPhase();
         if (state.event != null) {
             if (seconds >= state.ends || game.isFinalPhase()) {
                 stop(game, state);
@@ -143,7 +127,7 @@ public class ArenaEvents {
      */
     public boolean start(Game game, @Nullable Event event) {
         if (game.getState() != GameState.RUNNING) return false;
-        State state = states.computeIfAbsent(game, key -> new State());
+        State state = game.getModuleData(this, State.class, State::new);
         if (state.event != null) stop(game, state);
         return start(game, state, event);
     }
@@ -160,7 +144,7 @@ public class ArenaEvents {
         state.event = event;
         state.begins = game.getRunningSeconds() + warning;
         state.ends = state.begins + Math.max(1, config().getInt("duration", 30));
-        plugin.getTelemetry().used(Telemetry.Feature.ARENA_EVENT);
+        plugin.getUsageStats().used(UsageStats.Feature.ARENA_EVENT);
         game.broadcast(LangText.ARENA_EVENT_WARNING, warning);
         if (warning == 0) {
             begin(game, state);
@@ -183,6 +167,12 @@ public class ArenaEvents {
         clearMobs(state);
         state.event = null;
         if (game.getState() == GameState.RUNNING) game.broadcast(LangText.ARENA_EVENT_OVER);
+    }
+
+    @Override
+    public void stop(Game game) {
+        State state = game.getModuleData(this, State.class);
+        if (state != null) clearMobs(state);
     }
 
     private static void clearMobs(State state) {

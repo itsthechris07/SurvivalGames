@@ -39,7 +39,7 @@ collection. Stalls that are mostly caused by other plugins, the server or a lack
 `/sg report <text>` sends your description of a problem with the same information and links it to the last error
 report of the server.
 
-The settings of the plugin are attached (`config.yml` and `loot.yml`, without comments), so the error can be
+The settings of `config.yml` that differ from the defaults are attached (without comments), so the error can be
 reproduced with the same setup. They contain the names you gave arenas, kits, teams and worlds. Before they are sent,
 passwords, database logins, webhooks, the addresses of servers and databases, UUIDs and the names of online players
 are replaced with `<redacted>`, `<uuid>` and `<player>`.

@@ -1,7 +1,6 @@
 package com.christian34.survivalgames.network;
 
 import com.christian34.survivalgames.game.Game;
-import com.christian34.survivalgames.game.VaroGame;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,7 +58,7 @@ public record ServerStatus(State state, int players, int maxPlayers, String aren
             case ENDED -> State.ENDING;
         };
         int players = state == State.LOBBY ? game.getParticipants().size() : game.getPlayers().size();
-        Instant opens = state != State.ENDING && game instanceof VaroGame varo ? varo.getOpening() : null;
+        Instant opens = state != State.ENDING ? game.getOpening() : null;
         return new ServerStatus(state, players, game.getMaxPlayers(), game.getArena().getName(), game.getType().getKey(),
                 opens);
     }

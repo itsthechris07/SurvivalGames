@@ -434,7 +434,7 @@ public final class AdminMenus {
             menu.button(icon(Material.YELLOW_DYE), i18n(LangText.GUI_CONTROL_FORCE_START),
                     I.itemLines(LangText.GUI_CONTROL_FORCE_START_LORE), run(command + "start --force", again));
         }
-        if (state == GameState.RUNNING && game instanceof SurvivalGame) {
+        if (state == GameState.RUNNING && game instanceof RoundGame) {
             menu.button(icon(Material.NETHERITE_SWORD), i18n(LangText.GUI_CONTROL_DEATHMATCH),
                     I.itemLines(LangText.GUI_CONTROL_DEATHMATCH_LORE), run(command + "deathmatch", again));
         }

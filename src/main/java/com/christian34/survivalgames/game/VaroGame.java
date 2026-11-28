@@ -1,11 +1,12 @@
 package com.christian34.survivalgames.game;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
+import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -26,6 +27,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -60,6 +65,10 @@ public class VaroGame extends Game {
     private static final Set<Integer> TIME_WARNINGS = Set.of(300, 60, 30, 10, 5, 4, 3, 2, 1);
     private static final DateTimeFormatter BACKUP_TIME = DateTimeFormatter.ofPattern("HH-mm-ss");
     private static final DateTimeFormatter OPENING_TIME = DateTimeFormatter.ofPattern("HH:mm");
+    /**
+     * ticks between saving the world and zipping it for a backup
+     */
+    private static final long BACKUP_DELAY = 40;
     private final File file;
     private Clock clock = Clock.systemDefaultZone();
     @Nullable
@@ -95,6 +104,8 @@ public class VaroGame extends Game {
     // ---------------------------------------------------------------- saving
 
     private void load() {
+        // a save that is still being written
+        FileJobs.await(file);
         if (!file.isFile()) return;
         YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
         GameState saved;
@@ -150,7 +161,8 @@ public class VaroGame extends Game {
     }
 
     /**
-     * writes the game to games/&lt;arena&gt;.yml (every minute, on changes and when it stops)
+     * writes the game to games/&lt;arena&gt;.yml (every minute, on changes and when it stops) - the data is taken now,
+     * the file is written off the server thread (the saves of a game one after the other)
      */
     public void save() {
         // the state of the players in the game right now (lost after a crash otherwise)
@@ -178,13 +190,32 @@ public class VaroGame extends Game {
         ConfigurationSection bounties = data.createSection("bounties");
         getBounties().forEach((target, amounts) -> amounts.forEach((setter, amount) ->
                 bounties.set(target + "." + setter, amount)));
+        String content = data.saveToString();
+        String name = arena.getName();
+        FileJobs.run(() -> write(file, content), file).exceptionally(ex -> {
+            Debug.warn("Couldn't save the Varo of arena '" + name + "'", ex);
+            return null;
+        });
+    }
+
+    /**
+     * writes the file through a temporary one: a crash while writing doesn't leave half a game behind
+     */
+    private static void write(File file, String content) {
         try {
             File folder = file.getParentFile();
             if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Couldn't create " + folder);
-            data.save(file);
+            File temp = new File(folder, file.getName() + ".tmp");
+            Files.writeString(temp.toPath(), content, StandardCharsets.UTF_8);
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException ex) {
-            Debug.warn("Couldn't save the Varo of arena '" + arena.getName() + "'", ex);
+            throw new UncheckedIOException(ex);
         }
+    }
+
+    @Override
+    public void changed() {
+        if (!isStopped()) save();
     }
 
     @Override
@@ -203,6 +234,7 @@ public class VaroGame extends Game {
      */
     void deleteData() {
         gameWorld.delete();
+        FileJobs.await(file);
         if (file.isFile() && !file.delete()) Debug.warn("Couldn't delete " + file);
     }
 
@@ -297,6 +329,7 @@ public class VaroGame extends Game {
     /**
      * @return the next time the play hours begin, null if the game can be played right now (or at any time)
      */
+    @Override
     @Nullable
     public Instant getOpening() {
         LocalDateTime now = LocalDateTime.now(clock);
@@ -439,7 +472,7 @@ public class VaroGame extends Game {
         int seconds = settings().getInt("offline-npc-seconds");
         if (reason == LeaveReason.QUIT && seconds > 0 && getState() == GameState.RUNNING) {
             plugin.getOfflineNpc().spawn(player, seconds);
-            plugin.getTelemetry().used(Telemetry.Feature.OFFLINE_NPC);
+            plugin.getUsageStats().used(UsageStats.Feature.OFFLINE_NPC);
         }
     }
 
@@ -604,6 +637,8 @@ public class VaroGame extends Game {
         World world = gameWorld.getWorld();
         if (world == null) return CompletableFuture.failedFuture(new IllegalStateException("the world isn't loaded"));
         save();
+        // like save-off, save-all, save-on: the server doesn't write the world while it is zipped
+        world.setAutoSave(false);
         try {
             world.save();
         } catch (RuntimeException ex) {
@@ -615,19 +650,29 @@ public class VaroGame extends Game {
         File source = GameWorld.getFolder(world);
         File folder = getBackupFolder(arena);
         File target = new File(folder, name + ".zip");
+        String arenaName = arena.getName();
         CompletableFuture<File> future = new CompletableFuture<>();
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        // World#save only hands the chunks to the IO threads of the server: they are zipped a little later
+        Bukkit.getScheduler().runTaskLater(plugin, () -> FileJobs.run(() -> {
             try {
                 if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Couldn't create " + folder);
                 Backups.zip(source, file, target);
                 if (keep > 0) Backups.prune(folder, keep);
-                Debug.info("Backup of the Varo in arena '" + arena.getName() + "': " + target.getName());
-                future.complete(target);
-            } catch (IOException | RuntimeException ex) {
-                Debug.warn("Couldn't back up the Varo in arena '" + arena.getName() + "'", ex);
-                future.completeExceptionally(ex);
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
             }
-        });
+        }, file, source, folder).whenComplete((done, failure) -> {
+            FileJobs.onServerThread(() -> {
+                if (gameWorld.getWorld() == world) world.setAutoSave(true);
+            });
+            if (failure != null) {
+                Debug.warn("Couldn't back up the Varo in arena '" + arenaName + "'", failure);
+                future.completeExceptionally(failure);
+            } else {
+                Debug.info("Backup of the Varo in arena '" + arenaName + "': " + target.getName());
+                future.complete(target);
+            }
+        }), BACKUP_DELAY);
         return future;
     }
 
@@ -652,6 +697,8 @@ public class VaroGame extends Game {
         GameWorld world = arena.createWorld(arena.getName(), true);
         world.delete();
         File file = getFile(arena);
+        // a save or backup that is still being written
+        FileJobs.await(file);
         if (file.isFile() && !file.delete()) throw new IOException("Couldn't delete " + file);
         Backups.unzip(backup, world.getWorldFolder(), file);
     }
@@ -659,6 +706,11 @@ public class VaroGame extends Game {
     /**
      * @return true during the first peaceful-days of the game (nobody can hurt other players)
      */
+    @Override
+    public boolean isPvpAllowed() {
+        return !isPeaceful();
+    }
+
     public boolean isPeaceful() {
         int day = getDay();
         return day > 0 && day <= settings().getInt("peaceful-days");
@@ -753,7 +805,7 @@ public class VaroGame extends Game {
         int number = participant.addStrike(new Participant.Strike(reason, by, System.currentTimeMillis()));
         announce(LangText.STRIKE_GIVEN, participant.getName(), number, reason);
         plugin.getDiscord().post(Discord.Event.STRIKE, this, I.plain(LangText.STRIKE_GIVEN, participant.getName(), number, reason));
-        plugin.getTelemetry().used(Telemetry.Feature.STRIKE);
+        plugin.getUsageStats().used(UsageStats.Feature.STRIKE);
         List<String> consequences = settings().getStringList("strikes");
         if (number <= consequences.size()) punish(participant, consequences.get(number - 1).trim().toLowerCase(Locale.ROOT));
         save();

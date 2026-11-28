@@ -1,5 +1,6 @@
 package com.christian34.survivalgames.game;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.Telemetry;
@@ -10,6 +11,7 @@ import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.integrations.Discord;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.Items;
+import com.christian34.survivalgames.modules.GameModule;
 import com.christian34.survivalgames.modules.Betting;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -38,6 +40,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -50,6 +53,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 
 import static com.christian34.survivalgames.lib.lang.I.i18n;
 
@@ -116,6 +120,10 @@ public abstract class Game {
      */
     private final Map<UUID, Set<UUID>> alliances = new ConcurrentHashMap<>();
     /**
+     * the state of the modules in this game ({@link #getModuleData})
+     */
+    private final Map<GameModule, Object> moduleData = new HashMap<>();
+    /**
      * who has been asked for an alliance -> who has asked him
      */
     private final Map<UUID, Set<UUID>> allyRequests = new ConcurrentHashMap<>();
@@ -165,7 +173,7 @@ public abstract class Game {
     /**
      * the settings of the game type (section of config.yml)
      */
-    protected ConfigurationSection settings() {
+    public ConfigurationSection settings() {
         return arena.settings();
     }
 
@@ -230,6 +238,38 @@ public abstract class Game {
     }
 
     /**
+     * @return what the module keeps about this game, null if it hasn't got anything
+     */
+    @Nullable
+    public <T> T getModuleData(GameModule module, Class<T> type) {
+        Object data = moduleData.get(module);
+        return type.isInstance(data) ? type.cast(data) : null;
+    }
+
+    /**
+     * @return what the module keeps about this game, created if it hasn't got anything yet
+     */
+    public <T> T getModuleData(GameModule module, Class<T> type, Supplier<T> create) {
+        T data = getModuleData(module, type);
+        if (data == null) {
+            data = create.get();
+            moduleData.put(module, data);
+        }
+        return data;
+    }
+
+    /**
+     * @param data null: the module forgets the game
+     */
+    public void setModuleData(GameModule module, @Nullable Object data) {
+        if (data == null) {
+            moduleData.remove(module);
+        } else {
+            moduleData.put(module, data);
+        }
+    }
+
+    /**
      * the requests for an alliance (who has been asked -> who has asked him)
      */
     public Map<UUID, Set<UUID>> getAllyRequests() {
@@ -255,6 +295,28 @@ public abstract class Game {
      */
     public boolean isFinalPhase() {
         return false;
+    }
+
+    /**
+     * @return true if the players may hurt each other right now (not during a grace period or peaceful days)
+     */
+    public boolean isPvpAllowed() {
+        return true;
+    }
+
+    /**
+     * @return the next time the game can be played again, null if it can be played right now (only a Varo has play
+     * hours)
+     */
+    @Nullable
+    public Instant getOpening() {
+        return null;
+    }
+
+    /**
+     * the data of a module in the game has changed (bounties, the fallen): a Varo saves it
+     */
+    public void changed() {
     }
 
     /**
@@ -498,9 +560,9 @@ public abstract class Game {
             return false;
         }
         enter(gamePlayer, true);
+        // updates the visibility
         makeSpectator(gamePlayer, null);
-        plugin.updateVisibility();
-        plugin.getTelemetry().used(Telemetry.Feature.SPECTATE);
+        plugin.getUsageStats().used(UsageStats.Feature.SPECTATE);
         return true;
     }
 
@@ -840,7 +902,7 @@ public abstract class Game {
             return;
         }
         broadcast(LangText.TEAM_CREATED, player.getName(), team.getDisplayName(), team.getName());
-        plugin.getTelemetry().used(Telemetry.Feature.TEAM_CREATED);
+        plugin.getUsageStats().used(UsageStats.Feature.TEAM_CREATED);
         joinTeam(player.getUniqueId(), team);
     }
 
@@ -1178,8 +1240,6 @@ public abstract class Game {
         runningSeconds = 0;
         setState(GameState.RUNNING);
         closeLobby();
-        // the next round gets a fresh copy of the map, made while this one is running
-        if (this instanceof SurvivalGame) plugin.getGameManager().prepareWorld(arena);
         // the level showed the countdown
         for (GamePlayer member : members) {
             member.getPlayer().setLevel(0);
@@ -1280,10 +1340,9 @@ public abstract class Game {
             }
             if (state == GameState.RUNNING) runningSeconds++;
             onTick();
-            if (state == GameState.RUNNING && !stopped) {
-                plugin.getArenaEvents().tick(this);
-                plugin.getFallen().tick(this);
-                plugin.getAlliances().check(this);
+            for (GameModule module : plugin.getModules()) {
+                if (state != GameState.RUNNING || stopped) break;
+                if (module.isUsed(this)) module.tick(this);
             }
         } catch (RuntimeException ex) {
             Telemetry.inGame(this, () -> Debug.warn("Error in the game of arena '" + arena.getName() + "'", ex));
@@ -1421,7 +1480,7 @@ public abstract class Game {
 
     protected void end(@Nullable GameTeam winner) {
         countdown = -1;
-        plugin.getTelemetry().gamePlayed(this, winner == null);
+        plugin.getUsageStats().gamePlayed(this, winner == null);
         setState(GameState.ENDED);
         this.winner = winner == null ? null : winner.getName();
         Title title;
@@ -1534,12 +1593,17 @@ public abstract class Game {
         stopped = true;
         ticker.cancel();
         plugin.getReplays().stop(this);
-        // a round stopped before its end (a Varo goes on, but its bets don't)
-        plugin.getBetting().refundAll(this);
-        plugin.getArenaEvents().tick(this);
-        for (GamePlayer member : members) {
-            leave(member, LeaveReason.STOP);
+        // e.g. a round stopped before its end: the bets are paid back (a Varo goes on, but its bets don't)
+        for (GameModule module : plugin.getModules()) {
+            module.stop(this);
         }
+        moduleData.clear();
+        // the visibility once for all
+        plugin.batchVisibility(() -> {
+            for (GamePlayer member : members) {
+                leave(member, LeaveReason.STOP);
+            }
+        });
         plugin.getBackpack().closeAll(this);
         onStop();
         World world = gameWorld.getWorld();

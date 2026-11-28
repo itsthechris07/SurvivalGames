@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.game;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.modules.Kits;
@@ -81,7 +81,7 @@ public class Duels {
             player.sendMessage(I.prefixed(GameType.DUELS, LangText.DUEL_NO_ARENA));
             return;
         }
-        plugin.getTelemetry().joined(Telemetry.Join.COMMAND);
+        plugin.getUsageStats().joined(UsageStats.Join.COMMAND);
         plugin.getGameManager().join(gamePlayer, game.getArena());
     }
 

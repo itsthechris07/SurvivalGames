@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.lib.lang.I;
@@ -9,7 +9,6 @@ import com.christian34.survivalgames.lib.lang.LangText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Sound;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,10 +30,9 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * @author Christian34
  */
-public class Reaping {
+public class Reaping extends GameModule {
     public static final String MODULE = "reaping";
     public static final String LOTS_PERMISSION = "sg.reaping.lots.";
-    private final SurvivalGames plugin;
     /**
      * the reapings every player wasn't drawn in since he was drawn last
      */
@@ -42,17 +40,7 @@ public class Reaping {
     private Random random = ThreadLocalRandom.current();
 
     public Reaping(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    public boolean isUsed(@Nullable Game game) {
-        return plugin.isModuleEnabled(MODULE, game);
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     /**
@@ -96,7 +84,7 @@ public class Reaping {
         List<Participant> applicants = new ArrayList<>(game.getParticipants());
         int places = game.getMaxPlayers();
         if (!isUsed(game) || applicants.size() <= places) return List.of();
-        plugin.getTelemetry().used(Telemetry.Feature.REAPING);
+        plugin.getUsageStats().used(UsageStats.Feature.REAPING);
         Set<Participant> drawn = new HashSet<>();
         List<Participant> pool = new ArrayList<>(applicants);
         while (drawn.size() < places && !pool.isEmpty()) {

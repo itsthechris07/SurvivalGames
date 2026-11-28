@@ -360,14 +360,6 @@ public class ArenaManager {
     }
 
     /**
-     * @return true if the world is a copy of a map an admin edits
-     */
-    public boolean isEditWorld(World world) {
-        return world.equals(getLobbyEditWorld())
-                || editWorlds.values().stream().anyMatch(editWorld -> world.equals(editWorld.world.getWorld()));
-    }
-
-    /**
      * the player (whose state is saved) gets into the copy in creative mode
      *
      * @return the world of the copy

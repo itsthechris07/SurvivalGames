@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 
 /**
@@ -17,7 +18,12 @@ import java.util.List;
  */
 public abstract class PluginFile {
     private final File sourceFile;
+    /**
+     * counts the changes of all files: a new number on every load and change
+     */
+    private static final AtomicInteger CHANGES = new AtomicInteger();
     private YamlConfiguration data;
+    private volatile int version;
 
     public PluginFile(File sourceFile) {
         this(sourceFile, true);
@@ -49,6 +55,15 @@ public abstract class PluginFile {
             Debug.warn("Couldn't update file '" + sourceFile.getName() + "'", ex);
         }
         this.data = YamlConfiguration.loadConfiguration(sourceFile);
+        this.version = CHANGES.incrementAndGet();
+    }
+
+    /**
+     * @return a number that changes when the file is loaded again or changed with {@link #set} (to cache values read
+     * from it)
+     */
+    public int getVersion() {
+        return version;
     }
 
     /**
@@ -56,6 +71,7 @@ public abstract class PluginFile {
      */
     public void set(String path, @Nullable Object value) {
         data.set(path, value);
+        this.version = CHANGES.incrementAndGet();
         save();
     }
 

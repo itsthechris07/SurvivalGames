@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
@@ -45,15 +45,14 @@ import java.util.List;
  *
  * @author Christian34
  */
-public class ChestLock implements Listener {
+public class ChestLock extends GameModule implements Listener {
     public static final String MODULE = "chest-lock";
     private static final BlockFace[] SIGN_FACES = {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST,
             BlockFace.UP};
-    private final SurvivalGames plugin;
     private final NamespacedKey lockKey;
 
     public ChestLock(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
         this.lockKey = Items.key("lock");
     }
 
@@ -63,7 +62,7 @@ public class ChestLock implements Listener {
     @Nullable
     private Game getGame(Block block) {
         Game game = plugin.getGameManager().getGame(block.getWorld());
-        return plugin.isModuleEnabled(MODULE, game) ? game : null;
+        return isEnabled(game) ? game : null;
     }
 
     /**
@@ -169,7 +168,7 @@ public class ChestLock implements Listener {
             sign.update();
         });
         player.sendMessage(I.prefixed(player, LangText.LOCK_CREATED, team.getDisplayName()));
-        plugin.getTelemetry().used(Telemetry.Feature.CHEST_LOCK);
+        plugin.getUsageStats().used(UsageStats.Feature.CHEST_LOCK);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

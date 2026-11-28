@@ -45,10 +45,10 @@ public class GameWorld {
     public static final String TEMP_PREFIX = "sg_";
     public static final String KEPT_PREFIX = "sgvaro_";
     /**
-     * files and folders of a (pre 26.1) world save that don't belong into a dimension folder
+     * files and folders of a (pre 26.1) world save that don't belong into a dimension folder (the files of a running
+     * world are skipped by {@link FileManager#copyFolder} anyway)
      */
-    private static final Set<String> SKIPPED_FILES = Set.of("level.dat", "level.dat_old", "uid.dat", "session.lock",
-            "DIM-1", "DIM1", "dimensions", "playerdata", "players", "advancements", "stats", "datapacks",
+    private static final Set<String> SKIPPED_FILES = Set.of("level.dat", "level.dat_old", "DIM-1", "DIM1", "dimensions", "playerdata", "players", "advancements", "stats", "datapacks",
             MapTrimmer.MARKER);
     /**
      * a copy that takes longer is reported in the console (with the hint to trim the map)
@@ -358,8 +358,7 @@ public class GameWorld {
         if (copy == null) return;
         this.copy = null;
         if (kept) return;
-        File folder = getWorldFolder();
-        FileJobs.run(() -> FileManager.deleteDirectory(folder), folder);
+        deleteLater(getWorldFolder());
     }
 
     private static boolean copyMap(File from, File to) {
@@ -397,8 +396,13 @@ public class GameWorld {
         }
         this.world = null;
         this.copy = null;
-        if (!kept) FileManager.deleteDirectory(getWorldFolder());
+        // a big world takes a while to delete: the next copy under that name waits for it
+        if (!kept) deleteLater(getWorldFolder());
         return true;
+    }
+
+    private static void deleteLater(File folder) {
+        FileJobs.run(() -> FileManager.deleteDirectory(folder), folder);
     }
 
     /**
@@ -434,7 +438,7 @@ public class GameWorld {
             Debug.warn("Couldn't save world '" + worldName + "' to " + map + " - the copy is kept in " + worldFolder);
             return false;
         }
-        FileManager.deleteDirectory(worldFolder);
+        deleteLater(worldFolder);
         return true;
     }
 

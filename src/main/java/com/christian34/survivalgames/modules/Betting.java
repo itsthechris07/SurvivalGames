@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
@@ -10,7 +10,6 @@ import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,9 +27,8 @@ import java.util.UUID;
  *
  * @author Christian34
  */
-public class Betting {
+public class Betting extends GameModule {
     public static final String MODULE = "betting";
-    private final SurvivalGames plugin;
 
     /**
      * @param team the name of the team the player has bet on
@@ -39,17 +37,7 @@ public class Betting {
     }
 
     public Betting(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    public boolean isUsed(@Nullable Game game) {
-        return plugin.isModuleEnabled(MODULE, game);
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     private EconomySupport economy() {
@@ -138,7 +126,7 @@ public class Betting {
         }
         double odds = getOdds(game, team);
         game.getBets().add(new Bet(player.getUniqueId(), team.getName(), amount, odds));
-        plugin.getTelemetry().used(Telemetry.Feature.BET);
+        plugin.getUsageStats().used(UsageStats.Feature.BET);
         game.broadcast(LangText.BET_PLACED, player.getName(), economy().format(amount), team.getDisplayName(),
                 formatOdds(odds));
     }
@@ -177,6 +165,12 @@ public class Betting {
             }
         }
         game.getBets().clear();
+    }
+
+    @Override
+    public void stop(Game game) {
+        // a round stopped before its end
+        refundAll(game);
     }
 
     /**

@@ -1,8 +1,8 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Loot;
@@ -29,9 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Christian34
  */
-public class Sponsor {
+public class Sponsor extends GameModule {
     public static final String MODULE = "sponsor";
-    private final SurvivalGames plugin;
     /**
      * when every sponsor may send the next item (milliseconds)
      */
@@ -44,11 +43,7 @@ public class Sponsor {
     }
 
     public Sponsor(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    public boolean isUsed(@Nullable Game game) {
-        return plugin.isModuleEnabled(MODULE, game);
+        super(plugin, MODULE);
     }
 
     /**
@@ -56,7 +51,7 @@ public class Sponsor {
      */
     public List<Offer> getOffers() {
         List<Offer> offers = new ArrayList<>();
-        List<Map<?, ?>> items = plugin.getFileManager().getConfigFile().getData().getMapList("modules." + MODULE + ".items");
+        List<Map<?, ?>> items = config().getMapList("items");
         for (Map<?, ?> map : items) {
             Object name = map.get("item");
             ItemStack item = name == null ? null : Loot.parseItem(name.toString());
@@ -117,7 +112,7 @@ public class Sponsor {
                 return;
             }
         }
-        int cooldown = plugin.getFileManager().getConfigFile().getData().getInt("modules." + MODULE + ".cooldown", 30);
+        int cooldown = config().getInt("cooldown", 30);
         cooldowns.put(sponsor.getUniqueId(), now + Math.max(0, cooldown) * 1000L);
         ItemStack item = offer.item().clone();
         player.getInventory().addItem(item).values()
@@ -126,7 +121,7 @@ public class Sponsor {
         player.sendMessage(I.prefixed(player, LangText.SPONSOR_RECEIVED, sponsor.getName(), item.getAmount(), Items.name(item)));
         sponsor.sendMessage(I.prefixed(sponsor, LangText.SPONSOR_SENT, item.getAmount(), Items.name(item), target.getName()));
         plugin.getAchievements().unlock(sponsor.getUniqueId(), sponsor.getName(), Achievement.SPONSOR);
-        plugin.getTelemetry().used(Telemetry.Feature.SPONSOR);
+        plugin.getUsageStats().used(UsageStats.Feature.SPONSOR);
     }
 
 }

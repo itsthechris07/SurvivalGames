@@ -6,6 +6,7 @@ import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.game.Rewards;
+import com.christian34.survivalgames.game.RoundGame;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.modules.Backpack;
@@ -113,8 +114,8 @@ public class ProtectionListener implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (plugin.getUser(player).getGame() instanceof SurvivalGame sg && !plugin.getBuildMode().isBuilding(player)
-                && !sg.mayBreak(e.getBlock())) {
+        if (plugin.getUser(player).getGame() instanceof RoundGame round && !plugin.getBuildMode().isBuilding(player)
+                && !round.mayBreak(e.getBlock())) {
             e.setCancelled(true);
         }
     }
@@ -126,8 +127,8 @@ public class ProtectionListener implements Listener {
             e.setCancelled(true);
             return;
         }
-        if (plugin.getUser(player).getGame() instanceof SurvivalGame sg && !plugin.getBuildMode().isBuilding(player)
-                && !sg.mayPlace(e.getBlock())) {
+        if (plugin.getUser(player).getGame() instanceof RoundGame round && !plugin.getBuildMode().isBuilding(player)
+                && !round.mayPlace(e.getBlock())) {
             e.setCancelled(true);
         }
     }

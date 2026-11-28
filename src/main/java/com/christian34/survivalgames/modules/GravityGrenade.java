@@ -1,8 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
-import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.lib.Items;
@@ -45,29 +44,24 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class GravityGrenade implements Listener {
+public class GravityGrenade extends GameModule implements Listener {
     public static final String MODULE = "gravity-grenade";
     /**
      * ticks the blocks and entities are pulled to the center
      */
     private static final int PULL_TICKS = 30;
-    private final SurvivalGames plugin;
     private final NamespacedKey recipeKey;
 
     public GravityGrenade(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
         this.recipeKey = new NamespacedKey(plugin, "gravity_grenade");
-        if (config().getBoolean("modules.gravity-grenade.enabled")) {
+        if (config().getBoolean("enabled")) {
             ShapelessRecipe recipe = new ShapelessRecipe(recipeKey, createItem());
             recipe.addIngredient(Material.SNOWBALL);
             recipe.addIngredient(Material.TNT);
             recipe.addIngredient(Material.ENDER_PEARL);
             Bukkit.addRecipe(recipe);
         }
-    }
-
-    private ConfigFile config() {
-        return plugin.getFileManager().getConfigFile();
     }
 
     public void removeRecipe() {
@@ -83,10 +77,10 @@ public class GravityGrenade implements Listener {
     public void onHit(ProjectileHitEvent e) {
         if (!(e.getEntity() instanceof Snowball snowball) || !Items.is(snowball.getItem(), Items.GRENADE)) return;
         Game game = plugin.getGameManager().getGame(snowball.getWorld());
-        if (!plugin.isModuleEnabled(MODULE, game) || game.getState() != GameState.RUNNING) return;
+        if (!isEnabled(game) || game.getState() != GameState.RUNNING) return;
         Location center = e.getHitBlock() != null ? e.getHitBlock().getLocation().add(0.5, 0.5, 0.5)
                 : snowball.getLocation();
-        plugin.getTelemetry().used(Telemetry.Feature.GRAVITY_GRENADE);
+        plugin.getUsageStats().used(UsageStats.Feature.GRAVITY_GRENADE);
         explode(center, snowball.getShooter() instanceof Player player ? player : null);
     }
 
@@ -95,7 +89,7 @@ public class GravityGrenade implements Listener {
      */
     public void explode(Location center, @Nullable Player thrower) {
         World world = center.getWorld();
-        int radius = Math.clamp(config().getInt("modules.gravity-grenade.radius"), 1, 8);
+        int radius = Math.clamp(config().getInt("radius"), 1, 8);
         world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 0.5f);
         world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 1);
 

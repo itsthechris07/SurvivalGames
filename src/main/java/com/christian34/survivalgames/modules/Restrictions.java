@@ -45,20 +45,13 @@ import java.util.Map;
  *
  * @author Christian34
  */
-public class Restrictions implements Listener {
+public class Restrictions extends GameModule implements Listener {
     public static final String MODULE = "restrictions";
-    private final SurvivalGames plugin;
 
     public Restrictions(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
         // items from chests, villagers, other players, ... are checked every few seconds
         Bukkit.getScheduler().runTaskTimer(plugin, this::sweep, 60L, 60L);
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
     }
 
     /**
@@ -68,7 +61,7 @@ public class Restrictions implements Listener {
         if (!(entity instanceof Player player)) return false;
         GamePlayer user = plugin.getUser(player);
         Game game = user.getGame();
-        return game != null && !user.isSpectator() && plugin.isModuleEnabled(MODULE, game);
+        return game != null && !user.isSpectator() && isEnabled(game);
     }
 
     private static String normalize(String name) {
@@ -206,7 +199,7 @@ public class Restrictions implements Listener {
     public void onBrew(BrewEvent e) {
         List<ItemStack> results = e.getResults();
         Game game = plugin.getGameManager().getGame(e.getBlock().getWorld());
-        if (game == null || !plugin.isModuleEnabled(MODULE, game)) return;
+        if (game == null || !isEnabled(game)) return;
         for (int i = 0; i < results.size(); i++) {
             // an empty bottle instead
             if (isBanned(results.get(i))) results.set(i, ItemStack.of(Material.GLASS_BOTTLE));

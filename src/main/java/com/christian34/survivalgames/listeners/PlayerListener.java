@@ -5,8 +5,6 @@ import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.Participant;
-import com.christian34.survivalgames.game.SurvivalGame;
-import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -144,14 +142,13 @@ public class PlayerListener implements Listener {
             e.setCancelled(true);
             return;
         }
-        boolean peaceful = game instanceof SurvivalGame sg ? sg.isGracePeriod() : game instanceof VaroGame varo && varo.isPeaceful();
-        if (peaceful) {
+        if (!game.isPvpAllowed()) {
             e.setCancelled(true);
             return;
         }
         GameTeam team = game.getTeam(attacker.getUniqueId());
         if (team != null && team.isMember(victim.getUniqueId())
-                && !game.getArena().settings().getBoolean("friendly-fire")) {
+                && !game.settings().getBoolean("friendly-fire")) {
             e.setCancelled(true);
             return;
         }
@@ -180,7 +177,7 @@ public class PlayerListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onAdvancement(PlayerAdvancementCriterionGrantEvent e) {
         Game game = getGame(e.getPlayer());
-        if (game != null && !game.getArena().settings().getBoolean("advancements")) e.setCancelled(true);
+        if (game != null && !game.settings().getBoolean("advancements")) e.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)

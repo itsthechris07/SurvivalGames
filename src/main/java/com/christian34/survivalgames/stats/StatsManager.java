@@ -390,13 +390,6 @@ public class StatsManager implements Listener {
     }
 
     /**
-     * @return true if the settings of the online player are loaded
-     */
-    public boolean hasSettings(UUID uuid) {
-        return settings.containsKey(uuid);
-    }
-
-    /**
      * changes the setting of an online player right away and saves it
      *
      * @param value null: removes it

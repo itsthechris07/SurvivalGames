@@ -1,8 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
-import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.lib.lang.I;
@@ -27,25 +26,16 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * @author Christian34
  */
-public class ToxicRain implements Listener {
+public class ToxicRain extends GameModule implements Listener {
     public static final String MODULE = "toxic-rain";
-    private final SurvivalGames plugin;
     /**
      * the worlds where it rains toxic right now
      */
     private final Set<World> toxic = new HashSet<>();
 
     public ToxicRain(SurvivalGames plugin) {
-        this.plugin = plugin;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 40L, 40L);
-    }
-
-    private ConfigFile config() {
-        return plugin.getFileManager().getConfigFile();
-    }
-
-    public boolean isToxic(World world) {
-        return toxic.contains(world);
+        super(plugin, MODULE);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::damageAll, 40L, 40L);
     }
 
     /**
@@ -53,7 +43,7 @@ public class ToxicRain implements Listener {
      */
     public void setToxic(World world, boolean toxic) {
         if (toxic ? !this.toxic.add(world) : !this.toxic.remove(world)) return;
-        if (toxic) plugin.getTelemetry().used(Telemetry.Feature.TOXIC_RAIN);
+        if (toxic) plugin.getUsageStats().used(UsageStats.Feature.TOXIC_RAIN);
         for (Player player : world.getPlayers()) {
             player.sendMessage(I.prefixed(player, toxic ? LangText.TOXIC_RAIN_STARTED : LangText.TOXIC_RAIN_STOPPED));
         }
@@ -63,15 +53,15 @@ public class ToxicRain implements Listener {
     public void onWeatherChange(WeatherChangeEvent e) {
         Game game = plugin.getGameManager().getGame(e.getWorld());
         if (game == null) return;
-        boolean toxicRain = e.toWeatherState() && plugin.isModuleEnabled(MODULE, game)
+        boolean toxicRain = e.toWeatherState() && isEnabled(game)
                 && game.getState() == GameState.RUNNING
-                && ThreadLocalRandom.current().nextInt(100) < config().getInt("modules.toxic-rain.chance");
+                && ThreadLocalRandom.current().nextInt(100) < config().getInt("chance");
         setToxic(e.getWorld(), toxicRain);
     }
 
-    private void tick() {
+    private void damageAll() {
         toxic.removeIf(world -> plugin.getGameManager().getGame(world) == null);
-        double damage = config().getDouble("modules.toxic-rain.damage");
+        double damage = config().getDouble("damage");
         for (World world : toxic) {
             Game game = plugin.getGameManager().getGame(world);
             if (game == null || !world.hasStorm() || game.getState() != GameState.RUNNING) continue;

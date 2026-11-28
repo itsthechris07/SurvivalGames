@@ -20,7 +20,6 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitTask;
@@ -47,7 +46,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class UhcGame extends SurvivalGame {
+public class UhcGame extends RoundGame {
     public static final String CUTCLEAN = "cutclean";
     public static final String TIMBER = "timber";
     /**
@@ -429,13 +428,6 @@ public class UhcGame extends SurvivalGame {
             e.getDrops().add(head);
         }
         super.onDeath(gamePlayer, e);
-    }
-
-    /**
-     * the chests of the world keep their own loot
-     */
-    @Override
-    public void fillContainer(Inventory inventory) {
     }
 
     @Override

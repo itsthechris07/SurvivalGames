@@ -2,14 +2,12 @@ package com.christian34.survivalgames.modules;
 
 import com.christian34.survivalgames.SurvivalGames;
 import com.christian34.survivalgames.game.Game;
-import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.lib.Items;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.PlayerInventory;
@@ -25,20 +23,18 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class Tracker {
+public class Tracker extends GameModule {
     public static final String MODULE = "tracker";
-    private final SurvivalGames plugin;
 
     public Tracker(SurvivalGames plugin) {
-        this.plugin = plugin;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
+        super(plugin, MODULE);
     }
 
     /**
      * the player gets a tracker if the game uses them and he hasn't got one yet
      */
     public void give(Game game, Player player) {
-        if (!plugin.isModuleEnabled(MODULE, game) || hasTracker(player.getInventory())) return;
+        if (!isEnabled(game) || hasTracker(player.getInventory())) return;
         player.getInventory().addItem(Items.create(Material.COMPASS, i18n(LangText.ITEM_TRACKER),
                 I.itemLines(LangText.ITEM_TRACKER_LORE), Items.TRACKER));
         player.sendMessage(I.prefixed(player, LangText.TRACKER_GIVEN));
@@ -78,24 +74,22 @@ public class Tracker {
     /**
      * every second: the compasses point at the nearest enemy, who holds a tracker sees his name and distance
      */
-    private void tick() {
-        for (Game game : plugin.getGameManager().getGames()) {
-            if (game.getState() != GameState.RUNNING || !plugin.isModuleEnabled(MODULE, game)) continue;
-            for (GamePlayer member : game.getPlayers()) {
-                Player player = member.getPlayer();
-                PlayerInventory inventory = player.getInventory();
-                boolean holding = Items.is(inventory.getItemInMainHand(), Items.TRACKER)
-                        || Items.is(inventory.getItemInOffHand(), Items.TRACKER);
-                if (!holding && !hasTracker(inventory)) continue;
-                Player target = findTarget(game, player);
-                if (target != null) player.setCompassTarget(target.getLocation());
-                if (!holding) continue;
-                if (target == null) {
-                    player.sendActionBar(i18n(LangText.TRACKER_NO_TARGET));
-                } else {
-                    player.sendActionBar(i18n(LangText.TRACKER_TARGET, target.getName(),
-                            (int) Math.round(target.getLocation().distance(player.getLocation()))));
-                }
+    @Override
+    public void tick(Game game) {
+        for (GamePlayer member : game.getPlayers()) {
+            Player player = member.getPlayer();
+            PlayerInventory inventory = player.getInventory();
+            boolean holding = Items.is(inventory.getItemInMainHand(), Items.TRACKER)
+                    || Items.is(inventory.getItemInOffHand(), Items.TRACKER);
+            if (!holding && !hasTracker(inventory)) continue;
+            Player target = findTarget(game, player);
+            if (target != null) player.setCompassTarget(target.getLocation());
+            if (!holding) continue;
+            if (target == null) {
+                player.sendActionBar(i18n(LangText.TRACKER_NO_TARGET));
+            } else {
+                player.sendActionBar(i18n(LangText.TRACKER_TARGET, target.getName(),
+                        (int) Math.round(target.getLocation().distance(player.getLocation()))));
             }
         }
     }

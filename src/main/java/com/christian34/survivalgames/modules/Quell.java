@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
@@ -24,26 +24,19 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * @author Christian34
  */
-public class Quell {
+public class Quell extends GameModule {
     public static final String MODULE = "quell";
-    private final SurvivalGames plugin;
     /**
      * the rule an admin has chosen for the next round of an arena (lower case name)
      */
     private final Map<String, String> chosen = new ConcurrentHashMap<>();
 
     public Quell(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     private boolean isEnabled(Arena arena) {
-        return plugin.getFileManager().getConfigFile().getData().getBoolean("modules." + MODULE + ".enabled", true)
+        return config().getBoolean("enabled", true)
                 && config().getStringList("games").stream().anyMatch(type -> type.equalsIgnoreCase(arena.getType().getKey()));
     }
 
@@ -92,7 +85,7 @@ public class Quell {
                     || ThreadLocalRandom.current().nextInt(100) < config().getInt("chance");
             if (quell) rule = rules.get(ThreadLocalRandom.current().nextInt(rules.size()));
         }
-        if (rule != null) plugin.getTelemetry().used(Telemetry.Feature.QUELL);
+        if (rule != null) plugin.getUsageStats().used(UsageStats.Feature.QUELL);
         return rule;
     }
 

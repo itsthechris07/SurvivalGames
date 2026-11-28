@@ -81,7 +81,7 @@ public final class Placeholders {
             case "teams_alive" -> String.valueOf(game.getAliveTeams().size());
             case "players_alive" -> String.valueOf(game.getAlive().size());
             case "winner" -> game.getWinner() == null ? "" : game.getWinner();
-            case "day" -> game instanceof VaroGame varo && varo.getState() != GameState.LOBBY
+            case "day" -> game instanceof VaroGame varo && game.getState() != GameState.LOBBY
                     ? String.valueOf(varo.getDay()) : "0";
             case "team" -> team == null ? "" : I.legacy(team.getDisplayName());
             case "kills" -> String.valueOf(participant == null ? 0 : participant.getKills());

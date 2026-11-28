@@ -117,7 +117,8 @@ public class FileManager {
                 Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
             return true;
-        } catch (Exception ex) {
+        } catch (IOException | RuntimeException ex) {
+            Debug.warn("Couldn't copy " + source + " to " + destination, ex);
             return false;
         }
     }

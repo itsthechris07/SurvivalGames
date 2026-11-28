@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.commands;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.UpdateChecker;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.game.AdminMenus;
@@ -12,6 +12,7 @@ import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Menus;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.game.PlayHours;
+import com.christian34.survivalgames.game.RoundGame;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.I;
@@ -134,7 +135,7 @@ public class CommandSurvivalGames {
                 return;
             }
         }
-        plugin().getTelemetry().joined(Telemetry.Join.COMMAND);
+        plugin().getUsageStats().joined(UsageStats.Join.COMMAND);
         plugin().getGameManager().join(plugin().getUser(player), arena);
     }
 
@@ -264,7 +265,7 @@ public class CommandSurvivalGames {
                     game.getArena().getTeamSize()));
         } else {
             sender.sendMessage(i18n(LangText.INFO_RULES_SG, game.getArena().getTeamSize(),
-                    Game.formatDuration(game.getArena().settings().getInt("grace-period"))));
+                    Game.formatDuration(game.settings().getInt("grace-period"))));
         }
         if (sender instanceof Player player && game instanceof VaroGame && game.getParticipant(player.getUniqueId()) != null
                 && game.getState() == GameState.RUNNING) {
@@ -575,8 +576,8 @@ public class CommandSurvivalGames {
                     + game.getSpectators().size() + ", participants " + game.getParticipants().size()
                     + (game.getCountdown() >= 0 ? ", countdown " + game.getCountdown() : "");
             if (game instanceof VaroGame varo) state += ", day " + varo.getDay() + " (" + varo.today() + ")";
-            if (game instanceof SurvivalGame sg && sg.getState() == GameState.RUNNING) {
-                state += ", " + Game.formatTime(sg.getSeconds()) + (sg.isDeathmatch() ? ", deathmatch" : "");
+            if (game instanceof RoundGame round && round.getState() == GameState.RUNNING) {
+                state += ", " + Game.formatTime(round.getRunningSeconds()) + (round.isFinalPhase() ? ", deathmatch" : "");
             }
             sender.sendMessage(debugLine("Game " + game.getArena().getName(), state));
             for (GameTeam team : game.getTeams().getTeams()) {

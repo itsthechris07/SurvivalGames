@@ -348,16 +348,9 @@ class VaroRulesTest extends PluginTestBase {
      * runs the command and waits for the backup it writes
      */
     private void backup() {
-        long start = System.currentTimeMillis();
         execute(admin, "sg game varo1 backup");
-        // waitAsyncTasksFinished sometimes returns before the zip task has started (MockBukkit 4.118)
-        long timeout = start + 10_000;
-        while (VaroGame.getBackups(game.getArena()).stream().noneMatch(file -> file.lastModified() >= start)
-                && System.currentTimeMillis() < timeout) {
-            server.getScheduler().waitAsyncTasksFinished();
-        }
-        server.getScheduler().waitAsyncTasksFinished();
-        server.getScheduler().performOneTick();
+        // the world is zipped two seconds after it has been saved (the file jobs of the tests run right away)
+        server.getScheduler().performTicks(41);
     }
 
     @Test

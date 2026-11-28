@@ -1,8 +1,8 @@
 package com.christian34.survivalgames.game;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.lib.lang.I;
@@ -248,7 +248,7 @@ public class SignManager implements Listener {
         if (sign == null) return;
         // no sign editor
         e.setCancelled(true);
-        plugin.getTelemetry().joined(Telemetry.Join.SIGN);
+        plugin.getUsageStats().joined(UsageStats.Join.SIGN);
         join(e.getPlayer(), sign.target());
     }
 

@@ -1,11 +1,12 @@
 package com.christian34.survivalgames.replay;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.arena.Arena;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.files.FileManager;
+import com.christian34.survivalgames.game.Backups;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameType;
@@ -14,15 +15,12 @@ import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
 import com.destroystokyo.paper.event.player.PlayerStopSpectatingEntityEvent;
-import io.papermc.paper.event.player.PlayerArmSwingEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -31,55 +29,26 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockBurnEvent;
-import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.block.BlockFadeEvent;
-import org.bukkit.event.block.BlockFertilizeEvent;
-import org.bukkit.event.block.BlockFormEvent;
-import org.bukkit.event.block.BlockFromToEvent;
-import org.bukkit.event.block.BlockGrowEvent;
-import org.bukkit.event.block.BlockIgniteEvent;
-import org.bukkit.event.block.BlockMultiPlaceEvent;
-import org.bukkit.event.block.BlockPistonExtendEvent;
-import org.bukkit.event.block.BlockPistonRetractEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.BlockSpreadEvent;
-import org.bukkit.event.block.LeavesDecayEvent;
-import org.bukkit.event.block.TNTPrimeEvent;
-import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
-import org.bukkit.event.player.PlayerBucketEmptyEvent;
-import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.event.weather.LightningStrikeEvent;
-import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -90,8 +59,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
  * The replays: the games are recorded while they run (a round of Survival Games as one recording, a Varo day by day)
@@ -117,9 +84,8 @@ public final class Replays implements Listener {
      * a Varo runs all day: its recording is saved every 5 minutes
      */
     private static final int SAVE_INTERVAL = 20 * 60 * 5;
-    private static final BlockFace[] NEIGHBORS = {BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH, BlockFace.EAST,
-            BlockFace.SOUTH, BlockFace.WEST};
     private final SurvivalGames plugin;
+    private final RecordingListener recordingListener = new RecordingListener(this);
     private final Map<Game, Recorder> recorders = new LinkedHashMap<>();
     /**
      * how long the games that are over have been recorded since then
@@ -152,6 +118,13 @@ public final class Replays implements Listener {
      * @param info null: the file isn't a recording
      */
     private record Cached(long modified, @Nullable Recording.Info info) {
+    }
+
+    /**
+     * @return the listener for the events of the recorded games (registered by the plugin)
+     */
+    public Listener getRecordingListener() {
+        return recordingListener;
     }
 
     public Replays(SurvivalGames plugin) {
@@ -399,7 +372,7 @@ public final class Replays implements Listener {
     }
 
     @Nullable
-    private Recorder recorder(World world) {
+    Recorder recorder(World world) {
         if (recorders.isEmpty()) return null;
         for (Recorder recorder : recorders.values()) {
             if (world.equals(recorder.getGame().getGameWorld().getWorld())) return recorder;
@@ -411,7 +384,7 @@ public final class Replays implements Listener {
      * @return the recorder of the game the player plays in
      */
     @Nullable
-    private Recorder recorder(Player player) {
+    Recorder recorder(Player player) {
         if (recorders.isEmpty()) return null;
         Game game = plugin.getUser(player).getGame();
         return game == null ? null : recorders.get(game);
@@ -433,7 +406,7 @@ public final class Replays implements Listener {
         if (recorder != null) recorder.block(block, block.getBlockData());
     }
 
-    private void blocks(World world, Iterable<Block> blocks) {
+    void blocks(World world, Iterable<Block> blocks) {
         Recorder recorder = recorder(world);
         if (recorder == null) return;
         for (Block block : blocks) {
@@ -674,23 +647,8 @@ public final class Replays implements Listener {
      * morning would walk through the replay) and without the id of the world (it is the one of the Varo)
      */
     static void unzipWorld(File backup, File folder) throws IOException {
-        Path root = folder.toPath().toAbsolutePath().normalize();
-        try (ZipFile zip = new ZipFile(backup)) {
-            for (ZipEntry entry : Collections.list(zip.entries())) {
-                String name = entry.getName();
-                if (entry.isDirectory() || !name.startsWith("world/")) continue;
-                name = name.substring("world/".length());
-                if (name.startsWith("entities/") || name.equals("data/paper/metadata.dat")) continue;
-                Path target = root.resolve(name).normalize();
-                // a zip file from somewhere else must not write outside of the world
-                if (!target.startsWith(root)) throw new IOException("Invalid entry " + entry.getName());
-                if (target.getParent() != null) Files.createDirectories(target.getParent());
-                try (InputStream in = zip.getInputStream(entry)) {
-                    Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-                }
-            }
-        }
-        Files.createDirectories(root);
+        Backups.unzip(backup, folder, null,
+                name -> !name.startsWith("entities/") && !name.equals("data/paper/metadata.dat"));
     }
 
     private void fail(String key, String reason, @Nullable Throwable exception) {
@@ -762,7 +720,7 @@ public final class Replays implements Listener {
         gamePlayer.getStorage().cleanPlayer();
         plugin.getEssentials().joinGame(player, true);
         viewers.put(player.getUniqueId(), playback);
-        plugin.getTelemetry().used(Telemetry.Feature.REPLAY);
+        plugin.getUsageStats().used(UsageStats.Feature.REPLAY);
         playback.add(player);
         ReplayControls.fly(player, playback);
         plugin.updateVisibility();
@@ -913,196 +871,6 @@ public final class Replays implements Listener {
     @EventHandler(priority = EventPriority.LOW)
     public void onViewerPickup(EntityPickupItemEvent e) {
         if (e.getEntity() instanceof Player player && getPlayback(player) != null) e.setCancelled(true);
-    }
-
-    // ---------------------------------------------------------------- events of the games
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onSwing(PlayerArmSwingEvent e) {
-        Recorder recorder = recorder(e.getPlayer());
-        if (recorder != null) recorder.swing(e.getPlayer(), e.getHand() == EquipmentSlot.OFF_HAND);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDamage(EntityDamageEvent e) {
-        if (!(e.getEntity() instanceof Player player)) return;
-        Recorder recorder = recorder(player);
-        if (recorder != null) recorder.hurt(player);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onDeath(PlayerDeathEvent e) {
-        Recorder recorder = recorder(e.getPlayer());
-        if (recorder != null) recorder.death(e.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onLaunch(ProjectileLaunchEvent e) {
-        if (!(e.getEntity().getShooter() instanceof Player player)) return;
-        Recorder recorder = recorder(player);
-        if (recorder != null) recorder.launch(player, e.getEntity());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onLightning(LightningStrikeEvent e) {
-        Recorder recorder = recorder(e.getWorld());
-        if (recorder != null) recorder.lightning(e.getLightning().getLocation());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlace(BlockPlaceEvent e) {
-        Recorder recorder = recorder(e.getBlock().getWorld());
-        if (recorder == null) return;
-        // the block is placed already
-        if (e instanceof BlockMultiPlaceEvent multi) {
-            for (BlockState replaced : multi.getReplacedBlockStates()) {
-                recorder.block(replaced.getBlock(), replaced.getBlockData());
-            }
-        } else {
-            recorder.block(e.getBlock(), e.getBlockReplacedState().getBlockData());
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBreak(BlockBreakEvent e) {
-        withNeighbors(e.getBlock());
-    }
-
-    /**
-     * the block and what hangs on it (torches, doors, ...)
-     */
-    private void withNeighbors(Block block) {
-        Recorder recorder = recorder(block.getWorld());
-        if (recorder == null) return;
-        recorder.block(block, block.getBlockData());
-        for (BlockFace face : NEIGHBORS) {
-            Block neighbor = block.getRelative(face);
-            recorder.block(neighbor, neighbor.getBlockData());
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBurn(BlockBurnEvent e) {
-        withNeighbors(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onFade(BlockFadeEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onForm(BlockFormEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onSpread(BlockSpreadEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onGrow(BlockGrowEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onDecay(LeavesDecayEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onIgnite(BlockIgniteEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onFlow(BlockFromToEvent e) {
-        block(e.getToBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPrime(TNTPrimeEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onExplode(BlockExplodeEvent e) {
-        blocks(e.getBlock().getWorld(), e.blockList());
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onExplode(EntityExplodeEvent e) {
-        blocks(e.getLocation().getWorld(), e.blockList());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onChange(EntityChangeBlockEvent e) {
-        withNeighbors(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onEmpty(PlayerBucketEmptyEvent e) {
-        block(e.getBlock());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onFill(PlayerBucketFillEvent e) {
-        block(e.getBlock());
-    }
-
-    /**
-     * doors, levers, buttons, cake, ...
-     */
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onInteract(PlayerInteractEvent e) {
-        Block block = e.getClickedBlock();
-        if (block == null || e.getAction() != Action.RIGHT_CLICK_BLOCK && e.getAction() != Action.PHYSICAL) return;
-        withNeighbors(block);
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPiston(BlockPistonExtendEvent e) {
-        piston(e.getBlock(), e.getBlocks(), e.getDirection());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPiston(BlockPistonRetractEvent e) {
-        piston(e.getBlock(), e.getBlocks(), e.getDirection());
-    }
-
-    private void piston(Block piston, List<Block> moved, BlockFace direction) {
-        Recorder recorder = recorder(piston.getWorld());
-        if (recorder == null) return;
-        withNeighbors(piston);
-        for (Block block : moved) {
-            recorder.block(block, block.getBlockData());
-            Block target = block.getRelative(direction);
-            recorder.block(target, target.getBlockData());
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onGrow(StructureGrowEvent e) {
-        states(e.getWorld(), e.getBlocks());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onFertilize(BlockFertilizeEvent e) {
-        states(e.getBlock().getWorld(), e.getBlocks());
-    }
-
-    /**
-     * @param states what the blocks are going to be
-     */
-    private void states(World world, List<BlockState> states) {
-        Recorder recorder = recorder(world);
-        if (recorder == null) return;
-        for (BlockState state : states) {
-            Block block = state.getBlock();
-            recorder.block(block, block.getBlockData());
-        }
     }
 
 }

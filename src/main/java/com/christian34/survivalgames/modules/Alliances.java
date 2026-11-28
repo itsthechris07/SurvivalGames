@@ -1,13 +1,12 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.Participant;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,25 +25,19 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Christian34
  */
-public class Alliances {
+public class Alliances extends GameModule {
     public static final String MODULE = "alliances";
-    private final SurvivalGames plugin;
 
     public Alliances(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
     }
 
     /**
      * @return true if the game has alliances: the module is on for it and everybody plays alone
      */
+    @Override
     public boolean isUsed(@Nullable Game game) {
-        return game != null && game.getArena().getTeamSize() == 1 && plugin.isModuleEnabled(MODULE, game);
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        return game != null && game.getArena().getTeamSize() == 1 && isEnabled(game);
     }
 
     /**
@@ -119,7 +112,7 @@ public class Alliances {
             game.getAlliances().put(member, alliance);
             game.getAllyRequests().remove(member);
         }
-        plugin.getTelemetry().used(Telemetry.Feature.ALLIANCE);
+        plugin.getUsageStats().used(UsageStats.Feature.ALLIANCE);
         game.broadcast(LangText.ALLY_FORMED, names(game, alliance));
     }
 
@@ -174,7 +167,12 @@ public class Alliances {
     /**
      * all alliances break when it is time (break-at, deathmatch) or nobody but one alliance is left
      */
-    public void check(Game game) {
+    @Override
+    public void tick(Game game) {
+        check(game);
+    }
+
+    private void check(Game game) {
         if (game.getAlliances().isEmpty()) return;
         List<Participant> alive = game.getAlive();
         boolean onlyAllies = !alive.isEmpty() && alive.stream().allMatch(other -> areAllies(game,

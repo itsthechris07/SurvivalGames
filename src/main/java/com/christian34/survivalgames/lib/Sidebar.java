@@ -6,7 +6,7 @@ import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.Participant;
-import com.christian34.survivalgames.game.SurvivalGame;
+import com.christian34.survivalgames.game.RoundGame;
 import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -128,7 +128,7 @@ public class Sidebar {
      */
     private void updateHealth(Scoreboard board, Game game) {
         boolean show = game.getType() == GameType.UHC && game.getState() != GameState.LOBBY
-                && game.getArena().settings().getBoolean("health-in-tab");
+                && game.settings().getBoolean("health-in-tab");
         Objective health = board.getObjective(HEALTH_OBJECTIVE);
         if (!show) {
             if (health != null) health.unregister();
@@ -188,7 +188,7 @@ public class Sidebar {
             }
             case RUNNING -> {
                 if (game instanceof VaroGame varo) lines.add(i18n(LangText.SCOREBOARD_DAY, varo.getDay()));
-                if (game instanceof SurvivalGame sg) lines.add(i18n(LangText.SCOREBOARD_TIME, Game.formatTime(sg.getSeconds())));
+                if (game instanceof RoundGame) lines.add(i18n(LangText.SCOREBOARD_TIME, Game.formatTime(game.getRunningSeconds())));
                 lines.add(Component.empty());
                 if (teams) {
                     if (team != null) lines.add(i18n(LangText.SCOREBOARD_TEAM, team.getDisplayName()));
@@ -207,10 +207,10 @@ public class Sidebar {
                         lines.add(i18n(LangText.SCOREBOARD_TIME_LEFT, Game.formatTime(varo.getSessionTime(participant))));
                     }
                 }
-                if (game instanceof SurvivalGame sg) {
-                    if (sg.isDeathmatch()) {
+                if (game instanceof RoundGame round) {
+                    if (round.isFinalPhase()) {
                         lines.add(i18n(LangText.SCOREBOARD_DEATHMATCH));
-                    } else if (sg.isGracePeriod()) {
+                    } else if (round.isGracePeriod()) {
                         lines.add(i18n(LangText.SCOREBOARD_GRACE));
                     }
                 }

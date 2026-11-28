@@ -1,9 +1,8 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.Debug;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
-import com.christian34.survivalgames.files.ConfigFile;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
@@ -14,6 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -47,9 +47,8 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class Backpack implements Listener {
+public class Backpack extends GameModule implements Listener {
     public static final String MODULE = "backpack";
-    private final SurvivalGames plugin;
     private final NamespacedKey recipeKey;
     /**
      * the open backpacks: members of a team see the same inventory
@@ -65,9 +64,9 @@ public class Backpack implements Listener {
     }
 
     public Backpack(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
         this.recipeKey = new NamespacedKey(plugin, "backpack");
-        if (config().getBoolean("modules.backpack.enabled")) {
+        if (config().getBoolean("enabled")) {
             ShapedRecipe recipe = new ShapedRecipe(recipeKey, createItem());
             recipe.shape("LLL", "LCL", "LDL");
             recipe.setIngredient('L', Material.LEATHER);
@@ -75,14 +74,6 @@ public class Backpack implements Listener {
             recipe.setIngredient('D', Material.DIAMOND);
             Bukkit.addRecipe(recipe);
         }
-    }
-
-    private ConfigFile config() {
-        return plugin.getFileManager().getConfigFile();
-    }
-
-    public NamespacedKey getRecipeKey() {
-        return recipeKey;
     }
 
     public void removeRecipe() {
@@ -103,7 +94,7 @@ public class Backpack implements Listener {
 
         private Holder(Key key) {
             this.key = key;
-            int rows = Math.clamp(config().getInt("modules.backpack.rows"), 1, 6);
+            int rows = Math.clamp(config().getInt("rows"), 1, 6);
             this.inventory = Bukkit.createInventory(this, rows * 9, i18n(LangText.GUI_BACKPACK));
             String saved = key.game().getBackpacks().get(key.key());
             if (saved != null) {
@@ -132,18 +123,18 @@ public class Backpack implements Listener {
     /**
      * @return the key of the player's backpack in the game
      */
-    private static String getKey(Game game, Player player, ConfigFile config) {
+    private static String inventoryKey(Game game, Player player, ConfigurationSection config) {
         GameTeam team = game.getTeam(player.getUniqueId());
-        if (team != null && "team".equalsIgnoreCase(config.getString("modules.backpack.type"))) {
+        if (team != null && "team".equalsIgnoreCase(config.getString("type"))) {
             return "team." + team.getKey();
         }
         return "player." + player.getUniqueId();
     }
 
     public void open(Game game, Player player) {
-        Holder holder = open.computeIfAbsent(new Key(game, getKey(game, player, config())), Holder::new);
+        Holder holder = open.computeIfAbsent(new Key(game, inventoryKey(game, player, config())), Holder::new);
         player.openInventory(holder.getInventory());
-        plugin.getTelemetry().used(Telemetry.Feature.BACKPACK);
+        plugin.getUsageStats().used(UsageStats.Feature.BACKPACK);
         player.playSound(player, Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1f);
     }
 
@@ -183,7 +174,7 @@ public class Backpack implements Listener {
         if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         e.setCancelled(true);
         Game game = plugin.getUser(e.getPlayer()).getGame();
-        if (!plugin.isModuleEnabled(MODULE, game) || game.getState() != GameState.RUNNING
+        if (!isEnabled(game) || game.getState() != GameState.RUNNING
                 || plugin.getUser(e.getPlayer()).isSpectator()) {
             e.getPlayer().sendMessage(I.prefixed(e.getPlayer(), LangText.BACKPACK_ONLY_INGAME));
             return;

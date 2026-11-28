@@ -9,7 +9,6 @@ import com.christian34.survivalgames.stats.PlayerStats;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.Comparator;
@@ -23,18 +22,11 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * @author Christian34
  */
-public class TrainingScores {
+public class TrainingScores extends GameModule {
     public static final String MODULE = "training-score";
-    private final SurvivalGames plugin;
 
     public TrainingScores(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     /**
@@ -51,7 +43,7 @@ public class TrainingScores {
      * the game is starting: every participant gets his score, everybody sees all of them
      */
     public void announce(Game game) {
-        if (!plugin.isModuleEnabled(MODULE, game)) return;
+        if (!isEnabled(game)) return;
         List<Participant> participants = game.getParticipants().stream().filter(Participant::isAlive).toList();
         for (Participant participant : participants) {
             participant.setScore(score(plugin.getStats().getRating(participant.getUuid(), game.getType())));

@@ -1,5 +1,7 @@
 package com.christian34.survivalgames.game;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +13,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -21,7 +24,7 @@ import java.util.zip.ZipOutputStream;
  *
  * @author Christian34
  */
-final class Backups {
+public final class Backups {
     private static final String WORLD_ENTRIES = "world/";
     private static final String GAME_ENTRY = "game.yml";
 
@@ -62,15 +65,25 @@ final class Backups {
      * unpacks a backup: world/... into the (empty) folder of the world, game.yml to the saved game
      */
     static void unzip(File backup, File world, File game) throws IOException {
+        unzip(backup, world, game, name -> true);
+    }
+
+    /**
+     * unpacks the files of the world (path inside the world) that the filter accepts into the folder of the world,
+     * game.yml to the saved game (null: not at all)
+     */
+    public static void unzip(File backup, File world, @Nullable File game, Predicate<String> filter) throws IOException {
         Path root = world.toPath().toAbsolutePath().normalize();
         try (ZipFile zip = new ZipFile(backup)) {
             for (ZipEntry entry : Collections.list(zip.entries())) {
                 if (entry.isDirectory()) continue;
                 Path target;
-                if (entry.getName().equals(GAME_ENTRY)) {
+                String name = entry.getName();
+                if (name.equals(GAME_ENTRY)) {
+                    if (game == null) continue;
                     target = game.toPath();
-                } else if (entry.getName().startsWith(WORLD_ENTRIES)) {
-                    target = root.resolve(entry.getName().substring(WORLD_ENTRIES.length())).normalize();
+                } else if (name.startsWith(WORLD_ENTRIES) && filter.test(name.substring(WORLD_ENTRIES.length()))) {
+                    target = root.resolve(name.substring(WORLD_ENTRIES.length())).normalize();
                     // a zip file from somewhere else must not write outside of the world
                     if (!target.startsWith(root)) throw new IOException("Invalid entry " + entry.getName());
                 } else {
@@ -82,6 +95,7 @@ final class Backups {
                 }
             }
         }
+        Files.createDirectories(root);
     }
 
     /**

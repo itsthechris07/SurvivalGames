@@ -3,6 +3,8 @@ package com.christian34.survivalgames;
 import com.christian34.survivalgames.arena.ArenaManager;
 import com.christian34.survivalgames.arena.GameWorld;
 import com.christian34.survivalgames.commands.CommandManager;
+import com.christian34.survivalgames.files.ConfigFile;
+import com.christian34.survivalgames.files.FileJobs;
 import com.christian34.survivalgames.files.FileManager;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.Duels;
@@ -39,6 +41,7 @@ import com.christian34.survivalgames.modules.Reaping;
 import com.christian34.survivalgames.modules.BuildMode;
 import com.christian34.survivalgames.modules.ChestLock;
 import com.christian34.survivalgames.modules.Cosmetics;
+import com.christian34.survivalgames.modules.GameModule;
 import com.christian34.survivalgames.modules.GravityGrenade;
 import com.christian34.survivalgames.modules.InventoryView;
 import com.christian34.survivalgames.modules.Kits;
@@ -64,8 +67,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -89,6 +97,17 @@ public class SurvivalGames extends JavaPlugin {
     public static final String ADMIN_PERMISSION = "sg.admin";
     private static SurvivalGames instance;
     private final Map<UUID, GamePlayer> users = new ConcurrentHashMap<>();
+    /**
+     * the game types every module is used in (read from config.yml once per version of the file)
+     */
+    private final Map<String, Set<String>> moduleGames = new ConcurrentHashMap<>();
+    private volatile int moduleVersion = -1;
+    /**
+     * {@link #batchVisibility}: the visibility is updated at the end
+     */
+    private int visibilityBatches;
+    private boolean visibilityChanged;
+    private final List<GameModule> modules = new ArrayList<>();
     private FileManager fileManager;
     private ArenaManager arenaManager;
     private GameManager gameManager;
@@ -128,6 +147,7 @@ public class SurvivalGames extends JavaPlugin {
     private UpdateChecker updateChecker;
     private Achievements achievements;
     private Telemetry telemetry;
+    private UsageStats usageStats;
     private Discord discord;
     private Seasons seasons;
     private Cosmetics cosmetics;
@@ -145,6 +165,7 @@ public class SurvivalGames extends JavaPlugin {
         GameWorld.deleteLeftovers();
         this.fileManager = new FileManager();
         loadTexts();
+        this.usageStats = new UsageStats(this);
         this.telemetry = new Telemetry(this);
         telemetry.startErrorReports();
         this.loot = new Loot(this);
@@ -197,7 +218,7 @@ public class SurvivalGames extends JavaPlugin {
         }
         register(new PlayerListener(this), new ProtectionListener(this), new TeleportListener(this),
                 new Menu.ChestListener(), buildMode, backpack, new ChestLock(this), gravityGrenade, new ToxicRain(this),
-                new ForceField(this), stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays,
+                new ForceField(this), stats, inventoryView, leaderboards, new Restrictions(this), offlineNpc, replays, replays.getRecordingListener(),
                 uhcListener, cosmetics);
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new SgExpansion(this).register();
@@ -217,11 +238,14 @@ public class SurvivalGames extends JavaPlugin {
         this.updateChecker = new UpdateChecker(this);
         this.updateChecker.start();
         telemetry.start();
+        usageStats.start();
     }
 
     @Override
     public void onDisable() {
         if (gameManager != null) gameManager.stopAll();
+        // the last saves of the Varo games (a few milliseconds), not the copies of big maps
+        FileJobs.awaitAll(10_000);
         // after the games: their recordings are saved, the viewers get their things back
         if (replays != null) replays.close();
         // the NPCs don't show the state of games that don't exist any more
@@ -304,12 +328,31 @@ public class SurvivalGames extends JavaPlugin {
     }
 
     /**
+     * runs the action and updates the visibility once afterwards (e.g. all players leave a game)
+     */
+    public void batchVisibility(Runnable action) {
+        visibilityBatches++;
+        try {
+            action.run();
+        } finally {
+            if (--visibilityBatches == 0 && visibilityChanged) {
+                this.visibilityChanged = false;
+                updateVisibility();
+            }
+        }
+    }
+
+    /**
      * players only see the players of their own game (spectators only see each other), players outside of games
      * only see the players outside of games
      */
     public void updateVisibility() {
         // Paper refuses hidePlayer for a disabled plugin (onDisable: the games are stopped after disabling)
         if (!isEnabled()) return;
+        if (visibilityBatches > 0) {
+            this.visibilityChanged = true;
+            return;
+        }
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             GamePlayer viewerUser = getUser(viewer);
             for (Player target : Bukkit.getOnlinePlayers()) {
@@ -333,11 +376,34 @@ public class SurvivalGames extends JavaPlugin {
      * @return true if the module is enabled for the type of the game (`modules.<module>.games`)
      */
     public boolean isModuleEnabled(String module, @Nullable Game game) {
-        if (game == null || !fileManager.getConfigFile().getData().getBoolean("modules." + module + ".enabled", true)) {
-            return false;
+        if (game == null) return false;
+        ConfigFile config = fileManager.getConfigFile();
+        if (config.getVersion() != moduleVersion) {
+            moduleGames.clear();
+            this.moduleVersion = config.getVersion();
         }
-        return fileManager.getConfigFile().getData().getStringList("modules." + module + ".games").stream()
-                .anyMatch(type -> type.equalsIgnoreCase(game.getType().getKey()));
+        return moduleGames.computeIfAbsent(module, key -> {
+            if (!config.getData().getBoolean("modules." + key + ".enabled", true)) return Set.of();
+            Set<String> types = new HashSet<>();
+            for (String type : config.getData().getStringList("modules." + key + ".games")) {
+                types.add(type.toLowerCase(Locale.ROOT));
+            }
+            return types;
+        }).contains(game.getType().getKey());
+    }
+
+    /**
+     * called by every {@link GameModule} when it is created
+     */
+    public void registerModule(GameModule module) {
+        modules.add(module);
+    }
+
+    /**
+     * @return the modules (in the order they were created)
+     */
+    public List<GameModule> getModules() {
+        return modules;
     }
 
     // ---------------------------------------------------------------- getters
@@ -383,10 +449,6 @@ public class SurvivalGames extends JavaPlugin {
 
     public Backpack getBackpack() {
         return backpack;
-    }
-
-    public GravityGrenade getGravityGrenade() {
-        return gravityGrenade;
     }
 
     public Sidebar getSidebar() {
@@ -532,6 +594,10 @@ public class SurvivalGames extends JavaPlugin {
 
     public Telemetry getTelemetry() {
         return telemetry;
+    }
+
+    public UsageStats getUsageStats() {
+        return usageStats;
     }
 
 }

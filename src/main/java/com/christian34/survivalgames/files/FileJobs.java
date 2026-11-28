@@ -7,12 +7,16 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -94,6 +98,27 @@ public final class FileJobs {
             last.join();
         } catch (CompletionException ignored) {
             // the job has failed - its caller reports it
+        }
+    }
+
+    /**
+     * waits until all jobs are done (the plugin is disabled: the last saves of the games are written), at most for
+     * the given time - a copy of a big map isn't needed anymore and is deleted on the next start
+     */
+    public static void awaitAll(long millis) {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        for (CompletableFuture<Void> last : LAST.values().toArray(CompletableFuture[]::new)) {
+            try {
+                last.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            } catch (ExecutionException | CancellationException ignored) {
+                // the job has failed - its caller reports it
+            } catch (TimeoutException ex) {
+                Debug.warn("File jobs are still running, the server doesn't wait for them");
+                return;
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
     }
 

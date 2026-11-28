@@ -13,7 +13,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Sound;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
@@ -27,22 +26,11 @@ import java.util.UUID;
  *
  * @author Christian34
  */
-public class Fallen {
+public class Fallen extends GameModule {
     public static final String MODULE = "fallen";
-    private final SurvivalGames plugin;
 
     public Fallen(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    public boolean isUsed(Game game) {
-        return plugin.isModuleEnabled(MODULE, game);
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     /**
@@ -51,7 +39,7 @@ public class Fallen {
     public void onEliminated(Game game, Participant participant) {
         if (!isUsed(game)) return;
         game.getFallen().add(participant.getUuid());
-        if (game instanceof VaroGame varo && !varo.isStopped()) varo.save();
+        game.changed();
         if (!config().getBoolean("cannon", true)) return;
         for (GamePlayer member : game.getMembers()) {
             Player player = member.getPlayer();
@@ -64,6 +52,7 @@ public class Fallen {
      * every second of a running game: the list of the fallen every minutes minutes (not in a Varo, see
      * {@link #showFallen(Game)})
      */
+    @Override
     public void tick(Game game) {
         int minutes = config().getInt("minutes", 5);
         if (!isUsed(game) || game instanceof VaroGame || minutes <= 0 || game.getState() != GameState.RUNNING) return;

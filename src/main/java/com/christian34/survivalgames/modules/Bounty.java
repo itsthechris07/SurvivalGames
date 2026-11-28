@@ -1,18 +1,16 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.Participant;
-import com.christian34.survivalgames.game.VaroGame;
 import com.christian34.survivalgames.integrations.EconomySupport;
 import com.christian34.survivalgames.lib.lang.I;
 import com.christian34.survivalgames.lib.lang.LangText;
 import com.christian34.survivalgames.stats.Achievement;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,22 +25,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Christian34
  */
-public class Bounty {
+public class Bounty extends GameModule {
     public static final String MODULE = "bounty";
-    private final SurvivalGames plugin;
 
     public Bounty(SurvivalGames plugin) {
-        this.plugin = plugin;
-    }
-
-    public boolean isUsed(@Nullable Game game) {
-        return plugin.isModuleEnabled(MODULE, game);
-    }
-
-    private ConfigurationSection config() {
-        ConfigurationSection section = plugin.getFileManager().getConfigFile().getSection("modules." + MODULE);
-        return section != null ? section : plugin.getFileManager().getConfigFile().getData()
-                .createSection("modules." + MODULE);
+        super(plugin, MODULE);
     }
 
     private EconomySupport economy() {
@@ -101,7 +88,7 @@ public class Bounty {
         }
         game.getBounties().computeIfAbsent(target.getUuid(), key -> new ConcurrentHashMap<>())
                 .merge(setter.getUniqueId(), amount, Double::sum);
-        plugin.getTelemetry().used(Telemetry.Feature.BOUNTY);
+        plugin.getUsageStats().used(UsageStats.Feature.BOUNTY);
         game.announce(LangText.BOUNTY_SET, setter.getName(), economy().format(amount), target.getName(),
                 economy().format(getTotal(game, target.getUuid())));
         save(game);
@@ -148,7 +135,7 @@ public class Bounty {
     }
 
     private static void save(Game game) {
-        if (game instanceof VaroGame varo && !varo.isStopped()) varo.save();
+        game.changed();
     }
 
 }

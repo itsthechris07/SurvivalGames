@@ -24,6 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -46,6 +47,10 @@ final class Stage {
      * the chunks kept loaded: chunk key -> the mannequins in it
      */
     private final Map<Long, Integer> tickets = new HashMap<>();
+    /**
+     * the block changes for chunks that are loaded right now (chunk key - block key - data)
+     */
+    private final Map<Long, Map<Long, String>> pendingBlocks = new HashMap<>();
     private boolean turnsBody = true;
 
     /**
@@ -313,12 +318,56 @@ final class Stage {
      */
     void block(int x, int y, int z, String data) {
         if (y < world.getMinHeight() || y >= world.getMaxHeight()) return;
+        int chunkX = x >> 4;
+        int chunkZ = z >> 4;
+        long key = chunkKey(chunkX, chunkZ);
+        Map<Long, String> waiting = pendingBlocks.get(key);
+        if (waiting == null && !world.isChunkLoaded(chunkX, chunkZ)) {
+            // loading the chunk right now would block the server thread (seconds on a busy server): the changes wait
+            // for it, the last one of every block wins
+            waiting = new LinkedHashMap<>();
+            pendingBlocks.put(key, waiting);
+            try {
+                world.getChunkAtAsync(chunkX, chunkZ).whenComplete((chunk, failure) -> applyPending(key));
+            } catch (RuntimeException ex) {
+                // MockBukkit
+                pendingBlocks.remove(key);
+                waiting = null;
+            }
+        }
+        if (waiting != null) {
+            waiting.put(blockKey(x, y, z), data);
+            return;
+        }
+        setBlock(x, y, z, data);
+    }
+
+    private void applyPending(long chunk) {
+        Map<Long, String> waiting = pendingBlocks.remove(chunk);
+        // the replay has been closed in the meantime
+        if (waiting == null || Bukkit.getWorld(world.getUID()) == null) return;
+        waiting.forEach((position, data) -> setBlock((int) (position >> 38), (int) (position << 52 >> 52),
+                (int) (position << 26 >> 38), data));
+    }
+
+    private void setBlock(int x, int y, int z, String data) {
         try {
             Block block = world.getBlockAt(x, y, z);
             block.setBlockData(Bukkit.createBlockData(data), false);
         } catch (IllegalArgumentException ex) {
             // a block of a newer version
         }
+    }
+
+    private static long chunkKey(int x, int z) {
+        return ((long) x << 32) | (z & 0xFFFFFFFFL);
+    }
+
+    /**
+     * x (26 bits), z (26 bits) and y (12 bits) like BlockPos#asLong
+     */
+    private static long blockKey(int x, int y, int z) {
+        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (z & 0x3FFFFFF) << 12) | (y & 0xFFF);
     }
 
     /**

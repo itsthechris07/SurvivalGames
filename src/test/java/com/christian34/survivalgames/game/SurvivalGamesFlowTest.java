@@ -247,7 +247,7 @@ class SurvivalGamesFlowTest extends PluginTestBase {
         seconds(60);
         assertContains(messages(steve), "The deathmatch starts in 10 seconds");
         seconds(10);
-        assertTrue(game.isDeathmatch());
+        assertTrue(game.isFinalPhase());
         assertEquals(64, steve.getLocation().getBlockY());
         assertTrue(Math.abs(steve.getLocation().getBlockX()) <= 21);
         double border = game.getWorld().getWorldBorder().getSize();

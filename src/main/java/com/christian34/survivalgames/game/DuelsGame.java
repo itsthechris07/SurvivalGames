@@ -7,7 +7,6 @@ import com.christian34.survivalgames.modules.Kits;
 import com.christian34.survivalgames.user.GamePlayer;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
@@ -22,7 +21,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class DuelsGame extends SurvivalGame {
+public class DuelsGame extends RoundGame {
     /**
      * the players of a challenge (empty: everybody can join)
      */
@@ -108,13 +107,6 @@ public class DuelsGame extends SurvivalGame {
             Participant participant = getParticipant(player.getUniqueId());
             if (participant != null && participant.isAlive()) Kits.apply(player, duelKit);
         }
-    }
-
-    /**
-     * the chests of the map keep what they have
-     */
-    @Override
-    public void fillContainer(Inventory inventory) {
     }
 
 }

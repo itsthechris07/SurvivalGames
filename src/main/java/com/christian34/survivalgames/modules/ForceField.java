@@ -1,7 +1,7 @@
 package com.christian34.survivalgames.modules;
 
+import com.christian34.survivalgames.UsageStats;
 import com.christian34.survivalgames.SurvivalGames;
-import com.christian34.survivalgames.Telemetry;
 import com.christian34.survivalgames.game.Game;
 import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.user.GamePlayer;
@@ -33,23 +33,22 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Christian34
  */
-public class ForceField implements Listener {
+public class ForceField extends GameModule implements Listener {
     public static final String MODULE = "force-field";
-    private final SurvivalGames plugin;
     /**
      * the projectiles flying in games with a force field
      */
     private final Set<Projectile> projectiles = ConcurrentHashMap.newKeySet();
 
     public ForceField(SurvivalGames plugin) {
-        this.plugin = plugin;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
+        super(plugin, MODULE);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::update, 1L, 1L);
     }
 
     @Nullable
     private Game getGame(Entity entity) {
         Game game = plugin.getGameManager().getGame(entity.getWorld());
-        return game != null && game.getState() == GameState.RUNNING && plugin.isModuleEnabled(MODULE, game) ? game : null;
+        return game != null && game.getState() == GameState.RUNNING && isEnabled(game) ? game : null;
     }
 
     private static boolean hasBorder(Game game) {
@@ -62,7 +61,7 @@ public class ForceField implements Listener {
         if (game != null && hasBorder(game)) projectiles.add(e.getEntity());
     }
 
-    private void tick() {
+    private void update() {
         for (Iterator<Projectile> iterator = projectiles.iterator(); iterator.hasNext(); ) {
             Projectile projectile = iterator.next();
             Game game = projectile.isValid() ? getGame(projectile) : null;
@@ -95,7 +94,7 @@ public class ForceField implements Listener {
         if (z) velocity.setZ(-velocity.getZ());
         projectile.setVelocity(velocity);
         effect(location);
-        plugin.getTelemetry().used(Telemetry.Feature.FORCE_FIELD);
+        plugin.getUsageStats().used(UsageStats.Feature.FORCE_FIELD);
         return true;
     }
 
@@ -110,13 +109,13 @@ public class ForceField implements Listener {
         GamePlayer gamePlayer = plugin.getUser(player);
         Game game = gamePlayer.getGame();
         if (game == null || gamePlayer.isSpectator() || game.getState() != GameState.RUNNING
-                || !plugin.isModuleEnabled(MODULE, game) || !hasBorder(game)) return;
+                || !isEnabled(game) || !hasBorder(game)) return;
         WorldBorder border = player.getWorld().getWorldBorder();
         if (!isInside(border, e.getFrom()) || isInside(border, e.getTo())) return;
         e.setTo(e.getFrom());
         Vector back = border.getCenter().toVector().subtract(e.getFrom().toVector()).setY(0);
         if (back.lengthSquared() > 0) player.setVelocity(back.normalize().multiply(0.8).setY(0.3));
-        double damage = plugin.getFileManager().getConfigFile().getDouble("modules." + MODULE + ".damage");
+        double damage = config().getDouble("damage");
         if (damage > 0) player.damage(damage);
         effect(e.getFrom());
     }

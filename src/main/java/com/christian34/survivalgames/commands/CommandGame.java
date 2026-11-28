@@ -8,6 +8,7 @@ import com.christian34.survivalgames.game.GameState;
 import com.christian34.survivalgames.game.GameTeam;
 import com.christian34.survivalgames.game.GameType;
 import com.christian34.survivalgames.game.Participant;
+import com.christian34.survivalgames.game.RoundGame;
 import com.christian34.survivalgames.game.SurvivalGame;
 import com.christian34.survivalgames.game.Teams;
 import com.christian34.survivalgames.game.VaroGame;
@@ -86,7 +87,7 @@ public class CommandGame {
             send(sender, LangText.GAME_STARTED_BY_YOU, game.getArena().getName());
         }
         // the players leave again on the first tick
-        Instant opening = game instanceof VaroGame varo ? varo.getOpening() : null;
+        Instant opening = game.getOpening();
         if (opening != null) send(sender, LangText.VARO_STARTED_CLOSED, game.getArena().getName(),
                 VaroGame.formatOpening(opening));
     }
@@ -270,15 +271,15 @@ public class CommandGame {
     public void deathmatchCmd(CommandSender sender, @Argument("arena") Arena arena) {
         Game game = game(sender, arena);
         if (game == null) return;
-        if (!(game instanceof SurvivalGame sg)) {
+        if (!(game instanceof RoundGame round)) {
             send(sender, LangText.ONLY_SURVIVAL_GAMES);
             return;
         }
-        if (sg.getState() != GameState.RUNNING || sg.isDeathmatch()) {
+        if (round.getState() != GameState.RUNNING || round.isFinalPhase()) {
             send(sender, LangText.NOT_RUNNING);
             return;
         }
-        sg.startDeathmatch();
+        round.startDeathmatch();
     }
 
     // ---------------------------------------------------------------- quells and Gamemaker events

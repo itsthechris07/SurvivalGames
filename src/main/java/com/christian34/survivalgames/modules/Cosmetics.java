@@ -47,7 +47,7 @@ import static com.christian34.survivalgames.lib.lang.I.i18n;
  *
  * @author Christian34
  */
-public class Cosmetics implements Listener {
+public class Cosmetics extends GameModule implements Listener {
     public static final String MODULE = "cosmetics";
     public static final String PERMISSION = "sg.cosmetic.";
     private static final String BOUGHT = "bought-";
@@ -59,10 +59,9 @@ public class Cosmetics implements Listener {
      * seconds of the win effect
      */
     private static final int WIN_SECONDS = 5;
-    private final SurvivalGames plugin;
 
     public Cosmetics(SurvivalGames plugin) {
-        this.plugin = plugin;
+        super(plugin, MODULE);
     }
 
     private StatsManager stats() {
@@ -74,7 +73,7 @@ public class Cosmetics implements Listener {
      */
     public boolean isEnabled() {
         return stats().isEnabled()
-                && plugin.getFileManager().getConfigFile().getData().getBoolean("modules." + MODULE + ".enabled", true);
+                && config().getBoolean("enabled", true);
     }
 
     /**
@@ -236,7 +235,7 @@ public class Cosmetics implements Listener {
      * the killer's effect where the victim died
      */
     public void onKill(Game game, UUID killer, UUID victim) {
-        if (!plugin.isModuleEnabled(MODULE, game) || !stats().isEnabled()) return;
+        if (!isEnabled(game) || !stats().isEnabled()) return;
         Player player = Bukkit.getPlayer(killer);
         Player dead = Bukkit.getPlayer(victim);
         if (player == null || dead == null) return;
@@ -274,7 +273,7 @@ public class Cosmetics implements Listener {
         Projectile projectile = e.getEntity();
         if (!(projectile.getShooter() instanceof Player shooter)) return;
         Game game = plugin.getUser(shooter).getGame();
-        if (game == null || game.getState() != GameState.RUNNING || !plugin.isModuleEnabled(MODULE, game)
+        if (game == null || game.getState() != GameState.RUNNING || !isEnabled(game)
                 || !stats().isEnabled()) {
             return;
         }
@@ -302,7 +301,7 @@ public class Cosmetics implements Listener {
      * the effects of the winners who are in the game
      */
     public void onWin(Game game, Collection<Player> winners) {
-        if (!plugin.isModuleEnabled(MODULE, game) || !stats().isEnabled()) return;
+        if (!isEnabled(game) || !stats().isEnabled()) return;
         for (Player winner : winners) {
             Cosmetic cosmetic = getSelected(winner, Cosmetic.Category.WIN);
             if (cosmetic != null) playWin(winner, cosmetic);
