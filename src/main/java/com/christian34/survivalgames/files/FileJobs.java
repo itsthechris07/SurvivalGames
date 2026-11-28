@@ -42,10 +42,12 @@ public final class FileJobs {
     }
 
     /**
-     * only for the tests: the jobs run right away on the calling thread
+     * only for the tests: the jobs run on the given executor (e.g. right away on the calling thread); forgets the jobs
+     * of the test before (a test may have held some back on purpose - they never finish)
      */
     public static void setExecutor(@Nullable Executor executor) {
         testExecutor = executor;
+        LAST.clear();
     }
 
     private static synchronized Executor executor() {
